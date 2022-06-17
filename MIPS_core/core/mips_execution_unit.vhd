@@ -489,7 +489,8 @@ begin
         variable vec32 : std_logic_vector(31 downto 0);
         variable vec64 : std_logic_vector(63 downto 0);
 		variable vhandshake : BOOLEAN;
-	begin		
+	begin
+		
 		instruction_address_skid_valid <= '0';
 		instruction_data_skid_ready <= '0';
 			
@@ -1139,6 +1140,30 @@ begin
 							memb_wdata_skid_valid <= '1';
 							
 						end if;
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+				elsif slv_compare(instruction_to_slv(instr_sh_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
+						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+						--mem_port_b_processor.enable <= '1';
+						if vec32(0) /= '0' then
+							-- address exception
+							panic_next <= '1';
+						end if;
+						
+						memb_waddress_skid_data <= vec32(31 downto 1) & '0';
+						memb_waddress_skid_valid <= '1';
+						if vec32(1) = '0' then
+							memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(instruction_data_i.rt)(15 downto 0));
+							memb_wdata_skid_strobe <= "0011";
+						else
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt)(15 downto 0)) & x"0000";
+							memb_wdata_skid_strobe <= "1100";
+						end if;
+						memb_wdata_skid_valid <= '1';
+						
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
