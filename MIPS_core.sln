@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{1617981A-8EA0-45C1-BBB9-A360BB4976CD}") = "MIPS_core", "MIPS_core\MIPS_core.vhdproj", "{B2DF4F95-FDA6-4E3C-ACA8-43EB82C995D9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B2DF4F95-FDA6-4E3C-ACA8-43EB82C995D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2DF4F95-FDA6-4E3C-ACA8-43EB82C995D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2DF4F95-FDA6-4E3C-ACA8-43EB82C995D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2DF4F95-FDA6-4E3C-ACA8-43EB82C995D9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {34ABFD63-B114-4A7A-8D6D-53E5F9FDBB17}
+	EndGlobalSection
+EndGlobal

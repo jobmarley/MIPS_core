@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <CustomProjectExtensionsPath>$(LocalAppData)\CustomProjectSystems\vhdl4vs.ProjectType\</CustomProjectExtensionsPath>
+    <ProjectGuid>b2df4f95-fda6-4e3c-aca8-43eb82c995d9</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(CustomProjectExtensionsPath)vhdl4vsProjectType.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;$(LibraryPaths)</LibraryPaths>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;$(LibraryPaths)</LibraryPaths>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="cache\cache_memory_coe_generator.py" />
+    <None Include="core\axi_lite_adapter\axi_lite_adapter_test_data.coe" />
+    <None Include="core\test\core_test_traffic_address.coe" />
+    <None Include="core\test\core_test_traffic_control.coe" />
+    <None Include="core\test\core_test_traffic_data.coe" />
+    <None Include="core\test\core_test_traffic_mask.coe" />
+    <None Include="core\test\core_test_traffic_coe_generator.py" />
+    <None Include="debugger\test\debugger_test_traffic_address.coe" />
+    <None Include="debugger\test\debugger_test_traffic_control.coe" />
+    <None Include="debugger\test\debugger_test_traffic_data.coe" />
+    <None Include="debugger\test\debugger_test_traffic_mask.coe" />
+    <None Include="debugger\test\control_coe_generator.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <VHDLSource Include="cache\cache_performance_test.vhd" />
+    <VHDLSource Include="core\axi_helper.vhd" />
+    <VHDLSource Include="cache\cache_design_test.vhd" />
+    <VHDLSource Include="cache\cache_memory.vhd" />
+    <VHDLSource Include="core\axi_lite_adapter\axi_lite_adapter_test_design.vhd" />
+    <VHDLSource Include="core\axi_lite_adapter\axi_lite_adapter.vhd" />
+    <VHDLSource Include="core\mips_core.vhd" />
+    <VHDLSource Include="core\mips_execution_unit.vhd" />
+    <VHDLSource Include="core\mips_core_test.vhd" />
+    <VHDLSource Include="core\mips_utils.vhd" />
+    <VHDLSource Include="core\skid_buffer.vhd" />
+    <VHDLSource Include="core\xdma_test.vhd" />
+    <VHDLSource Include="debugger\mips_debugger.vhd" />
+    <VHDLSource Include="debugger\mips_debugger_test.vhd" />
+  </ItemGroup>
+  <Import Project="$(CustomProjectExtensionsPath)vhdl4vsProjectType.targets" />
+</Project>
