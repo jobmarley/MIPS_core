@@ -31,14 +31,14 @@ use IEEE.STD_LOGIC_1164.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity mips_execution_unit_test_top is
+entity mips_core_unit_test is
 --  Port ( );
-end mips_execution_unit_test_top;
+end mips_core_unit_test;
 
-architecture mips_execution_unit_test_top_behavioral of mips_execution_unit_test_top is
+architecture mips_core_unit_test_behavioral of mips_core_unit_test is
 component mips_exec_test_design is
   end component mips_exec_test_design;
 begin
 mips_exec_test_design_i: component mips_exec_test_design
  ;
-end mips_execution_unit_test_top_behavioral;
+end mips_core_unit_test_behavioral;
