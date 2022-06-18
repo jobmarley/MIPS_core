@@ -10,7 +10,7 @@ entity mips_debugger is
 		register_out : in std_logic_vector(31 downto 0);
 		register_in : out std_logic_vector(31 downto 0);
 		register_write : out std_logic;
-		register_address : out std_logic_vector(4 downto 0);
+		register_address : out std_logic_vector(5 downto 0);
 			
 		processor_enable : out std_logic;
 	
@@ -160,8 +160,12 @@ begin
 							s_axi_rdata_reg_next <= x"000000" & leds_reg;
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_resp;
-						elsif s_axi_araddr(11 downto 7) = "00001" then
-							register_address <= s_axi_araddr(6 downto 2);
+						elsif s_axi_araddr(11 downto 7) = "00001" then -- REGISTERS
+							register_address <= '0' & s_axi_araddr(6 downto 2);
+							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
+							debugger_state_next <= debugger_state_read_reg;
+						elsif s_axi_araddr(11 downto 7) = "00010" then -- COP0
+							register_address <= '1' & s_axi_araddr(6 downto 2);
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_reg;
 						else
@@ -181,7 +185,11 @@ begin
 								leds_reg_next <= s_axi_wdata(7 downto 0);
 							end if;
 						elsif s_axi_araddr(11 downto 7) = "00001" then
-							register_address <= s_axi_araddr(6 downto 2);
+							register_address <= '0' & s_axi_araddr(6 downto 2);	-- REGISTERS
+							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
+							register_write <= '1';
+						elsif s_axi_araddr(11 downto 7) = "00010" then
+							register_address <= '1' & s_axi_araddr(6 downto 2); -- COP0
 							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
 							register_write <= '1';
 						else

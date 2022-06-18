@@ -121,7 +121,7 @@ architecture mips_core_behavioral of mips_core is
 		register_out : out std_logic_vector(31 downto 0);
 		register_in : in std_logic_vector(31 downto 0);
 		register_write : in std_logic;
-		register_address : in std_logic_vector(4 downto 0);
+		register_address : in std_logic_vector(5 downto 0);
 	
 	
 		-- memory port a
@@ -206,7 +206,7 @@ architecture mips_core_behavioral of mips_core is
 	signal register_out : std_logic_vector(31 downto 0);
 	signal register_in : std_logic_vector(31 downto 0);
 	signal register_write : std_logic;
-	signal register_address : std_logic_vector(4 downto 0);
+	signal register_address : std_logic_vector(5 downto 0);
 	signal processor_enable : std_logic;
 begin
 
