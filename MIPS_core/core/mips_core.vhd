@@ -176,7 +176,7 @@ architecture mips_core_behavioral of mips_core is
 			register_out : in std_logic_vector(31 downto 0);
 			register_in : out std_logic_vector(31 downto 0);
 			register_write : out std_logic;
-			register_address : out std_logic_vector(4 downto 0);
+			register_address : out std_logic_vector(5 downto 0);
 			
 			processor_enable : out std_logic;
 	
