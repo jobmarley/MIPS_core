@@ -167,11 +167,15 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	constant instr_addiu_opc : instruction_i_t := ( opcode => "001001", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_and_opc : instruction_r_t := ( opcode => "000000", funct => "100100", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_andi_opc : instruction_i_t := ( opcode => "001100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
-	constant instr_div_opc : instruction_r_t := ( opcode => "000000", funct => "011010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
-	constant instr_divu_opc : instruction_r_t := ( opcode => "000000", funct => "011011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_div_opc : instruction_r_t := ( opcode => "000000", funct => "011010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_divu_opc : instruction_r_t := ( opcode => "000000", funct => "011011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
 	constant instr_mul_opc : instruction_r_t := ( opcode => "011100", funct => "000010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_mult_opc : instruction_r_t := ( opcode => "000000", funct => "011000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
 	constant instr_multu_opc : instruction_r_t := ( opcode => "000000", funct => "011001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_madd_opc : instruction_r_t := ( opcode => "011100", funct => "000000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_maddu_opc : instruction_r_t := ( opcode => "011100", funct => "000001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_msub_opc : instruction_r_t := ( opcode => "011100", funct => "000100", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_msubu_opc : instruction_r_t := ( opcode => "011100", funct => "000101", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
 	constant instr_noop_opc : instruction_r_t := ( opcode => "000000", funct => "000000", shamt => (others => '0'), rs => (others => '0'), rt => (others => '0'), rd => (others => '0') );
 	constant instr_or_opc : instruction_r_t := ( opcode => "000000", funct => "100101", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_ori_opc : instruction_i_t := ( opcode => "001101", rs => (others => '-'), rt => (others => '-'), immediate => (others => '-') );
@@ -184,6 +188,7 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	constant instr_subu_opc : instruction_r_t := ( opcode => "000000", funct => "100011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_xor_opc : instruction_r_t := ( opcode => "000000", funct => "100110", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_xori_opc : instruction_i_t := ( opcode => "001110", rs => (others => '-'), rt => (others => '-'), immediate => (others => '-') );
+	constant instr_nor_opc : instruction_r_t := ( opcode => "000000", funct => "100111", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	
 	constant instr_slt_opc : instruction_r_t := ( opcode => "000000", funct => "101010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_slti_opc : instruction_i_t := ( opcode => "001010", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
@@ -229,14 +234,22 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	constant instr_sb_opc : instruction_i_t := ( opcode => "101000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_sh_opc : instruction_i_t := ( opcode => "101001", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_sw_opc : instruction_i_t := ( opcode => "101011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sc_opc : instruction_i_t := ( opcode => "111000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_mfc0_opc : instruction_cop0_t := ( opcode => "010000", funct => "00000", rt => (others => '-'), rd => (others => '-'), zero => (others => '0'), sel => "---" );
 	constant instr_mtc0_opc : instruction_cop0_t := ( opcode => "010000", funct => "00100", rt => (others => '-'), rd => (others => '-'), zero => (others => '0'), sel => "---" );
+	constant instr_ll_opc : instruction_i_t := ( opcode => "110000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lwl_opc : instruction_i_t := ( opcode => "100010", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lwr_opc : instruction_i_t := ( opcode => "100110", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_movn_opc : instruction_r_t := ( opcode => "000000", funct => "001011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_movz_opc : instruction_r_t := ( opcode => "000000", funct => "001010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	
 	constant instr_syscall_opc : instruction_r_t := ( opcode => "000000", funct => "001100", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_break_opc : instruction_r_t := ( opcode => "000000", funct => "001101", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 		
 	constant instr_cache_opc : instruction_i_t := ( opcode => "101111", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_pref_opc : instruction_i_t := ( opcode => "110011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_deret_opc : instruction_r_t := ( opcode => "010000", funct => "011111", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
+	constant instr_eret_opc : instruction_r_t := ( opcode => "010000", funct => "011000", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
 	
 	-- registers
 	signal registers : register_array_t := (others => x"00000000");
@@ -262,7 +275,14 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 		return signed(registers(to_integer(unsigned(r)))); 
 	end function;
 			
-	type load_type_t is (load_type_byte_signed, load_type_byte_unsigned, load_type_halfword_signed, load_type_halfword_unsigned, load_type_word_unsigned);
+	type load_type_t is (
+		load_type_byte_signed,
+		load_type_byte_unsigned,
+		load_type_halfword_signed,
+		load_type_halfword_unsigned,
+		load_type_word_unsigned,
+		load_type_word_left,
+		load_type_word_right);
 	
 	signal load_pending : boolean := FALSE;
 	signal load_pending_next : boolean := FALSE;
@@ -648,6 +668,29 @@ begin
 							end if;
 						when load_type_word_unsigned =>
 							registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data;
+					
+						-- NOTE: those two are dependent on endianess
+						when load_type_word_left =>
+							if load_address(1 downto 0) = "00" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data(7 downto 0) & registers(to_integer(unsigned(load_pending_reg)))(23 downto 0);
+							elsif load_address(1 downto 0) = "01" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data(15 downto 0) & registers(to_integer(unsigned(load_pending_reg)))(15 downto 0);
+							elsif load_address(1 downto 0) = "10" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data(23 downto 0) & registers(to_integer(unsigned(load_pending_reg)))(7 downto 0);
+							elsif load_address(1 downto 0) = "11" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data;
+							end if;
+						when load_type_word_right =>
+							if load_address(1 downto 0) = "00" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data;
+							elsif load_address(1 downto 0) = "01" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= registers(to_integer(unsigned(load_pending_reg)))(31 downto 24) & memb_rdata_skid_data(31 downto 8);
+							elsif load_address(1 downto 0) = "10" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= registers(to_integer(unsigned(load_pending_reg)))(31 downto 16) & memb_rdata_skid_data(31 downto 16);
+							elsif load_address(1 downto 0) = "11" then
+								registers_next(to_integer(unsigned(load_pending_reg))) <= registers(to_integer(unsigned(load_pending_reg)))(31 downto 8) & memb_rdata_skid_data(31 downto 24);
+							end if;
+							
 					end case;
 				end if;
 					
@@ -748,7 +791,47 @@ begin
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
-					end if;				
+					end if;		
+				elsif slv_compare(instruction_to_slv(instr_madd_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
+						vec64 := std_logic_vector(signed(vec64) + signed(register_hi & register_lo));
+						register_lo_next <= vec64(31 downto 0);
+						register_hi_next <= vec64(63 downto 32);
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;	
+				elsif slv_compare(instruction_to_slv(instr_maddu_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vec64 := std_logic_vector(get_reg_u(instruction_data_r.rs) * get_reg_u(instruction_data_r.rt));
+						vec64 := std_logic_vector(unsigned(vec64) + unsigned(register_hi & register_lo));
+						register_lo_next <= vec64(31 downto 0);
+						register_hi_next <= vec64(63 downto 32);
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;			
+				elsif slv_compare(instruction_to_slv(instr_msub_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
+						vec64 := std_logic_vector(signed(vec64) - signed(register_hi & register_lo));
+						register_lo_next <= vec64(31 downto 0);
+						register_hi_next <= vec64(63 downto 32);
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;	
+				elsif slv_compare(instruction_to_slv(instr_msubu_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vec64 := std_logic_vector(get_reg_u(instruction_data_r.rs) * get_reg_u(instruction_data_r.rt));
+						vec64 := std_logic_vector(unsigned(vec64) - unsigned(register_hi & register_lo));
+						register_lo_next <= vec64(31 downto 0);
+						register_hi_next <= vec64(63 downto 32);
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;		
 				elsif slv_compare(instruction_to_slv(instr_noop_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 					
@@ -797,6 +880,14 @@ begin
 				elsif slv_compare(instruction_to_slv(instr_xori_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) xor (unsigned(sign_extend(instruction_data_i.immediate, 32))));
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+				-- nor
+				elsif slv_compare(instruction_to_slv(instr_nor_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) nor get_reg_u(instruction_data_r.rt));
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
@@ -1007,14 +1098,14 @@ begin
 				-- jump
 				elsif slv_compare(instruction_to_slv(instr_j_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						pc_next <= pc(31 downto 28) & instruction_data_j.address & "00";
+						pc_next <= std_logic_vector(unsigned(pc) + 4)(31 downto 28) & instruction_data_j.address & "00";
 						--instruction_data_skid_discard <= '1';
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
 				elsif slv_compare(instruction_to_slv(instr_jal_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						pc_next <= pc(31 downto 28) & instruction_data_j.address & "00";
+						pc_next <= std_logic_vector(unsigned(pc) + 4)(31 downto 28) & instruction_data_j.address & "00";
 						registers_next(31) <= std_logic_vector(unsigned(pc) + 8);
 						--instruction_data_skid_discard <= '1';
 						instruction_address_skid_valid <= '1';
@@ -1022,7 +1113,10 @@ begin
 					end if;
 				elsif slv_compare(instruction_to_slv(instr_jalr_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						pc_next <= std_logic_vector(get_reg_u(instruction_data_i.rs)(31 downto 2)) & "00";
+						pc_next <= std_logic_vector(get_reg_u(instruction_data_i.rs));
+						if get_reg_u(instruction_data_i.rs)(1 downto 0) /= "00" then
+							panic_next <= '1';
+						end if;
 						registers_next(31) <= std_logic_vector(unsigned(pc) + 8);
 						--instruction_data_skid_discard <= '1';
 						instruction_address_skid_valid <= '1';
@@ -1030,7 +1124,10 @@ begin
 					end if;
 				elsif slv_compare(instruction_to_slv(instr_jr_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						pc_next <= std_logic_vector(get_reg_u(instruction_data_i.rs)(31 downto 2)) & "00";
+						pc_next <= std_logic_vector(get_reg_u(instruction_data_i.rs));
+						if get_reg_u(instruction_data_i.rs)(1 downto 0) /= "00" then
+							panic_next <= '1';
+						end if;
 						--instruction_data_skid_discard <= '1';
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
@@ -1161,6 +1258,38 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
+				elsif slv_compare(instruction_to_slv(instr_ll_opc), vinstruction_data) then
+					panic_next <= '1';
+				elsif slv_compare(instruction_to_slv(instr_lwl_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
+						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+						
+						memb_raddress_skid_data <= vec32(31 downto 2) & "00";
+						memb_raddress_skid_valid <= '1';
+														
+						load_type_next <= load_type_word_left;
+						load_pending_reg_next <= instruction_data_i.rt;
+						load_pending_next <= TRUE;
+						
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+				elsif slv_compare(instruction_to_slv(instr_lwr_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
+						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+						
+						memb_raddress_skid_data <= vec32(31 downto 2) & "00";
+						memb_raddress_skid_valid <= '1';
+														
+						load_type_next <= load_type_word_right;
+						load_pending_reg_next <= instruction_data_i.rt;
+						load_pending_next <= TRUE;
+						
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
 				elsif slv_compare(instruction_to_slv(instr_sb_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
@@ -1244,6 +1373,24 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
+				--elsif slv_compare(instruction_to_slv(instr_sc_opc), vinstruction_data) then
+				--	if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
+				--		vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+				--		if vec32(1 downto 0) /= "00" then
+				--			address_error_exception_next <= '1';
+				--			panic_next <= '1';
+				--		else
+				--								
+				--			memb_waddress_skid_data <= vec32(31 downto 2) & "00";
+				--			memb_waddress_skid_valid <= '1';
+				--			memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
+				--			memb_wdata_skid_strobe <= "1111";
+				--			memb_wdata_skid_valid <= '1';
+				--		end if;
+				--		pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+				--		instruction_address_skid_valid <= '1';
+				--		instruction_data_skid_ready <= '1';
+				--	end if;
 				elsif slv_compare(instruction_to_slv(instr_mfc0_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						registers_next(to_integer(unsigned(instruction_data_cop0.rt))) <= cp0_registers(to_integer(unsigned(instruction_data_cop0.rd)));
@@ -1259,9 +1406,34 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
+				elsif slv_compare(instruction_to_slv(instr_movn_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						if get_reg_u(instruction_data_i.rt) /= 0 then
+							registers_next(to_integer(unsigned(instruction_data_r.rd))) <= registers(to_integer(unsigned(instruction_data_r.rs)));
+						end if;
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+				elsif slv_compare(instruction_to_slv(instr_movz_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						if get_reg_u(instruction_data_i.rt) = 0 then
+							registers_next(to_integer(unsigned(instruction_data_r.rd))) <= registers(to_integer(unsigned(instruction_data_r.rs)));
+						end if;
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
 					
 				-- cache
 				elsif slv_compare(instruction_to_slv(instr_cache_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						-- does nothing for now
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+				elsif slv_compare(instruction_to_slv(instr_pref_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						-- does nothing for now
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1289,6 +1461,8 @@ begin
 					end if;
 							
 				elsif slv_compare(instruction_to_slv(instr_deret_opc), vinstruction_data) then
+					panic_next <= '1';
+				elsif slv_compare(instruction_to_slv(instr_eret_opc), vinstruction_data) then
 					panic_next <= '1';
 				else
 					-- exception
