@@ -169,6 +169,7 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	constant instr_andi_opc : instruction_i_t := ( opcode => "001100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_div_opc : instruction_r_t := ( opcode => "000000", funct => "011010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_divu_opc : instruction_r_t := ( opcode => "000000", funct => "011011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_mul_opc : instruction_r_t := ( opcode => "011100", funct => "000010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_mult_opc : instruction_r_t := ( opcode => "000000", funct => "011000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
 	constant instr_multu_opc : instruction_r_t := ( opcode => "000000", funct => "011001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
 	constant instr_noop_opc : instruction_r_t := ( opcode => "000000", funct => "000000", shamt => (others => '0'), rs => (others => '0'), rt => (others => '0'), rd => (others => '0') );
@@ -701,6 +702,14 @@ begin
 						instruction_data_skid_ready <= '1';
 					end if;
 				-- mult
+				elsif slv_compare(instruction_to_slv(instr_mul_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
+						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= vec64(31 downto 0);
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
 				elsif slv_compare(instruction_to_slv(instr_mult_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
