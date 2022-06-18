@@ -66,25 +66,37 @@ entity mips_core is
 	m_axil_mema_arvalid : out STD_LOGIC;
 	m_axil_mema_rready : out STD_LOGIC;
 	-- memory port b
-	m_axil_memb_awready : in STD_LOGIC;
-	m_axil_memb_wready : in STD_LOGIC;
-	m_axil_memb_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axil_memb_bvalid : in STD_LOGIC;
-	m_axil_memb_arready : in STD_LOGIC;
-	m_axil_memb_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axil_memb_rvalid : in STD_LOGIC;
-	m_axil_memb_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axil_memb_awvalid : out STD_LOGIC;
-	m_axil_memb_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	m_axil_memb_wvalid : out STD_LOGIC;
-	m_axil_memb_bready : out STD_LOGIC;
-	m_axil_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axil_memb_arvalid : out STD_LOGIC;
-	m_axil_memb_rready : out STD_LOGIC;
+	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+	m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+	m_axi_memb_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+	m_axi_memb_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+	m_axi_memb_arlock : out STD_LOGIC;
+	m_axi_memb_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	m_axi_memb_arready : in STD_LOGIC;
+	m_axi_memb_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	m_axi_memb_arvalid : out STD_LOGIC;
+	m_axi_memb_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+	m_axi_memb_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+	m_axi_memb_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+	m_axi_memb_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+	m_axi_memb_awlock : out STD_LOGIC;
+	m_axi_memb_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	m_axi_memb_awready : in STD_LOGIC;
+	m_axi_memb_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	m_axi_memb_awvalid : out STD_LOGIC;
+	m_axi_memb_bready : out STD_LOGIC;
+	m_axi_memb_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+	m_axi_memb_bvalid : in STD_LOGIC;
+	m_axi_memb_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
+	m_axi_memb_rlast : in STD_LOGIC;
+	m_axi_memb_rready : out STD_LOGIC;
+	m_axi_memb_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+	m_axi_memb_rvalid : in STD_LOGIC;
+	m_axi_memb_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
+	m_axi_memb_wlast : out STD_LOGIC;
+	m_axi_memb_wready : in STD_LOGIC;
+	m_axi_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
+	m_axi_memb_wvalid : out STD_LOGIC;
 	
 	-- AXI lite debug
 	s_axil_debug_awready : out STD_LOGIC;
@@ -144,26 +156,39 @@ architecture mips_core_behavioral of mips_core is
 		m_axil_mema_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
 		m_axil_mema_arvalid : out STD_LOGIC;
 		m_axil_mema_rready : out STD_LOGIC;
+		-- this is full AXI4 because we need support for exclusive access for atomic operations
 		-- memory port b
-		m_axil_memb_awready : in STD_LOGIC;
-		m_axil_memb_wready : in STD_LOGIC;
-		m_axil_memb_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-		m_axil_memb_bvalid : in STD_LOGIC;
-		m_axil_memb_arready : in STD_LOGIC;
-		m_axil_memb_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-		m_axil_memb_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-		m_axil_memb_rvalid : in STD_LOGIC;
-		m_axil_memb_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-		m_axil_memb_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-		m_axil_memb_awvalid : out STD_LOGIC;
-		m_axil_memb_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-		m_axil_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-		m_axil_memb_wvalid : out STD_LOGIC;
-		m_axil_memb_bready : out STD_LOGIC;
-		m_axil_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-		m_axil_memb_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-		m_axil_memb_arvalid : out STD_LOGIC;
-		m_axil_memb_rready : out STD_LOGIC;
+		m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+		m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+		m_axi_memb_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+		m_axi_memb_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+		m_axi_memb_arlock : out STD_LOGIC;
+		m_axi_memb_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		m_axi_memb_arready : in STD_LOGIC;
+		m_axi_memb_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		m_axi_memb_arvalid : out STD_LOGIC;
+		m_axi_memb_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+		m_axi_memb_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+		m_axi_memb_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+		m_axi_memb_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+		m_axi_memb_awlock : out STD_LOGIC;
+		m_axi_memb_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		m_axi_memb_awready : in STD_LOGIC;
+		m_axi_memb_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		m_axi_memb_awvalid : out STD_LOGIC;
+		m_axi_memb_bready : out STD_LOGIC;
+		m_axi_memb_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+		m_axi_memb_bvalid : in STD_LOGIC;
+		m_axi_memb_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
+		m_axi_memb_rlast : in STD_LOGIC;
+		m_axi_memb_rready : out STD_LOGIC;
+		m_axi_memb_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+		m_axi_memb_rvalid : in STD_LOGIC;
+		m_axi_memb_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
+		m_axi_memb_wlast : out STD_LOGIC;
+		m_axi_memb_wready : in STD_LOGIC;
+		m_axi_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
+		m_axi_memb_wvalid : out STD_LOGIC;
 		debug : out std_logic_vector(7 downto 0)
 		);
 	end component;
@@ -240,25 +265,37 @@ begin
 		m_axil_mema_arvalid => m_axil_mema_arvalid,
 		m_axil_mema_rready => m_axil_mema_rready,
 	
-		m_axil_memb_awready => m_axil_memb_awready,
-		m_axil_memb_wready => m_axil_memb_wready,
-		m_axil_memb_bresp => m_axil_memb_bresp,
-		m_axil_memb_bvalid => m_axil_memb_bvalid,
-		m_axil_memb_arready => m_axil_memb_arready,
-		m_axil_memb_rdata => m_axil_memb_rdata,
-		m_axil_memb_rresp => m_axil_memb_rresp,
-		m_axil_memb_rvalid => m_axil_memb_rvalid,
-		m_axil_memb_awaddr => m_axil_memb_awaddr,
-		m_axil_memb_awprot => m_axil_memb_awprot,
-		m_axil_memb_awvalid => m_axil_memb_awvalid,
-		m_axil_memb_wdata => m_axil_memb_wdata,
-		m_axil_memb_wstrb => m_axil_memb_wstrb,
-		m_axil_memb_wvalid => m_axil_memb_wvalid,
-		m_axil_memb_bready => m_axil_memb_bready,
-		m_axil_memb_araddr => m_axil_memb_araddr,
-		m_axil_memb_arprot => m_axil_memb_arprot,
-		m_axil_memb_arvalid => m_axil_memb_arvalid,
-		m_axil_memb_rready => m_axil_memb_rready
+		m_axi_memb_araddr => m_axi_memb_araddr,
+		m_axi_memb_arburst => m_axi_memb_arburst,
+		m_axi_memb_arcache => m_axi_memb_arcache,
+		m_axi_memb_arlen => m_axi_memb_arlen,
+		m_axi_memb_arlock => m_axi_memb_arlock,
+		m_axi_memb_arprot => m_axi_memb_arprot,
+		m_axi_memb_arready => m_axi_memb_arready,
+		m_axi_memb_arsize => m_axi_memb_arsize,
+		m_axi_memb_arvalid => m_axi_memb_arvalid,
+		m_axi_memb_awaddr => m_axi_memb_awaddr,
+		m_axi_memb_awburst => m_axi_memb_awburst,
+		m_axi_memb_awcache => m_axi_memb_awcache,
+		m_axi_memb_awlen => m_axi_memb_awlen,
+		m_axi_memb_awlock => m_axi_memb_awlock,
+		m_axi_memb_awprot => m_axi_memb_awprot,
+		m_axi_memb_awready => m_axi_memb_awready,
+		m_axi_memb_awsize => m_axi_memb_awsize,
+		m_axi_memb_awvalid => m_axi_memb_awvalid,
+		m_axi_memb_bready => m_axi_memb_bready,
+		m_axi_memb_bresp => m_axi_memb_bresp,
+		m_axi_memb_bvalid => m_axi_memb_bvalid,
+		m_axi_memb_rdata => m_axi_memb_rdata,
+		m_axi_memb_rlast => m_axi_memb_rlast,
+		m_axi_memb_rready => m_axi_memb_rready,
+		m_axi_memb_rresp => m_axi_memb_rresp,
+		m_axi_memb_rvalid => m_axi_memb_rvalid,
+		m_axi_memb_wdata => m_axi_memb_wdata,
+		m_axi_memb_wlast => m_axi_memb_wlast,
+		m_axi_memb_wready => m_axi_memb_wready,
+		m_axi_memb_wstrb => m_axi_memb_wstrb,
+		m_axi_memb_wvalid => m_axi_memb_wvalid
 		--,debug => LEDS
 	);
 	mips_debugger_i : mips_debugger port map(
