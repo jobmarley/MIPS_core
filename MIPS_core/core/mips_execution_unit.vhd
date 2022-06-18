@@ -582,7 +582,7 @@ begin
 			-- enable select the access to the register file
 			if register_address = "000000" then -- use 0 as program counter
 				register_out_next <= pc;
-			else if register_address(5) = '0' then
+			elsif register_address(5) = '0' then
 				register_out_next <= registers(to_integer(unsigned(register_address(4 downto 0))));
 			else
 				register_out_next <= cp0_registers(to_integer(unsigned(register_address(4 downto 0))));
@@ -591,7 +591,7 @@ begin
 			if register_write = '1' then
 				if register_address = "000000" then -- use 0 as program counter
 					pc_next <= register_in;
-				else if register_address(5) = '0' then
+				elsif register_address(5) = '0' then
 					registers_next(to_integer(unsigned(register_address(4 downto 0)))) <= register_in;
 				else
 					cp0_registers_next(to_integer(unsigned(register_address(4 downto 0)))) <= register_in;
