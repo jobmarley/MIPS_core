@@ -38,26 +38,41 @@ entity mips_execution_unit is
 	m_axil_mema_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
 	m_axil_mema_arvalid : out STD_LOGIC;
 	m_axil_mema_rready : out STD_LOGIC;
+	
+	-- this is full AXI4 because we need support for exclusive access for atomic operations
 	-- memory port b
-	m_axil_memb_awready : in STD_LOGIC;
-	m_axil_memb_wready : in STD_LOGIC;
-	m_axil_memb_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axil_memb_bvalid : in STD_LOGIC;
-	m_axil_memb_arready : in STD_LOGIC;
-	m_axil_memb_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axil_memb_rvalid : in STD_LOGIC;
-	m_axil_memb_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axil_memb_awvalid : out STD_LOGIC;
-	m_axil_memb_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	m_axil_memb_wvalid : out STD_LOGIC;
-	m_axil_memb_bready : out STD_LOGIC;
-	m_axil_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axil_memb_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axil_memb_arvalid : out STD_LOGIC;
-	m_axil_memb_rready : out STD_LOGIC;
+	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+    m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+    m_axi_memb_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+    m_axi_memb_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+    m_axi_memb_arlock : out STD_LOGIC;
+    m_axi_memb_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+    m_axi_memb_arready : in STD_LOGIC;
+    m_axi_memb_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+    m_axi_memb_arvalid : out STD_LOGIC;
+    m_axi_memb_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+    m_axi_memb_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+    m_axi_memb_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+    m_axi_memb_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+    m_axi_memb_awlock : out STD_LOGIC;
+    m_axi_memb_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+    m_axi_memb_awready : in STD_LOGIC;
+    m_axi_memb_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+    m_axi_memb_awvalid : out STD_LOGIC;
+    m_axi_memb_bready : out STD_LOGIC;
+    m_axi_memb_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+    m_axi_memb_bvalid : in STD_LOGIC;
+    m_axi_memb_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
+    m_axi_memb_rlast : in STD_LOGIC;
+    m_axi_memb_rready : out STD_LOGIC;
+    m_axi_memb_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+    m_axi_memb_rvalid : in STD_LOGIC;
+    m_axi_memb_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
+    m_axi_memb_wlast : out STD_LOGIC;
+    m_axi_memb_wready : in STD_LOGIC;
+    m_axi_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
+    m_axi_memb_wvalid : out STD_LOGIC;
+	
 	
 	debug : out std_logic_vector(7 downto 0)
 	);
@@ -281,6 +296,7 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 		load_type_halfword_signed,
 		load_type_halfword_unsigned,
 		load_type_word_unsigned,
+		load_type_word_exclusive,
 		load_type_word_left,
 		load_type_word_right);
 	
@@ -292,6 +308,10 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	signal load_type_next : load_type_t := load_type_byte_signed;
 	signal load_address : std_logic_vector(31 downto 0) := x"00000000";
 	signal load_address_next : std_logic_vector(31 downto 0) := x"00000000";
+	signal store_pending : boolean := FALSE;
+	signal store_pending_next : boolean := FALSE;
+	signal store_pending_reg : std_logic_vector(4 downto 0);
+	signal store_pending_reg_next : std_logic_vector(4 downto 0);
 	
 	signal panic : std_logic := '0';
 	signal panic_next : std_logic := '0';
@@ -324,10 +344,12 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	
 	-- memb rdata skid
 	signal memb_rdata_skid_data : std_logic_vector(31 downto 0);
+	signal memb_rdata_skid_resp : std_logic_vector(1 downto 0);
 	signal memb_rdata_skid_valid : std_logic;
 	signal memb_rdata_skid_ready : std_logic;
 	-- memb raddress skid
 	signal memb_raddress_skid_data : std_logic_vector(31 downto 0);
+	signal memb_raddress_skid_lock : std_logic;
 	signal memb_raddress_skid_valid : std_logic;
 	signal memb_raddress_skid_ready : std_logic;
 	-- memb wdata skid
@@ -337,6 +359,7 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	signal memb_wdata_skid_ready : std_logic;
 	-- memb waddress skid
 	signal memb_waddress_skid_data : std_logic_vector(31 downto 0);
+	signal memb_waddress_skid_lock : std_logic;
 	signal memb_waddress_skid_valid : std_logic;
 	signal memb_waddress_skid_ready : std_logic;
 	
@@ -363,6 +386,18 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	signal force_fetch : std_logic;
 	signal force_fetch_next : std_logic;
 begin
+	
+    m_axi_memb_arburst <= "00";
+    m_axi_memb_awburst <= "00";
+    m_axi_memb_arsize <= "010";	-- 32bits
+    m_axi_memb_awsize <= "010";	-- 32bits
+    m_axi_memb_arlen <= x"00";	-- 1 beat
+    m_axi_memb_awlen <= x"00";	-- 1 beat
+    m_axi_memb_wlast <= '1';
+    m_axi_memb_arprot <= "000";
+    m_axi_memb_awprot <= "000";
+    m_axi_memb_arcache <= "0000";
+    m_axi_memb_awcache <= "0000";
 	
 	debug(0) <= force_fetch;
 	debug(1) <= instruction_data_skid_valid;
@@ -405,32 +440,36 @@ begin
 		);
 	
 	memb_rdata_skid : skid_buffer
-		generic map(data_width => 32)
+		generic map(data_width => 32 + 2) -- rdata + rresp
 		port map(
 			resetn => resetn,
 			clock => clock,
 	
-			in_valid => m_axil_memb_rvalid,
-			in_ready => m_axil_memb_rready,
-			in_data => m_axil_memb_rdata,
+			in_valid => m_axi_memb_rvalid,
+			in_ready => m_axi_memb_rready,
+			in_data(31 downto 0) => m_axi_memb_rdata,
+			in_data(33 downto 32) => m_axi_memb_rresp,
 		
 			out_valid => memb_rdata_skid_valid,
 			out_ready => memb_rdata_skid_ready,
-			out_data => memb_rdata_skid_data
+			out_data(31 downto 0) => memb_rdata_skid_data,
+			in_data(33 downto 32) => memb_rdata_skid_resp
 		);
 	memb_raddress_skid : skid_buffer
-		generic map(data_width => 32)
+		generic map(data_width => 32 + 1) -- address + lock
 		port map(
 			resetn => resetn,
 			clock => clock,
 	
 			in_valid => memb_raddress_skid_valid,
 			in_ready => memb_raddress_skid_ready,
-			in_data => memb_raddress_skid_data,
+			in_data(31 downto 0) => memb_raddress_skid_data,
+			in_data(32) => memb_raddress_skid_lock,
 		
-			out_valid => m_axil_memb_arvalid,
-			out_ready => m_axil_memb_arready,
-			out_data => m_axil_memb_araddr
+			out_valid => m_axi_memb_arvalid,
+			out_ready => m_axi_memb_arready,
+			out_data(31 downto 0) => m_axi_memb_araddr,
+			out_data(32) => m_axi_memb_arlock
 		);
 	memb_wdata_skid : skid_buffer
 		generic map(data_width => 32 + 4) -- data + strobe
@@ -443,24 +482,26 @@ begin
 			in_data(31 downto 0) => memb_wdata_skid_data,
 			in_data(35 downto 32) => memb_wdata_skid_strobe,
 		
-			out_valid => m_axil_memb_wvalid,
-			out_ready => m_axil_memb_wready,
-			out_data(31 downto 0) => m_axil_memb_wdata,
-			out_data(35 downto 32) => m_axil_memb_wstrb	
+			out_valid => m_axi_memb_wvalid,
+			out_ready => m_axi_memb_wready,
+			out_data(31 downto 0) => m_axi_memb_wdata,
+			out_data(35 downto 32) => m_axi_memb_wstrb	
 		);
 	memb_waddress_skid : skid_buffer
-		generic map(data_width => 32)
+		generic map(data_width => 32 + 1) -- address + lock
 		port map(
 			resetn => resetn,
 			clock => clock,
 	
 			in_valid => memb_waddress_skid_valid,
 			in_ready => memb_waddress_skid_ready,
-			in_data => memb_waddress_skid_data,
+			in_data(31 downto 0) => memb_waddress_skid_data,
+			in_data(32) => memb_waddress_skid_lock,
 		
-			out_valid => m_axil_memb_awvalid,
-			out_ready => m_axil_memb_awready,
-			out_data => m_axil_memb_awaddr
+			out_valid => m_axi_memb_awvalid,
+			out_ready => m_axi_memb_awready,
+			out_data(31 downto 0) => m_axi_memb_awaddr,
+			out_data(32) => m_axi_memb_awlock
 		);
 	
 	pc_debug <= unsigned(pc(29 downto 0)) & "00";
@@ -477,6 +518,8 @@ begin
 			load_pending_reg <= load_pending_reg_next;
 			load_type <= load_type_next;
 			load_address <= load_address_next;
+			store_pending <= store_pending_next;
+			store_pending_reg <= store_pending_reg_next;
 			
 			panic <= panic_next;
 			address_error_exception <= address_error_exception_next;
@@ -498,6 +541,8 @@ begin
 			cp0_registers,
 			load_pending,
 			load_pending_reg,
+			store_pending,
+			store_pending_reg,
 			load_type,
 			panic,
 			register_in,
@@ -514,8 +559,12 @@ begin
 			memb_raddress_skid_ready,
 			memb_rdata_skid_valid,
 			memb_rdata_skid_data,
+			memb_rdata_skid_resp,
 			memb_waddress_skid_ready,
-			memb_wdata_skid_ready
+			memb_wdata_skid_ready,
+		
+			m_axi_memb_bvalid,
+			m_axi_memb_bresp
 			) is
 		variable vinstruction_data : std_logic_vector(31 downto 0);
         variable instruction_data_r : instruction_r_t;
@@ -530,6 +579,8 @@ begin
 		
 		instruction_address_skid_valid <= '0';
 		instruction_data_skid_ready <= '0';
+		memb_raddress_skid_lock <= '0';
+		memb_waddress_skid_lock <= '0';
 			
 		-- memb rdata skid
 		memb_rdata_skid_ready <= '0';
@@ -552,9 +603,9 @@ begin
 		m_axil_mema_wvalid <= '0';
 		m_axil_mema_bready <= '0';
 		m_axil_mema_arprot <= (others => '0');
-		m_axil_memb_awprot <= (others => '0');
-		m_axil_memb_bready <= '1';
-		m_axil_memb_arprot <= (others => '0');
+		m_axi_memb_awprot <= (others => '0');
+		m_axi_memb_bready <= '1';
+		m_axi_memb_arprot <= (others => '0');
 		
 		-- keep the same state
 		pc_next <= pc;
@@ -570,6 +621,9 @@ begin
 		load_pending_reg_next <= load_pending_reg;
 		load_type_next <= load_type;
 		load_address_next <= load_address;
+		store_pending_next <= store_pending;
+		store_pending_reg_next <= store_pending_reg;
+		
 			
 		panic_next <= panic;
 		address_error_exception_next <= address_error_exception;
@@ -668,6 +722,11 @@ begin
 							end if;
 						when load_type_word_unsigned =>
 							registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data;
+						when load_type_word_exclusive =>
+							if memb_rdata_skid_resp /= AXI_RESP_EXOKAY then
+								panic_next <= '1';
+							end if;
+							registers_next(to_integer(unsigned(load_pending_reg))) <= memb_rdata_skid_data;
 					
 						-- NOTE: those two are dependent on endianess
 						when load_type_word_left =>
@@ -690,10 +749,18 @@ begin
 							elsif load_address(1 downto 0) = "11" then
 								registers_next(to_integer(unsigned(load_pending_reg))) <= registers(to_integer(unsigned(load_pending_reg)))(31 downto 8) & memb_rdata_skid_data(31 downto 24);
 							end if;
-							
 					end case;
 				end if;
-					
+			elsif store_pending = TRUE then
+				if m_axi_memb_bvalid = '1' then
+					store_pending_next <= FALSE;
+					if m_axi_memb_bresp = AXI_RESP_EXOKAY then
+						registers_next(to_integer(unsigned(store_pending_reg))) <= x"00000001";
+					else
+						registers_next(to_integer(unsigned(store_pending_reg))) <= x"00000000";
+					end if;
+				end if;
+				
 			elsif instruction_data_skid_valid = '1' then -- execute instruction
 				
 				vinstruction_data := instruction_data_skid_data;
@@ -1230,6 +1297,26 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
+				elsif slv_compare(instruction_to_slv(instr_ll_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
+						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+						if vec32(1 downto 0) /= "00" then
+							address_error_exception_next <= '1';
+							panic_next <= '1';
+						else
+								
+							memb_raddress_skid_data <= vec32(31 downto 2) & "00";
+							memb_raddress_skid_lock <= '1';
+							memb_raddress_skid_valid <= '1';
+														
+							load_type_next <= load_type_word_unsigned;
+							load_pending_reg_next <= instruction_data_i.rt;
+							load_pending_next <= TRUE;
+						end if;
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
 				elsif slv_compare(instruction_to_slv(instr_mfhi_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= register_hi;
@@ -1258,8 +1345,6 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_ll_opc), vinstruction_data) then
-					panic_next <= '1';
 				elsif slv_compare(instruction_to_slv(instr_lwl_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
@@ -1373,24 +1458,29 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				--elsif slv_compare(instruction_to_slv(instr_sc_opc), vinstruction_data) then
-				--	if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-				--		vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-				--		if vec32(1 downto 0) /= "00" then
-				--			address_error_exception_next <= '1';
-				--			panic_next <= '1';
-				--		else
-				--								
-				--			memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-				--			memb_waddress_skid_valid <= '1';
-				--			memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
-				--			memb_wdata_skid_strobe <= "1111";
-				--			memb_wdata_skid_valid <= '1';
-				--		end if;
-				--		pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-				--		instruction_address_skid_valid <= '1';
-				--		instruction_data_skid_ready <= '1';
-				--	end if;
+				elsif slv_compare(instruction_to_slv(instr_sc_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
+						vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+						if vec32(1 downto 0) /= "00" then
+							address_error_exception_next <= '1';
+							panic_next <= '1';
+						else
+								
+							memb_waddress_skid_data <= vec32(31 downto 2) & "00";
+							memb_waddress_skid_valid <= '1';
+							memb_waddress_skid_lock <= '1';
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
+							memb_wdata_skid_strobe <= "1111";
+							memb_wdata_skid_valid <= '1';
+						end if;
+						
+						store_pending_reg_next <= instruction_data_i.rt;
+						store_pending_next <= TRUE;
+						
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
 				elsif slv_compare(instruction_to_slv(instr_mfc0_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						registers_next(to_integer(unsigned(instruction_data_cop0.rt))) <= cp0_registers(to_integer(unsigned(instruction_data_cop0.rd)));
