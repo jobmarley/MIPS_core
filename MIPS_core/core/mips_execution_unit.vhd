@@ -190,15 +190,27 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	constant instr_sltiu_opc : instruction_i_t := ( opcode => "001011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_sltu_opc : instruction_r_t := ( opcode => "000000", funct => "101011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	
-	constant instr_beq_opc : instruction_i_t := ( opcode => "000100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
-	constant instr_bltz_opc : instruction_i_t := ( opcode => "000001", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
-	constant instr_bltzal_opc : instruction_i_t := ( opcode => "000001", rt => "10000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10000
-	constant instr_bgez_opc : instruction_i_t := ( opcode => "000001", rt => "00001", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00001
-	constant instr_bgezal_opc : instruction_i_t := ( opcode => "000001", rt => "10001", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10001
-	constant instr_bgtz_opc : instruction_i_t := ( opcode => "000111", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
-	constant instr_blez_opc : instruction_i_t := ( opcode => "000110", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
-	constant instr_bne_opc : instruction_i_t := ( opcode => "000101", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_clo_opc : instruction_r_t := ( opcode => "011100", funct => "100001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_clz_opc : instruction_r_t := ( opcode => "011100", funct => "100000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	
+	
+	constant instr_beq_opc : instruction_i_t := ( opcode => "000100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_beql_opc : instruction_i_t := ( opcode => "010100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_bltz_opc : instruction_i_t := ( opcode => "000001", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_bltzl_opc : instruction_i_t := ( opcode => "000001", rt => "00010", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00010
+	constant instr_bltzal_opc : instruction_i_t := ( opcode => "000001", rt => "10000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10000
+	constant instr_bltzall_opc : instruction_i_t := ( opcode => "000001", rt => "10010", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10010
+	constant instr_bgez_opc : instruction_i_t := ( opcode => "000001", rt => "00001", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00001
+	constant instr_bgezl_opc : instruction_i_t := ( opcode => "000001", rt => "00011", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00011
+	constant instr_bgezal_opc : instruction_i_t := ( opcode => "000001", rt => "10001", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10001
+	constant instr_bgezall_opc : instruction_i_t := ( opcode => "000001", rt => "10011", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10011
+	constant instr_bgtz_opc : instruction_i_t := ( opcode => "000111", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_bgtzl_opc : instruction_i_t := ( opcode => "010111", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_blez_opc : instruction_i_t := ( opcode => "000110", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_blezl_opc : instruction_i_t := ( opcode => "010110", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_bne_opc : instruction_i_t := ( opcode => "000101", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_bnel_opc : instruction_i_t := ( opcode => "010101", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+
 	constant instr_j_opc : instruction_j_t := ( opcode => "000010", address => (others => '-') );
 	constant instr_jal_opc : instruction_j_t := ( opcode => "000011", address => (others => '-') );
 	constant instr_jalr_opc : instruction_r_t := ( opcode => "000000", funct => "001001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '0'), rd => (others => '-') );
@@ -223,6 +235,9 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	constant instr_syscall_opc : instruction_r_t := ( opcode => "000000", funct => "001100", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_break_opc : instruction_r_t := ( opcode => "000000", funct => "001101", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 		
+	constant instr_cache_opc : instruction_i_t := ( opcode => "101111", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_deret_opc : instruction_r_t := ( opcode => "010000", funct => "011111", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
+	
 	-- registers
 	signal registers : register_array_t := (others => x"00000000");
 	signal registers_next : register_array_t := (others => x"00000000");
@@ -490,6 +505,7 @@ begin
         variable vec32 : std_logic_vector(31 downto 0);
         variable vec64 : std_logic_vector(63 downto 0);
 		variable vhandshake : BOOLEAN;
+		variable vzero_count : NATURAL;
 	begin
 		
 		instruction_address_skid_valid <= '0';
@@ -644,9 +660,10 @@ begin
 				instruction_data_cop0 := slv_to_instruction_cop0(vinstruction_data);
 				
 				-- add
+				-- NOTE: for all unsigned version, it does the same operation but does not trap on overflow
 				if slv_compare(instruction_to_slv(instr_add_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_s(instruction_data_r.rs) + get_reg_s(instruction_data_r.rt));
+						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) + get_reg_u(instruction_data_r.rt));
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
@@ -660,7 +677,7 @@ begin
 					end if;
 				elsif slv_compare(instruction_to_slv(instr_addi_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(get_reg_s(instruction_data_i.rs) + signed(instruction_data_i.immediate));
+						registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
@@ -867,12 +884,40 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-																													
+				-- count zero
+				elsif slv_compare(instruction_to_slv(instr_clo_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vzero_count := 32;
+						for i in 31 downto 0 loop
+							if get_reg_u(instruction_data_r.rs)(i) = '0' then
+								vzero_count := 31 - i;
+								exit;
+							end if;
+						end loop;
+						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(to_unsigned(vzero_count, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+				elsif slv_compare(instruction_to_slv(instr_clz_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						vzero_count := 32;
+						for i in 31 downto 0 loop
+							if get_reg_u(instruction_data_r.rs)(i) = '1' then
+								vzero_count := 31 - i;
+								exit;
+							end if;
+						end loop;
+						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(to_unsigned(vzero_count, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+																												
 				-- branch
-				elsif slv_compare(instruction_to_slv(instr_beq_opc), vinstruction_data) then
+				-- NOTE: we are a missing cop branch fp and cop1+ branch because we dont have it
+				elsif slv_compare(instruction_to_slv(instr_beq_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_beql_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) = get_reg_u(instruction_data_i.rt) then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							--instruction_data_skid_discard <= '1';
 						else
 							pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -880,10 +925,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_bgez_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_bgez_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_bgezl_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) >= 0 then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							--instruction_data_skid_discard <= '1';
 						else
 							pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -891,10 +936,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_bgezal_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_bgezal_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_bgezall_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) >= 0 then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							registers_next(31) <= std_logic_vector(unsigned(pc) + 8);
 							--instruction_data_skid_discard <= '1';
 						else
@@ -903,10 +948,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_bgtz_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_bgtz_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_bgtzl_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) > 0 then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							--instruction_data_skid_discard <= '1';
 						else
 							pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -914,10 +959,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_blez_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_blez_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_blezl_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) <= 0 then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							--instruction_data_skid_discard <= '1';
 						else
 							pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -925,10 +970,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_bltz_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_bltz_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_bltzl_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) < 0 then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							--instruction_data_skid_discard <= '1';
 						else
 							pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -936,10 +981,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_bltzal_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_bltzal_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_bltzall_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) < 0 then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							registers_next(31) <= std_logic_vector(unsigned(pc) + 8);
 							--instruction_data_skid_discard <= '1';
 						else
@@ -948,10 +993,10 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-				elsif slv_compare(instruction_to_slv(instr_bne_opc), vinstruction_data) then
+				elsif slv_compare(instruction_to_slv(instr_bne_opc), vinstruction_data) or slv_compare(instruction_to_slv(instr_bnel_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
 						if get_reg_u(instruction_data_i.rs) /= get_reg_u(instruction_data_i.rt) then
-							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(instruction_data_i.immediate) & "00"));
+							pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
 							--instruction_data_skid_discard <= '1';
 						else
 							pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1215,6 +1260,14 @@ begin
 						instruction_data_skid_ready <= '1';
 					end if;
 					
+				-- cache
+				elsif slv_compare(instruction_to_slv(instr_cache_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						-- does nothing for now
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
 				-- syscall
 				elsif slv_compare(instruction_to_slv(instr_syscall_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
@@ -1234,6 +1287,9 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
+							
+				elsif slv_compare(instruction_to_slv(instr_deret_opc), vinstruction_data) then
+					panic_next <= '1';
 				else
 					-- exception
 					panic_next <= '1';
