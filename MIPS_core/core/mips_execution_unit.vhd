@@ -176,6 +176,18 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 		return r;
 	end function;
 	
+	function shift_right_arith(data : std_logic_vector; n : NATURAL) return std_logic_vector is
+		variable result : std_logic_vector(data'range);
+	begin
+		for i in 0 to data'LENGTH-1 loop
+			if i + n < data'LENGTH then
+				result(i) := data(i + n);
+			else
+				result(i) := data(data'LENGTH-1);
+			end if;
+		end loop;
+		return result;
+	end function;
 	constant instr_add_opc : instruction_r_t := ( opcode => "000000", funct => "100000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_addu_opc : instruction_r_t := ( opcode => "000000", funct => "100001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_addi_opc : instruction_i_t := ( opcode => "001000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
@@ -981,7 +993,7 @@ begin
 				-- shift left
 				elsif slv_compare(instruction_to_slv(instr_sra_opc), vinstruction_data) then
 					if instruction_address_skid_ready = '1' then
-						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= sign_extend(instruction_data_r.rt(31 downto to_integer(unsigned(instruction_data_r.shamt))), 32);
+						registers_next(to_integer(unsigned(instruction_data_r.rd))) <= shift_right_arith(std_logic_vector(get_reg_u(instruction_data_r.rt)), to_integer(unsigned(instruction_data_r.shamt)));
 						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
