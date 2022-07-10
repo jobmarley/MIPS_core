@@ -28,3 +28,12 @@ Mips doesn't have interlocked instructions. Instead it uses SC and LL. LL loads 
 store a value and will only succeed if no other memory address was accessed by the processor and if no other processor/peripheral accessed that memory location inbetween
 the LL and SC instruction.  
 The implementation of SC and LL makes use of AXI4 exclusive access. That means it can be used for synchronization with other peripherals by using memory.
+
+## Not supported
+A lot of things are not supported currently.  
+Here is a non exhaustive list:
+- Exception/Interrupt vectors
+- Kernel transition/syscalls
+- Floating point
+- MMU
+- Cache
