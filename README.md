@@ -39,3 +39,13 @@ Here is a non exhaustive list:
 - Floating point
 - MMU
 - Cache
+
+## Debug registers
+Those registers are accessible through the AXI lite interface on the processor
+| Address      | Description |
+|--------------|:------------|
+| 00000000 |  Processor state (0: Enable, 1: Break pending |
+| 00000004 |  LEDS (only 1st byte)  |
+| 00000008 - 0000007C |  unused  |
+| 00000080 - 000000FC |  Processor registers, only accessible if enable is 0. PC is mapped on register 0 |
+| 00000100 - 0000017C |  COP0 registers  |
