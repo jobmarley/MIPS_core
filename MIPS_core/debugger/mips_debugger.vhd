@@ -7,12 +7,19 @@ entity mips_debugger is
 		resetn : in std_logic;
 		clock : in std_logic;
 			
+		xdma_clock : in std_logic;
+	
 		register_out : in std_logic_vector(31 downto 0);
 		register_in : out std_logic_vector(31 downto 0);
 		register_write : out std_logic;
 		register_address : out std_logic_vector(5 downto 0);
 			
 		processor_enable : out std_logic;
+	
+		breakpoint : in std_logic;
+	
+		interrupt : out std_logic;
+		interrupt_ack : in std_logic;
 	
 		s_axi_awready : out STD_LOGIC;
 		s_axi_wready : out STD_LOGIC;
@@ -49,8 +56,11 @@ architecture mips_debugger_behavioral of mips_debugger is
 	signal debugger_state : debugger_state_e := debugger_state_idle;
 	signal debugger_state_next : debugger_state_e := debugger_state_idle;
 	
-	signal processor_enable_reg : std_logic;
-	signal processor_enable_reg_next : std_logic;
+	constant status_enable_index : NATURAL := 0;
+	constant status_breakpoint_index : NATURAL := 1;
+	
+	signal status_reg : std_logic_vector(31 downto 0);
+	signal status_reg_next : std_logic_vector(31 downto 0);
 	
 	signal leds_reg : std_logic_vector(7 downto 0) := x"00";
 	signal leds_reg_next : std_logic_vector(7 downto 0) := x"00";
@@ -79,21 +89,35 @@ architecture mips_debugger_behavioral of mips_debugger is
 	constant AXI_RESP_EXOKAY : std_logic_vector(1 downto 0) := "01";
 	constant AXI_RESP_SLVERR : std_logic_vector(1 downto 0) := "10";
 	constant AXI_RESP_DECERR : std_logic_vector(1 downto 0) := "11";
+	
+	
+	signal interrupt_reg1 : std_logic := '0';
+	signal interrupt_reg2 : std_logic := '0';
 begin	
-	processor_enable <= processor_enable_reg;
+	processor_enable <= status_reg(status_enable_index);
 	debug <= leds_reg;
 	
 	s_axi_rresp <= s_axi_rresp_reg;
 	s_axi_rdata <= s_axi_rdata_reg;
 	s_axi_bresp <= s_axi_bresp_reg;
 	
+	interrupt <= interrupt_reg2;
+	
+	clock_to_xdma_clock_sync : process(xdma_clock) is
+	begin
+		if rising_edge(xdma_clock) then
+			interrupt_reg1 <= status_reg(status_breakpoint_index);
+			interrupt_reg2 <= interrupt_reg1;
+		end if;
+	end process;
+	
     clock_process : process(clock)
     begin
 	    if (rising_edge(clock)) then
 			debugger_state <= debugger_state_next;
 			
-			processor_enable_reg <= processor_enable_reg_next;
 			leds_reg <= leds_reg_next;
+			status_reg <= status_reg_next;
 			
 			s_axi_rdata_reg <= s_axi_rdata_reg_next;
 			s_axi_rresp_reg <= s_axi_rresp_reg_next;
@@ -118,8 +142,9 @@ begin
 		s_axi_rresp_reg,
 		s_axi_rdata_reg,
 		s_axi_bresp_reg,
-		processor_enable_reg,
-		leds_reg
+		leds_reg,
+		status_reg,
+		breakpoint
 		)
 	begin
 		s_axi_awready <= '0';
@@ -137,23 +162,28 @@ begin
 			s_axi_rdata_reg_next <= (others => '0');
 			s_axi_bresp_reg_next <= (others => '0');
 			debugger_state_next <= debugger_state_idle;
-			processor_enable_reg_next <= '0';
 			leds_reg_next <= x"00";
+			status_reg_next <= (others => '0');
 		else
 		
 			s_axi_rresp_reg_next <= s_axi_rresp_reg;
 			s_axi_rdata_reg_next <= s_axi_rdata_reg;
 			s_axi_bresp_reg_next <= s_axi_bresp_reg;
 			debugger_state_next <= debugger_state;
-			processor_enable_reg_next <= processor_enable_reg;
 			leds_reg_next <= leds_reg;
+			status_reg_next <= status_reg;
 						
+			if breakpoint = '1' then
+				status_reg_next(status_enable_index) <= '0';
+				status_reg_next(status_breakpoint_index) <= '1';
+			end if;
+			
 			case (debugger_state) is
 				when debugger_state_idle =>
 					if s_axi_arvalid = '1' then
 						s_axi_arready <= '1';
 						if s_axi_araddr(11 downto 0) = x"000" then
-							s_axi_rdata_reg_next <= x"0000000" & "000" & processor_enable_reg;
+							s_axi_rdata_reg_next <= status_reg;
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_resp;
 						elsif s_axi_araddr(11 downto 0) = x"004" then
@@ -177,13 +207,9 @@ begin
 						s_axi_awready <= '1';
 						s_axi_wready <= '1';
 						if s_axi_awaddr(11 downto 0) = x"000" then
-							if s_axi_wstrb(0) = '1' then
-								processor_enable_reg_next <= s_axi_wdata(0);
-							end if;
+							status_reg_next <= slv_select(status_reg, s_axi_wdata, s_axi_wstrb);
 						elsif s_axi_awaddr(11 downto 0) = x"004" then
-							if s_axi_wstrb(0) = '1' then
-								leds_reg_next <= s_axi_wdata(7 downto 0);
-							end if;
+							leds_reg_next <= slv_select(leds_reg, s_axi_wdata, s_axi_wstrb(0 downto 0));
 						elsif s_axi_araddr(11 downto 7) = "00001" then
 							register_address <= '0' & s_axi_araddr(6 downto 2);	-- REGISTERS
 							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read

@@ -17,6 +17,7 @@ entity mips_execution_unit is
 	register_write : in std_logic;
 	register_address : in std_logic_vector(5 downto 0);
 	
+	breakpoint : out std_logic;
 	
 	-- memory port a
 	m_axil_mema_awready : in STD_LOGIC;
@@ -274,6 +275,7 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	
 	constant instr_syscall_opc : instruction_r_t := ( opcode => "000000", funct => "001100", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 	constant instr_break_opc : instruction_r_t := ( opcode => "000000", funct => "001101", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_sdbbp_opc : instruction_r_t := ( opcode => "011100", funct => "111111", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
 		
 	constant instr_cache_opc : instruction_i_t := ( opcode => "101111", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
 	constant instr_pref_opc : instruction_i_t := ( opcode => "110011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
@@ -646,6 +648,8 @@ begin
 		force_fetch_next <= force_fetch;
 		
 		vinstruction_data := instruction_to_slv(instr_noop_opc);
+		
+		breakpoint <= '0';
 		
 		if resetn = '0' then
 			pc_next <= x"00000000";
@@ -1625,7 +1629,16 @@ begin
 						instruction_address_skid_valid <= '1';
 						instruction_data_skid_ready <= '1';
 					end if;
-							
+				elsif slv_compare(instruction_to_slv(instr_sdbbp_opc), vinstruction_data) then
+					if instruction_address_skid_ready = '1' then
+						cp0_registers_next(COP0_REGISTER_DEPC) <= pc;
+						breakpoint <= '1';
+						
+						pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+						instruction_address_skid_valid <= '1';
+						instruction_data_skid_ready <= '1';
+					end if;
+					
 				elsif slv_compare(instruction_to_slv(instr_deret_opc), vinstruction_data) then
 					panic_next <= '1';
 				elsif slv_compare(instruction_to_slv(instr_eret_opc), vinstruction_data) then

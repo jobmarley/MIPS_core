@@ -8,6 +8,8 @@ entity mips_core is
 	resetn : in std_logic;
 	clock : in std_ulogic;
 	
+	xdma_clock : in std_logic;
+	
 	-- AXI4 memory
 	--m_axi_awready : in STD_LOGIC;
  --   m_axi_wready : in STD_LOGIC;
@@ -44,6 +46,9 @@ entity mips_core is
  --   m_axi_arlock : out STD_LOGIC;
  --   m_axi_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
  --   m_axi_rready : out STD_LOGIC;
+	
+	interrupt : out std_logic;
+	interrupt_ack : in std_logic;
 	
 	-- memory port a
 	m_axil_mema_awready : in STD_LOGIC;
@@ -135,7 +140,8 @@ architecture mips_core_behavioral of mips_core is
 		register_write : in std_logic;
 		register_address : in std_logic_vector(5 downto 0);
 	
-	
+		breakpoint : out std_logic;
+		
 		-- memory port a
 		m_axil_mema_awready : in STD_LOGIC;
 		m_axil_mema_wready : in STD_LOGIC;
@@ -198,12 +204,18 @@ architecture mips_core_behavioral of mips_core is
 			resetn : in std_logic;
 			clock : in std_logic;
 			
+			xdma_clock : in std_logic;
+	
 			register_out : in std_logic_vector(31 downto 0);
 			register_in : out std_logic_vector(31 downto 0);
 			register_write : out std_logic;
 			register_address : out std_logic_vector(5 downto 0);
 			
 			processor_enable : out std_logic;
+	
+			breakpoint : in std_logic;
+			interrupt : out std_logic;
+			interrupt_ack : in std_logic;
 	
 			s_axi_awready : out STD_LOGIC;
 			s_axi_wready : out STD_LOGIC;
@@ -233,6 +245,7 @@ architecture mips_core_behavioral of mips_core is
 	signal register_write : std_logic;
 	signal register_address : std_logic_vector(5 downto 0);
 	signal processor_enable : std_logic;
+	signal breakpoint : std_logic;
 begin
 
 	mips_execution_unit_i : mips_execution_unit port map(
@@ -244,6 +257,8 @@ begin
 		register_in => register_in,
 		register_write => register_write,
 		register_address => register_address,
+	
+		breakpoint => breakpoint,
 	
 		m_axil_mema_awready => m_axil_mema_awready,
 		m_axil_mema_wready => m_axil_mema_wready,
@@ -302,12 +317,18 @@ begin
 		resetn => resetn,
 		clock => clock,
 			
+		xdma_clock => xdma_clock,
+	
 		register_out => register_out,
 		register_in => register_in,
 		register_write => register_write,
 		register_address => register_address,
 			
 		processor_enable => processor_enable,
+	
+		breakpoint => breakpoint,
+		interrupt => interrupt,
+		interrupt_ack => interrupt_ack,
 	
 		s_axi_awready => s_axil_debug_awready,
 		s_axi_wready => s_axil_debug_wready,
