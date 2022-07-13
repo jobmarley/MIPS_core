@@ -18,7 +18,7 @@ cd MIPS_core/vivado
 source MIPS_core_vivado.tcl
 ```
 This will automatically generate the project files.  
-Note that this reference project is configured for a KC705 board, so it should be course be adapted to the current hardware. But that's a good starting point.
+Note that this reference project is configured for a KC705 board, so modifications might be necessary to make it run on other hardware. But that's a good starting point.
 
 ## Features
 - Mips I instructions
