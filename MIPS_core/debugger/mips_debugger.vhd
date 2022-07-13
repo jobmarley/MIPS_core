@@ -222,12 +222,12 @@ begin
 							status_reg_next <= slv_select(status_reg, s_axi_wdata, s_axi_wstrb);
 						elsif s_axi_awaddr(11 downto 0) = x"004" then
 							leds_reg_next <= slv_select(leds_reg, s_axi_wdata, s_axi_wstrb(0 downto 0));
-						elsif s_axi_araddr(11 downto 7) = "00001" then
-							register_address <= '0' & s_axi_araddr(6 downto 2);	-- REGISTERS
+						elsif s_axi_awaddr(11 downto 7) = "00001" then
+							register_address <= '0' & s_axi_awaddr(6 downto 2);	-- REGISTERS
 							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
 							register_write <= '1';
-						elsif s_axi_araddr(11 downto 7) = "00010" then
-							register_address <= '1' & s_axi_araddr(6 downto 2); -- COP0
+						elsif s_axi_awaddr(11 downto 7) = "00010" then
+							register_address <= '1' & s_axi_awaddr(6 downto 2); -- COP0
 							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
 							register_write <= '1';
 						else
