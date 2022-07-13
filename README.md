@@ -10,6 +10,15 @@ The only constraints for [pcie_mips_driver](https://github.com/jobmarley/pcie_mi
  - Debug interface of the processor accessible through BAR1 at offset 0 (which means it needs to be accessible through DMA Bypass, not lite)
  
 ![image](https://user-images.githubusercontent.com/99695100/178165298-0fa1e8f4-bcb4-4cb5-aad4-4a3625170760.png)
+### Build
+The vivado project for the reference design is available as a tcl file in _vivado/MIPS_core_vivado.tcl_.  
+To use it open a vivado tcl console, then write
+```
+cd MIPS_core/vivado
+source MIPS_core_vivado.tcl
+```
+This will automatically generate the project files.  
+Note that this reference project is configured for a KC705 board, so it should be course be adapted to the current hardware. But that's a good starting point.
 
 ## Features
 - Mips I instructions
@@ -44,7 +53,7 @@ Here is a non exhaustive list:
 Those registers are accessible through the AXI lite interface on the processor
 | Address      | Description |
 |--------------|:------------|
-| 00000000 |  Processor state (0: Enable, 1: Break pending |
+| 00000000 |  Processor state (0x1: Enable, 0x2: Break pending) |
 | 00000004 |  LEDS (only 1st byte)  |
 | 00000008 - 0000007C |  unused  |
 | 00000080 - 000000FC |  Processor registers, only accessible if enable is 0. PC is mapped on register 0 |
