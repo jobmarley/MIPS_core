@@ -696,6 +696,7 @@ begin
 			if register_write = '1' then
 				if register_address = "000000" then -- use 0 as program counter
 					pc_next <= register_in;
+					force_fetch_next <= '1';
 				elsif register_address(5) = '0' then
 					registers_next(to_integer(unsigned(register_address(4 downto 0)))) <= register_in;
 				else
@@ -706,7 +707,15 @@ begin
 			-- do nothing
 		elsif force_fetch = '1' then
 			-- used for initial instruction fetch
-			if instruction_address_skid_ready = '1' then
+			if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
+				-- we wait for addresses to be ready to make sure the pending data arrived
+				-- then we mark data ready to flush the buffers
+				instruction_data_skid_ready <= '1';
+				memb_rdata_skid_ready <= '1';
+				-- reset load/store pending
+				load_pending_next <= FALSE;
+				store_pending_next <= FALSE;
+				-- we write instruction address then go to normal execution
 				instruction_address_skid_valid <= '1';
 				force_fetch_next <= '0';
 			end if;
