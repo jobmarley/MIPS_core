@@ -28,6 +28,8 @@
     <None Include="debugger\test\control_coe_generator.py" />
   </ItemGroup>
   <ItemGroup>
+    <VHDLSource Include="alu\mips_alu.vhd" />
+    <VHDLSource Include="alu\mips_alu_test.vhd" />
     <VHDLSource Include="cache\cache_performance_test.vhd" />
     <VHDLSource Include="core\axi_helper.vhd" />
     <VHDLSource Include="cache\cache_design_test.vhd" />

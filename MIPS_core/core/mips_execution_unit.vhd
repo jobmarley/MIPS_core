@@ -306,8 +306,12 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	
 	signal register_hi : std_logic_vector(31 downto 0) := x"00000000";
 	signal register_hi_next : std_logic_vector(31 downto 0) := x"00000000";
+	signal register_hi_pending : std_logic;
+	signal register_hi_pending_next : std_logic;
 	signal register_lo : std_logic_vector(31 downto 0) := x"00000000";
 	signal register_lo_next : std_logic_vector(31 downto 0) := x"00000000";
+	signal register_lo_pending : std_logic;
+	signal register_lo_pending_next : std_logic;
 	
 	signal pc : std_logic_vector(31 downto 0) := x"00000000";
 	signal pc_next : std_logic_vector(31 downto 0) := x"00000000";
@@ -362,9 +366,7 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	
 	signal address_error_exception : std_logic := '0';
 	signal address_error_exception_next : std_logic := '0';
-			
-	signal pc_debug : unsigned(31 downto 0);
-	
+				
 	signal register_out_next : std_logic_vector(31 downto 0);
 					
 	-- instruction data skid
@@ -440,6 +442,157 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 			return FALSE;
 		end if;
 	end function;
+	
+	component mips_alu is
+		port (
+			clock : in std_logic;
+			resetn : in std_logic;
+	
+			add_in_tready : out std_logic;
+			add_in_tvalid : in std_logic;
+			add_in_tdata : in std_logic_vector(63 downto 0);
+			add_in_tuser : in std_logic_vector(5 downto 0);
+			add_out_tready : in std_logic;
+			add_out_tvalid : out std_logic;
+			add_out_tdata : out std_logic_vector(32 downto 0);
+			add_out_tuser : out std_logic_vector(5 downto 0);
+		
+			sub_in_tready : out std_logic;
+			sub_in_tvalid : in std_logic;
+			sub_in_tdata : in std_logic_vector(63 downto 0);
+			sub_in_tuser : in std_logic_vector(5 downto 0);
+			sub_out_tready : in std_logic;
+			sub_out_tvalid : out std_logic;
+			sub_out_tdata : out std_logic_vector(32 downto 0);
+			sub_out_tuser : out std_logic_vector(5 downto 0);
+	
+			mul_in_tready : out std_logic;
+			mul_in_tvalid : in std_logic;
+			mul_in_tdata : in std_logic_vector(63 downto 0);
+			mul_in_tuser : in std_logic_vector(5 downto 0);
+			mul_out_tready : in std_logic;
+			mul_out_tvalid : out std_logic;
+			mul_out_tdata : out std_logic_vector(63 downto 0);
+			mul_out_tuser : out std_logic_vector(5 downto 0);
+	
+			multu_in_tready : out std_logic;
+			multu_in_tvalid : in std_logic;
+			multu_in_tdata : in std_logic_vector(63 downto 0);
+			multu_in_tuser : in std_logic_vector(5 downto 0);
+			multu_out_tready : in std_logic;
+			multu_out_tvalid : out std_logic;
+			multu_out_tdata : out std_logic_vector(63 downto 0);
+			multu_out_tuser : out std_logic_vector(5 downto 0);
+	
+			div_in_tready : out std_logic;
+			div_in_tvalid : in std_logic;
+			div_in_tdata : in std_logic_vector(63 downto 0);
+			div_in_tuser : in std_logic_vector(5 downto 0);
+			div_out_tready : in std_logic;
+			div_out_tvalid : out std_logic;
+			div_out_tdata : out std_logic_vector(63 downto 0);
+			div_out_tuser : out std_logic_vector(5 downto 0);
+	
+			divu_in_tready : out std_logic;
+			divu_in_tvalid : in std_logic;
+			divu_in_tdata : in std_logic_vector(63 downto 0);
+			divu_in_tuser : in std_logic_vector(5 downto 0);
+			divu_out_tready : in std_logic;
+			divu_out_tvalid : out std_logic;
+			divu_out_tdata : out std_logic_vector(63 downto 0);
+			divu_out_tuser : out std_logic_vector(5 downto 0);
+	
+			multadd_in_tready : out std_logic;
+			multadd_in_tvalid : in std_logic;
+			multadd_in_tdata : in std_logic_vector(128 downto 0);
+			multadd_in_tuser : in std_logic_vector(5 downto 0);
+			multadd_out_tready : in std_logic;
+			multadd_out_tvalid : out std_logic;
+			multadd_out_tdata : out std_logic_vector(63 downto 0);
+			multadd_out_tuser : out std_logic_vector(5 downto 0);
+	
+			multaddu_in_tready : out std_logic;
+			multaddu_in_tvalid : in std_logic;
+			multaddu_in_tdata : in std_logic_vector(128 downto 0);
+			multaddu_in_tuser : in std_logic_vector(5 downto 0);
+			multaddu_out_tready : in std_logic;
+			multaddu_out_tvalid : out std_logic;
+			multaddu_out_tdata : out std_logic_vector(63 downto 0);
+			multaddu_out_tuser : out std_logic_vector(5 downto 0)
+		);
+	end component;
+	
+	signal add_in_tready : std_logic;
+	signal add_in_tvalid : std_logic;
+	signal add_in_tdata : std_logic_vector(63 downto 0);
+	signal add_in_tuser : std_logic_vector(5 downto 0);
+	signal add_out_tready : std_logic;
+	signal add_out_tvalid : std_logic;
+	signal add_out_tdata : std_logic_vector(32 downto 0);
+	signal add_out_tuser : std_logic_vector(5 downto 0);
+		
+	signal sub_in_tready : std_logic;
+	signal sub_in_tvalid : std_logic;
+	signal sub_in_tdata : std_logic_vector(63 downto 0);
+	signal sub_in_tuser : std_logic_vector(5 downto 0);
+	signal sub_out_tready : std_logic;
+	signal sub_out_tvalid : std_logic;
+	signal sub_out_tdata : std_logic_vector(32 downto 0);
+	signal sub_out_tuser : std_logic_vector(5 downto 0);
+	
+	signal mul_in_tready : std_logic;
+	signal mul_in_tvalid : std_logic;
+	signal mul_in_tdata : std_logic_vector(63 downto 0);
+	signal mul_in_tuser : std_logic_vector(5 downto 0);
+	signal mul_out_tready : std_logic;
+	signal mul_out_tvalid : std_logic;
+	signal mul_out_tdata : std_logic_vector(63 downto 0);
+	signal mul_out_tuser : std_logic_vector(5 downto 0);
+	
+	signal multu_in_tready : std_logic;
+	signal multu_in_tvalid : std_logic;
+	signal multu_in_tdata : std_logic_vector(63 downto 0);
+	signal multu_in_tuser : std_logic_vector(5 downto 0);
+	signal multu_out_tready : std_logic;
+	signal multu_out_tvalid : std_logic;
+	signal multu_out_tdata : std_logic_vector(63 downto 0);
+	signal multu_out_tuser : std_logic_vector(5 downto 0);
+	
+	signal div_in_tready : std_logic;
+	signal div_in_tvalid : std_logic;
+	signal div_in_tdata : std_logic_vector(63 downto 0);
+	signal div_in_tuser : std_logic_vector(5 downto 0);
+	signal div_out_tready : std_logic;
+	signal div_out_tvalid : std_logic;
+	signal div_out_tdata : std_logic_vector(63 downto 0);
+	signal div_out_tuser : std_logic_vector(5 downto 0);
+	
+	signal divu_in_tready : std_logic;
+	signal divu_in_tvalid : std_logic;
+	signal divu_in_tdata : std_logic_vector(63 downto 0);
+	signal divu_in_tuser : std_logic_vector(5 downto 0);
+	signal divu_out_tready : std_logic;
+	signal divu_out_tvalid : std_logic;
+	signal divu_out_tdata : std_logic_vector(63 downto 0);
+	signal divu_out_tuser : std_logic_vector(5 downto 0);
+	
+	signal multadd_in_tready : std_logic;
+	signal multadd_in_tvalid : std_logic;
+	signal multadd_in_tdata : std_logic_vector(128 downto 0);
+	signal multadd_in_tuser : std_logic_vector(5 downto 0);
+	signal multadd_out_tready : std_logic;
+	signal multadd_out_tvalid : std_logic;
+	signal multadd_out_tdata : std_logic_vector(63 downto 0);
+	signal multadd_out_tuser : std_logic_vector(5 downto 0);
+	
+	signal multaddu_in_tready : std_logic;
+	signal multaddu_in_tvalid : std_logic;
+	signal multaddu_in_tdata : std_logic_vector(128 downto 0);
+	signal multaddu_in_tuser : std_logic_vector(5 downto 0);
+	signal multaddu_out_tready : std_logic;
+	signal multaddu_out_tvalid : std_logic;
+	signal multaddu_out_tdata : std_logic_vector(63 downto 0);
+	signal multaddu_out_tuser : std_logic_vector(5 downto 0);
 begin
 	
     m_axi_memb_arburst <= "00";
@@ -558,9 +711,7 @@ begin
 			out_data(31 downto 0) => m_axi_memb_awaddr,
 			out_data(32) => m_axi_memb_awlock
 		);
-	
-	pc_debug <= unsigned(pc(29 downto 0)) & "00";
-				
+					
 	clock_process : process(clock) is
 	begin
 		if rising_edge(clock) then
@@ -623,7 +774,34 @@ begin
 			m_axi_memb_bvalid,
 			m_axi_memb_bresp,
 		
-			registers_pending
+			registers_pending,
+			register_hi_pending,
+			register_lo_pending,
+			add_out_tvalid,
+			sub_out_tvalid,
+			mul_out_tvalid,
+			multu_out_tvalid,
+			div_out_tvalid,
+			divu_out_tvalid,
+			multadd_out_tvalid,
+			multaddu_out_tvalid,
+			add_out_tdata,
+			sub_out_tdata,
+			mul_out_tdata,
+			multu_out_tdata,
+			div_out_tdata,
+			divu_out_tdata,
+			multadd_out_tdata,
+			multaddu_out_tdata,
+			add_in_tready,
+			sub_in_tready,
+			mul_in_tready,
+			multu_in_tready,
+			div_in_tready,
+			divu_in_tready,
+			multadd_in_tready,
+			multaddu_in_tready,
+			mul_out_tuser
 			) is
 		variable vinstruction_data : std_logic_vector(31 downto 0);
         variable instruction_data_r : instruction_r_t;
@@ -691,10 +869,45 @@ begin
 		force_fetch_next <= force_fetch;
 		
 		registers_pending_next <= registers_pending;
+		register_hi_pending_next <= register_hi_pending;
+		register_lo_pending_next <= register_lo_pending;
 		
 		vinstruction_data := instruction_to_slv(instr_noop_opc);
 		
 		breakpoint <= '0';
+		
+		add_out_tready <= '0';
+		add_in_tvalid <= '0';
+		add_in_tuser <= (others => '0');
+		add_in_tdata <= (others => '0');
+		sub_out_tready <= '0';
+		sub_in_tvalid <= '0';
+		sub_in_tuser <= (others => '0');
+		sub_in_tdata <= (others => '0');
+		mul_out_tready <= '0';
+		mul_in_tvalid <= '0';
+		mul_in_tuser <= (others => '0');
+		mul_in_tdata <= (others => '0');
+		multu_out_tready <= '0';
+		multu_in_tvalid <= '0';
+		multu_in_tuser <= (others => '0');
+		multu_in_tdata <= (others => '0');
+		div_out_tready <= '0';
+		div_in_tvalid <= '0';
+		div_in_tuser <= (others => '0');
+		div_in_tdata <= (others => '0');
+		divu_out_tready <= '0';
+		divu_in_tvalid <= '0';
+		divu_in_tuser <= (others => '0');
+		divu_in_tdata <= (others => '0');
+		multadd_out_tready <= '0';
+		multadd_in_tvalid <= '0';
+		multadd_in_tuser <= (others => '0');
+		multadd_in_tdata <= (others => '0');
+		multaddu_out_tready <= '0';
+		multaddu_in_tvalid <= '0';
+		multaddu_in_tuser <= (others => '0');
+		multaddu_in_tdata <= (others => '0');
 		
 		if resetn = '0' then
 			pc_next <= x"00000000";
@@ -717,7 +930,69 @@ begin
 			force_fetch_next <= '1';
 			
 			registers_pending_next <= (others => '0');
+			register_hi_pending_next <= '0';
+			register_lo_pending_next <= '0';
 		else
+			
+			-- handle pending alu
+			if add_out_tvalid = '1' then
+				add_out_tready <= '1';
+				registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+				registers_next(get_reg_id(add_out_tuser(4 downto 0))) <= add_out_tdata(31 downto 0);
+			end if;
+			if sub_out_tvalid = '1' then
+				sub_out_tready <= '1';
+				registers_pending_next(get_reg_id(sub_out_tuser(4 downto 0))) <= '0';
+				registers_next(get_reg_id(sub_out_tuser(4 downto 0))) <= sub_out_tdata(31 downto 0);
+			end if;
+			if mul_out_tvalid = '1' then
+				mul_out_tready <= '1';
+				if mul_out_tuser(5) = '1' then
+					registers_pending_next(get_reg_id(mul_out_tuser(4 downto 0))) <= '0';
+					registers_next(get_reg_id(mul_out_tuser(4 downto 0))) <= mul_out_tdata(31 downto 0);
+				else
+					register_hi_pending_next <= '0';
+					register_lo_pending_next <= '0';
+					register_lo_next <= mul_out_tdata(63 downto 32);
+					register_hi_next <= mul_out_tdata(31 downto 0);
+				end if;
+			end if;
+			if multu_out_tvalid = '1' then
+				multu_out_tready <= '1';
+				register_hi_pending_next <= '0';
+				register_lo_pending_next <= '0';
+				register_lo_next <= multu_out_tdata(63 downto 32);
+				register_hi_next <= multu_out_tdata(31 downto 0);
+			end if;
+			if div_out_tvalid = '1' then
+				div_out_tready <= '1';
+				register_hi_pending_next <= '0';
+				register_lo_pending_next <= '0';
+				register_lo_next <= div_out_tdata(63 downto 32);
+				register_hi_next <= div_out_tdata(31 downto 0);
+			end if;
+			if divu_out_tvalid = '1' then
+				divu_out_tready <= '1';
+				register_hi_pending_next <= '0';
+				register_lo_pending_next <= '0';
+				register_lo_next <= divu_out_tdata(63 downto 32);
+				register_hi_next <= divu_out_tdata(31 downto 0);
+			end if;
+			if multadd_out_tvalid = '1' then
+				multadd_out_tready <= '1';
+				register_hi_pending_next <= '0';
+				register_lo_pending_next <= '0';
+				register_lo_next <= multadd_out_tdata(63 downto 32);
+				register_hi_next <= multadd_out_tdata(31 downto 0);
+			end if;
+			if multaddu_out_tvalid = '1' then
+				multaddu_out_tready <= '1';
+				register_hi_pending_next <= '0';
+				register_lo_pending_next <= '0';
+				register_lo_next <= multaddu_out_tdata(63 downto 32);
+				register_hi_next <= multaddu_out_tdata(31 downto 0);
+			end if;
+			
 			-- handle the pending load operation
 			if load_pending = TRUE then
 				memb_rdata_skid_ready <= '1';
@@ -870,40 +1145,64 @@ begin
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) + get_reg_u(instruction_data_r.rt));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= '0' & instruction_data_r.rd;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_r.rs) & get_reg_u(instruction_data_r.rt));
+								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
+								
+								if add_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_addu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) + get_reg_u(instruction_data_r.rt));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= '0' & instruction_data_r.rd;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_r.rs) & get_reg_u(instruction_data_r.rt));
+								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
+								
+								if add_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_addi_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
-								registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= '0' & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+								
+								if add_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_addiu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 							
-								registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= '0' & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+								
+								if add_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					-- sub
@@ -911,20 +1210,32 @@ begin
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_s(instruction_data_r.rs) - get_reg_s(instruction_data_r.rt));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								sub_in_tvalid <= '1';
+								sub_in_tuser <= '0' & instruction_data_r.rd;
+								sub_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rt) & get_reg_s(instruction_data_r.rs));
+								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
+								
+								if sub_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_subu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 						
-								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) - get_reg_u(instruction_data_r.rt));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								sub_in_tvalid <= '1';
+								sub_in_tuser <= '0' & instruction_data_r.rd;
+								sub_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rt) & get_reg_s(instruction_data_r.rs));
+								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
+								
+								if sub_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 			
@@ -933,22 +1244,32 @@ begin
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								register_lo_next <= std_logic_vector(get_reg_s(instruction_data_r.rs) / get_reg_s(instruction_data_r.rt));
-								register_hi_next <= std_logic_vector(get_reg_s(instruction_data_r.rs) mod get_reg_s(instruction_data_r.rt));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								div_in_tvalid <= '1';
+								div_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if div_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_divu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 						
-								register_lo_next <= std_logic_vector(get_reg_u(instruction_data_r.rs) / get_reg_u(instruction_data_r.rt));
-								register_hi_next <= std_logic_vector(get_reg_u(instruction_data_r.rs) mod get_reg_u(instruction_data_r.rt));
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								divu_in_tvalid <= '1';
+								divu_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if divu_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					-- mult
@@ -956,87 +1277,113 @@ begin
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
-								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= vec64(31 downto 0);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								mul_in_tvalid <= '1';
+								mul_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								mul_in_tuser <= '1' & instruction_data_r.rd;
+								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
+								
+								if mul_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_mult_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 						
-								vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
-								register_lo_next <= vec64(31 downto 0);
-								register_hi_next <= vec64(63 downto 32);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								mul_in_tvalid <= '1';
+								mul_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								mul_in_tuser <= (others => '0');
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if mul_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					elsif slv_compare(instruction_to_slv(instr_multu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								vec64 := std_logic_vector(get_reg_u(instruction_data_r.rs) * get_reg_u(instruction_data_r.rt));
-								register_lo_next <= vec64(31 downto 0);
-								register_hi_next <= vec64(63 downto 32);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								multu_in_tvalid <= '1';
+								multu_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if multu_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;		
 					elsif slv_compare(instruction_to_slv(instr_madd_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
-								vec64 := std_logic_vector(signed(vec64) + (signed(register_hi) & signed(register_lo)));
-								register_lo_next <= vec64(31 downto 0);
-								register_hi_next <= vec64(63 downto 32);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								multadd_in_tvalid <= '1';
+								multadd_in_tdata <= '0' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if multadd_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;	
 					elsif slv_compare(instruction_to_slv(instr_maddu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 						
-								vec64 := std_logic_vector(get_reg_u(instruction_data_r.rs) * get_reg_u(instruction_data_r.rt));
-								vec64 := std_logic_vector(unsigned(vec64) + (unsigned(register_hi) & unsigned(register_lo)));
-								register_lo_next <= vec64(31 downto 0);
-								register_hi_next <= vec64(63 downto 32);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								multaddu_in_tvalid <= '1';
+								multaddu_in_tdata <= '0' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if multaddu_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;			
 					elsif slv_compare(instruction_to_slv(instr_msub_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								vec64 := std_logic_vector(get_reg_s(instruction_data_r.rs) * get_reg_s(instruction_data_r.rt));
-								vec64 := std_logic_vector(signed(vec64) - (signed(register_hi) & signed(register_lo)));
-								register_lo_next <= vec64(31 downto 0);
-								register_hi_next <= vec64(63 downto 32);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								multadd_in_tvalid <= '1';
+								multadd_in_tdata <= '1' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if multadd_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;	
 					elsif slv_compare(instruction_to_slv(instr_msubu_opc), vinstruction_data) then
 						if instruction_address_skid_ready = '1' then
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
-								vec64 := std_logic_vector(get_reg_u(instruction_data_r.rs) * get_reg_u(instruction_data_r.rt));
-								vec64 := std_logic_vector(unsigned(vec64) - (unsigned(register_hi) & unsigned(register_lo)));
-								register_lo_next <= vec64(31 downto 0);
-								register_hi_next <= vec64(63 downto 32);
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+								multaddu_in_tvalid <= '1';
+								multaddu_in_tdata <= '1' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
+								register_hi_pending_next <= '1';
+								register_lo_pending_next <= '1';
+								
+								if multaddu_in_tready = '1' then
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;		
 					elsif slv_compare(instruction_to_slv(instr_noop_opc), vinstruction_data) then
@@ -1924,5 +2271,82 @@ begin
 		end if;
 	end process;
 	
+	mips_alu_0 : mips_alu
+		port map(
+			clock => clock,
+			resetn => resetn,
+	
+			add_in_tready => add_in_tready,
+			add_in_tvalid => add_in_tvalid,
+			add_in_tdata => add_in_tdata,
+			add_in_tuser => add_in_tuser,
+			add_out_tready => add_out_tready,
+			add_out_tvalid => add_out_tvalid,
+			add_out_tdata => add_out_tdata,
+			add_out_tuser => add_out_tuser,
+		
+			sub_in_tready => sub_in_tready,
+			sub_in_tvalid => sub_in_tvalid,
+			sub_in_tdata => sub_in_tdata,
+			sub_in_tuser => sub_in_tuser,
+			sub_out_tready => sub_out_tready,
+			sub_out_tvalid => sub_out_tvalid,
+			sub_out_tdata => sub_out_tdata,
+			sub_out_tuser => sub_out_tuser,
+	
+			mul_in_tready => mul_in_tready,
+			mul_in_tvalid => mul_in_tvalid,
+			mul_in_tdata => mul_in_tdata,
+			mul_in_tuser => mul_in_tuser,
+			mul_out_tready => mul_out_tready,
+			mul_out_tvalid => mul_out_tvalid,
+			mul_out_tdata => mul_out_tdata,
+			mul_out_tuser => mul_out_tuser,
+	
+			multu_in_tready => multu_in_tready,
+			multu_in_tvalid => multu_in_tvalid,
+			multu_in_tdata => multu_in_tdata,
+			multu_in_tuser => multu_in_tuser,
+			multu_out_tready => multu_out_tready,
+			multu_out_tvalid => multu_out_tvalid,
+			multu_out_tdata => multu_out_tdata,
+			multu_out_tuser => multu_out_tuser,
+	
+			div_in_tready => div_in_tready,
+			div_in_tvalid => div_in_tvalid,
+			div_in_tdata => div_in_tdata,
+			div_in_tuser => div_in_tuser,
+			div_out_tready => div_out_tready,
+			div_out_tvalid => div_out_tvalid,
+			div_out_tdata => div_out_tdata,
+			div_out_tuser => div_out_tuser,
+	
+			divu_in_tready => divu_in_tready,
+			divu_in_tvalid => divu_in_tvalid,
+			divu_in_tdata => divu_in_tdata,
+			divu_in_tuser => divu_in_tuser,
+			divu_out_tready => divu_out_tready,
+			divu_out_tvalid => divu_out_tvalid,
+			divu_out_tdata => divu_out_tdata,
+			divu_out_tuser => divu_out_tuser,
+	
+			multadd_in_tready => multadd_in_tready,
+			multadd_in_tvalid => multadd_in_tvalid,
+			multadd_in_tdata => multadd_in_tdata,
+			multadd_in_tuser => multadd_in_tuser,
+			multadd_out_tready => multadd_out_tready,
+			multadd_out_tvalid => multadd_out_tvalid,
+			multadd_out_tdata => multadd_out_tdata,
+			multadd_out_tuser => multadd_out_tuser,
+	
+			multaddu_in_tready => multaddu_in_tready,
+			multaddu_in_tvalid => multaddu_in_tvalid,
+			multaddu_in_tdata => multaddu_in_tdata,
+			multaddu_in_tuser => multaddu_in_tuser,
+			multaddu_out_tready => multaddu_out_tready,
+			multaddu_out_tvalid => multaddu_out_tvalid,
+			multaddu_out_tdata => multaddu_out_tdata,
+			multaddu_out_tuser => multaddu_out_tuser
+			);
 	
 end mips_execution_unit_behavioral;
