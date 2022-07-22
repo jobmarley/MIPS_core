@@ -374,6 +374,13 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 		load_type_word_exclusive,
 		load_type_word_left,
 		load_type_word_right);
+	type store_type_t is (
+		store_type_byte,
+		store_type_halfword,
+		store_type_word,
+		store_type_word_exclusive,
+		store_type_word_left,
+		store_type_word_right);
 	
 	signal load_pending : boolean := FALSE;
 	signal load_pending_next : boolean := FALSE;
@@ -387,6 +394,8 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	signal store_pending_next : boolean := FALSE;
 	signal store_pending_reg : std_logic_vector(4 downto 0);
 	signal store_pending_reg_next : std_logic_vector(4 downto 0);
+	signal store_type : store_type_t;
+	signal store_type_next : store_type_t;
 	
 	signal panic : std_logic := '0';
 	signal panic_next : std_logic := '0';
@@ -487,20 +496,20 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 			add_in_tready : out std_logic;
 			add_in_tvalid : in std_logic;
 			add_in_tdata : in std_logic_vector(63 downto 0);
-			add_in_tuser : in std_logic_vector(5 downto 0);
+			add_in_tuser : in std_logic_vector(7 downto 0);
 			add_out_tready : in std_logic;
 			add_out_tvalid : out std_logic;
 			add_out_tdata : out std_logic_vector(32 downto 0);
-			add_out_tuser : out std_logic_vector(5 downto 0);
+			add_out_tuser : out std_logic_vector(7 downto 0);
 		
 			sub_in_tready : out std_logic;
 			sub_in_tvalid : in std_logic;
 			sub_in_tdata : in std_logic_vector(63 downto 0);
-			sub_in_tuser : in std_logic_vector(5 downto 0);
+			sub_in_tuser : in std_logic_vector(7 downto 0);
 			sub_out_tready : in std_logic;
 			sub_out_tvalid : out std_logic;
 			sub_out_tdata : out std_logic_vector(32 downto 0);
-			sub_out_tuser : out std_logic_vector(5 downto 0);
+			sub_out_tuser : out std_logic_vector(7 downto 0);
 	
 			mul_in_tready : out std_logic;
 			mul_in_tvalid : in std_logic;
@@ -561,20 +570,20 @@ architecture mips_execution_unit_behavioral of mips_execution_unit is
 	signal add_in_tready : std_logic;
 	signal add_in_tvalid : std_logic;
 	signal add_in_tdata : std_logic_vector(63 downto 0);
-	signal add_in_tuser : std_logic_vector(5 downto 0);
+	signal add_in_tuser : std_logic_vector(7 downto 0);
 	signal add_out_tready : std_logic;
 	signal add_out_tvalid : std_logic;
 	signal add_out_tdata : std_logic_vector(32 downto 0);
-	signal add_out_tuser : std_logic_vector(5 downto 0);
+	signal add_out_tuser : std_logic_vector(7 downto 0);
 		
 	signal sub_in_tready : std_logic;
 	signal sub_in_tvalid : std_logic;
 	signal sub_in_tdata : std_logic_vector(63 downto 0);
-	signal sub_in_tuser : std_logic_vector(5 downto 0);
+	signal sub_in_tuser : std_logic_vector(7 downto 0);
 	signal sub_out_tready : std_logic;
 	signal sub_out_tvalid : std_logic;
 	signal sub_out_tdata : std_logic_vector(32 downto 0);
-	signal sub_out_tuser : std_logic_vector(5 downto 0);
+	signal sub_out_tuser : std_logic_vector(7 downto 0);
 	
 	signal mul_in_tready : std_logic;
 	signal mul_in_tvalid : std_logic;
@@ -762,6 +771,7 @@ begin
 			load_address <= load_address_next;
 			store_pending <= store_pending_next;
 			store_pending_reg <= store_pending_reg_next;
+			store_type <= store_type_next;
 			
 			panic <= panic_next;
 			address_error_exception <= address_error_exception_next;
@@ -787,6 +797,7 @@ begin
 			load_pending_reg,
 			store_pending,
 			store_pending_reg,
+			store_type,
 			load_type,
 			panic,
 			register_in,
@@ -837,7 +848,8 @@ begin
 			divu_in_tready,
 			multadd_in_tready,
 			multaddu_in_tready,
-			mul_out_tuser
+			mul_out_tuser,
+			add_out_tuser
 			) is
 		variable vinstruction_data : std_logic_vector(31 downto 0);
         variable instruction_data_r : instruction_r_t;
@@ -898,8 +910,8 @@ begin
 		load_address_next <= load_address;
 		store_pending_next <= store_pending;
 		store_pending_reg_next <= store_pending_reg;
+		store_type_next <= store_type;
 		
-			
 		panic_next <= panic;
 		address_error_exception_next <= address_error_exception;
 					
@@ -973,9 +985,147 @@ begin
 			
 			-- handle pending alu
 			if add_out_tvalid = '1' then
-				add_out_tready <= '1';
-				registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
-				registers_next(get_reg_id(add_out_tuser(4 downto 0))) <= add_out_tdata(31 downto 0);
+				if add_out_tuser(6) = '1' and memb_waddress_skid_ready = '1' then
+					-- result is write address
+					-- add_out_tuser(4 downto 0) contains the src register id
+					add_out_tready <= '1';
+					
+					if store_type = store_type_byte then
+						registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
+						memb_waddress_skid_valid <= '1';
+						memb_wdata_skid_valid <= '1';
+						if add_out_tdata(1 downto 0) = "00" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+							memb_wdata_skid_strobe <= "0001";
+						end if;
+						if add_out_tdata(1 downto 0) = "01" then
+							memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(7 downto 0)) & x"00";
+							memb_wdata_skid_strobe <= "0010";
+						end if;
+						if add_out_tdata(1 downto 0) = "10" then
+							memb_wdata_skid_data <= x"00" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(7 downto 0)) & x"0000";
+							memb_wdata_skid_strobe <= "0100";
+						end if;
+						if add_out_tdata(1 downto 0) = "11" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(7 downto 0)) & x"000000";
+							memb_wdata_skid_strobe <= "1000";
+						end if;
+					end if;
+					if store_type = store_type_halfword then
+						registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+						if add_out_tdata(0) = '1' then
+							address_error_exception_next <= '1';
+							panic_next <= '1';
+						else
+							memb_waddress_skid_valid <= '1';
+							memb_wdata_skid_valid <= '1';
+						end if;
+						
+						memb_waddress_skid_data <= add_out_tdata(31 downto 1) & '0';
+						if add_out_tdata(1) = '0' then
+							memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(15 downto 0));
+							memb_wdata_skid_strobe <= "0011";
+						else
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(15 downto 0)) & x"0000";
+							memb_wdata_skid_strobe <= "1100";
+						end if;
+					end if;
+					if store_type = store_type_word then
+						registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+						if add_out_tdata(1 downto 0) /= "00" then
+							address_error_exception_next <= '1';
+							panic_next <= '1';
+						else
+							memb_waddress_skid_valid <= '1';
+							memb_wdata_skid_valid <= '1';
+						end if;
+						
+						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
+						memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+						memb_wdata_skid_strobe <= "1111";
+					end if;
+					if store_type = store_type_word_exclusive then
+						-- do not remove the pending register, the result is stored in it when the transaction completes
+						if add_out_tdata(1 downto 0) /= "00" then
+							address_error_exception_next <= '1';
+							panic_next <= '1';
+						else
+							memb_waddress_skid_valid <= '1';
+							memb_wdata_skid_valid <= '1';
+						end if;
+						
+						memb_waddress_skid_lock <= '1';
+						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
+						memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+						memb_wdata_skid_strobe <= "1111";
+					end if;
+					if store_type = store_type_word_left then
+						registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
+						memb_waddress_skid_valid <= '1';
+						memb_wdata_skid_valid <= '1';
+						if add_out_tdata(1 downto 0) = "00" then
+							memb_wdata_skid_data <= x"000000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 24));
+							memb_wdata_skid_strobe <= "0001";
+						elsif add_out_tdata(1 downto 0) = "01" then
+							memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 16));
+							memb_wdata_skid_strobe <= "0011";
+						elsif add_out_tdata(1 downto 0) = "10" then
+							memb_wdata_skid_data <= x"00" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 8));
+							memb_wdata_skid_strobe <= "0111";
+						elsif add_out_tdata(1 downto 0) = "11" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+							memb_wdata_skid_strobe <= "1111";
+						end if;
+					end if;
+					if store_type = store_type_word_right then
+						registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
+						memb_waddress_skid_valid <= '1';
+						memb_wdata_skid_valid <= '1';
+						if add_out_tdata(1 downto 0) = "00" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+							memb_wdata_skid_strobe <= "1111";
+						elsif add_out_tdata(1 downto 0) = "01" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(23 downto 0)) & x"00";
+							memb_wdata_skid_strobe <= "1110";
+						elsif add_out_tdata(1 downto 0) = "10" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(15 downto 0)) & x"0000";
+							memb_wdata_skid_strobe <= "1100";
+						elsif add_out_tdata(1 downto 0) = "11" then
+							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(7 downto 0)) & x"000000";
+							memb_wdata_skid_strobe <= "1000";
+						end if;
+					end if;
+				end if;
+				if add_out_tuser(5) = '1' then
+					-- result is load address
+					memb_raddress_skid_data <= add_out_tdata(31 downto 2) & "00";
+					memb_raddress_skid_valid <= '1';
+					if load_type = load_type_word_exclusive then
+						memb_raddress_skid_lock <= '1';
+					end if;
+					load_address_next <= add_out_tdata(31 downto 0);
+					add_out_tready <= '1';
+					
+					if load_type = load_type_halfword_signed and add_out_tdata(0) /= '0' then
+						address_error_exception_next <= '1';
+						panic_next <= '1';
+					end if;
+					if load_type = load_type_word_unsigned and add_out_tdata(1 downto 0) /= "00" then
+						address_error_exception_next <= '1';
+						panic_next <= '1';
+					end if;
+					if load_type = load_type_word_exclusive and add_out_tdata(1 downto 0) /= "00" then
+						address_error_exception_next <= '1';
+						panic_next <= '1';
+					end if;
+				else
+					add_out_tready <= '1';
+					registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
+					registers_next(get_reg_id(add_out_tuser(4 downto 0))) <= add_out_tdata(31 downto 0);
+				end if;
 			end if;
 			if sub_out_tvalid = '1' then
 				sub_out_tready <= '1';
@@ -1186,11 +1336,11 @@ begin
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
 								add_in_tvalid <= '1';
-								add_in_tuser <= '0' & instruction_data_r.rd;
+								add_in_tuser <= "000" & instruction_data_r.rd;
 								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_r.rs) & get_reg_u(instruction_data_r.rt));
-								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 								
 								if add_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1204,11 +1354,11 @@ begin
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
 								add_in_tvalid <= '1';
-								add_in_tuser <= '0' & instruction_data_r.rd;
+								add_in_tuser <= "000" & instruction_data_r.rd;
 								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_r.rs) & get_reg_u(instruction_data_r.rt));
-								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 								
 								if add_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1222,11 +1372,11 @@ begin
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
 								add_in_tvalid <= '1';
-								add_in_tuser <= '0' & instruction_data_i.rt;
+								add_in_tuser <= "000" & instruction_data_i.rt;
 								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 								
 								if add_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1240,11 +1390,11 @@ begin
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 							
 								add_in_tvalid <= '1';
-								add_in_tuser <= '0' & instruction_data_i.rt;
+								add_in_tuser <= "000" & instruction_data_i.rt;
 								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 								
 								if add_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1259,11 +1409,11 @@ begin
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 							
 								sub_in_tvalid <= '1';
-								sub_in_tuser <= '0' & instruction_data_r.rd;
+								sub_in_tuser <= "000" & instruction_data_r.rd;
 								sub_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rt) & get_reg_s(instruction_data_r.rs));
-								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 								
 								if sub_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1277,11 +1427,11 @@ begin
 							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
 						
 								sub_in_tvalid <= '1';
-								sub_in_tuser <= '0' & instruction_data_r.rd;
+								sub_in_tuser <= "000" & instruction_data_r.rd;
 								sub_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rt) & get_reg_s(instruction_data_r.rs));
-								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 								
 								if sub_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1336,9 +1486,9 @@ begin
 								mul_in_tvalid <= '1';
 								mul_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
 								mul_in_tuser <= '1' & instruction_data_r.rd;
-								registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 								
 								if mul_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_r.rd)) <= '1';
 									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 									instruction_address_skid_valid <= '1';
 									instruction_data_skid_ready <= '1';
@@ -1903,20 +2053,21 @@ begin
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
-							
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));	
-						
-								memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-								memb_raddress_skid_valid <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 												
-								load_type_next <= load_type_byte_signed;
-								load_pending_reg_next <= instruction_data_i.rt;
-								load_pending_next <= TRUE;
-								load_address_next <= vec32;
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+									load_type_next <= load_type_byte_signed;
+									load_pending_reg_next <= instruction_data_i.rt;
+									load_pending_next <= TRUE;
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					end if;
@@ -1925,19 +2076,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 							
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-						
-								memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-								memb_raddress_skid_valid <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 												
-								load_type_next <= load_type_byte_unsigned;
-								load_pending_reg_next <= instruction_data_i.rt;
-								load_pending_next <= TRUE;
-								load_address_next <= vec32;
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+									load_type_next <= load_type_byte_unsigned;
+									load_pending_reg_next <= instruction_data_i.rt;
+									load_pending_next <= TRUE;
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					end if;
@@ -1946,24 +2099,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								if vec32(0) /= '0' then
-									address_error_exception_next <= '1';
-									panic_next <= '1';
-								else
-									load_address_next <= vec32;
-							
-									memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_raddress_skid_valid <= '1';
-													
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+																						
 									load_type_next <= load_type_halfword_signed;
 									load_pending_reg_next <= instruction_data_i.rt;
 									load_pending_next <= TRUE;
-									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+										
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -1972,24 +2122,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								if vec32(0) /= '0' then
-									address_error_exception_next <= '1';
-									panic_next <= '1';
-								else
-									load_address_next <= vec32;
-							
-									memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_raddress_skid_valid <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 													
 									load_type_next <= load_type_halfword_unsigned;
 									load_pending_reg_next <= instruction_data_i.rt;
 									load_pending_next <= TRUE;
-									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2010,23 +2157,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 							
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								if vec32(1 downto 0) /= "00" then
-									address_error_exception_next <= '1';
-									panic_next <= '1';
-								else
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
 								
-									memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_raddress_skid_valid <= '1';
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 														
 									load_type_next <= load_type_word_unsigned;
 									load_pending_reg_next <= instruction_data_i.rt;
 									load_pending_next <= TRUE;
-									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2035,24 +2180,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								if vec32(1 downto 0) /= "00" then
-									address_error_exception_next <= '1';
-									panic_next <= '1';
-								else
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
 								
-									memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_raddress_skid_lock <= '1';
-									memb_raddress_skid_valid <= '1';
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 														
-									load_type_next <= load_type_word_unsigned;
+									load_type_next <= load_type_word_exclusive;
 									load_pending_reg_next <= instruction_data_i.rt;
 									load_pending_next <= TRUE;
-									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2108,19 +2250,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-						
-								memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-								memb_raddress_skid_valid <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 														
-								load_type_next <= load_type_word_left;
-								load_pending_reg_next <= instruction_data_i.rt;
-								load_pending_next <= TRUE;
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									load_type_next <= load_type_word_left;
+									load_pending_reg_next <= instruction_data_i.rt;
+									load_pending_next <= TRUE;
 						
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					end if;
@@ -2129,19 +2273,21 @@ begin
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-						
-								memb_raddress_skid_data <= vec32(31 downto 2) & "00";
-								memb_raddress_skid_valid <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= "001" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
 														
-								load_type_next <= load_type_word_right;
-								load_pending_reg_next <= instruction_data_i.rt;
-								load_pending_next <= TRUE;
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									load_type_next <= load_type_word_right;
+									load_pending_reg_next <= instruction_data_i.rt;
+									load_pending_next <= TRUE;
 						
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
+								end if;
 							end if;
 						end if;
 					end if;
@@ -2150,44 +2296,19 @@ begin
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								--mem_port_b_processor.enable <= '1';
-								if vec32(1 downto 0) = "00" then
-							
-									memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_waddress_skid_valid <= '1';
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
-									memb_wdata_skid_strobe <= "0001";
-									memb_wdata_skid_valid <= '1';
-							
-								elsif vec32(1 downto 0) = "01" then
-							
-									memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_waddress_skid_valid <= '1';
-									memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(instruction_data_i.rt)(7 downto 0)) & x"00";
-									memb_wdata_skid_strobe <= "0010";
-									memb_wdata_skid_valid <= '1';
-							
-								elsif vec32(1 downto 0) = "10" then
-							
-									memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_waddress_skid_valid <= '1';
-									memb_wdata_skid_data <= x"00" & std_logic_vector(get_reg_u(instruction_data_i.rt)(7 downto 0)) & x"0000";
-									memb_wdata_skid_strobe <= "0100";
-									memb_wdata_skid_valid <= '1';
-							
-								elsif vec32(1 downto 0) = "11" then
-							
-									memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_waddress_skid_valid <= '1';
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt)(7 downto 0)) & x"000000";
-									memb_wdata_skid_strobe <= "1000";
-									memb_wdata_skid_valid <= '1';
-							
+								add_in_tvalid <= '1';
+								add_in_tuser <= "010" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+								
+									store_type_next <= store_type_byte;
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2196,27 +2317,19 @@ begin
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								--mem_port_b_processor.enable <= '1';
-								if vec32(0) /= '0' then
-									-- address exception
-									panic_next <= '1';
+								add_in_tvalid <= '1';
+								add_in_tuser <= "010" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+								
+									store_type_next <= store_type_halfword;
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-						
-								memb_waddress_skid_data <= vec32(31 downto 1) & '0';
-								memb_waddress_skid_valid <= '1';
-								if vec32(1) = '0' then
-									memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(instruction_data_i.rt)(15 downto 0));
-									memb_wdata_skid_strobe <= "0011";
-								else
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt)(15 downto 0)) & x"0000";
-									memb_wdata_skid_strobe <= "1100";
-								end if;
-								memb_wdata_skid_valid <= '1';
-						
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2225,21 +2338,19 @@ begin
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								if vec32(1 downto 0) /= "00" then
-									address_error_exception_next <= '1';
-									panic_next <= '1';
-								else
+								add_in_tvalid <= '1';
+								add_in_tuser <= "010" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
 								
-									memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_waddress_skid_valid <= '1';
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
-									memb_wdata_skid_strobe <= "1111";
-									memb_wdata_skid_valid <= '1';
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+								
+									store_type_next <= store_type_word;
+									
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2248,27 +2359,22 @@ begin
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE and store_pending = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-								if vec32(1 downto 0) /= "00" then
-									address_error_exception_next <= '1';
-									panic_next <= '1';
-								else
+								add_in_tvalid <= '1';
+								add_in_tuser <= "010" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
 								
-									memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-									memb_waddress_skid_valid <= '1';
-									memb_waddress_skid_lock <= '1';
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
-									memb_wdata_skid_strobe <= "1111";
-									memb_wdata_skid_valid <= '1';
+								if add_in_tready = '1' then	
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+								
+									store_type_next <= store_type_word_exclusive;
+									
+									store_pending_reg_next <= instruction_data_i.rt;
+									store_pending_next <= TRUE;
+						
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-						
-								store_pending_reg_next <= instruction_data_i.rt;
-								store_pending_next <= TRUE;
-								registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
-						
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2277,29 +2383,19 @@ begin
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
-						
-								memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-								memb_waddress_skid_valid <= '1';
-						
-								if vec32(1 downto 0) = "00" then
-									memb_wdata_skid_data <= x"000000" & std_logic_vector(get_reg_u(instruction_data_i.rt)(31 downto 24));
-									memb_wdata_skid_strobe <= "0001";
-								elsif vec32(1 downto 0) = "01" then
-									memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(instruction_data_i.rt)(31 downto 16));
-									memb_wdata_skid_strobe <= "0011";
-								elsif vec32(1 downto 0) = "10" then
-									memb_wdata_skid_data <= x"00" & std_logic_vector(get_reg_u(instruction_data_i.rt)(31 downto 8));
-									memb_wdata_skid_strobe <= "0111";
-								elsif vec32(1 downto 0) = "11" then
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
-									memb_wdata_skid_strobe <= "1111";
+								add_in_tvalid <= '1';
+								add_in_tuser <= "010" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									
+									store_type_next <= store_type_word_left;
+												
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								memb_wdata_skid_valid <= '1';
-						
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
@@ -2308,29 +2404,19 @@ begin
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
 							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
 						
-								vec32 := std_logic_vector(get_reg_u(instruction_data_i.rs) + unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								add_in_tvalid <= '1';
+								add_in_tuser <= "010" & instruction_data_i.rt;
+								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
+								
+								if add_in_tready = '1' then
+									registers_pending_next(get_reg_id(instruction_data_i.rt)) <= '1';
+									
+									store_type_next <= store_type_word_left;
 						
-								memb_waddress_skid_data <= vec32(31 downto 2) & "00";
-								memb_waddress_skid_valid <= '1';
-						
-								if vec32(1 downto 0) = "00" then
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt));
-									memb_wdata_skid_strobe <= "1111";
-								elsif vec32(1 downto 0) = "01" then
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt)(23 downto 0)) & x"00";
-									memb_wdata_skid_strobe <= "1110";
-								elsif vec32(1 downto 0) = "10" then
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt)(15 downto 0)) & x"0000";
-									memb_wdata_skid_strobe <= "1100";
-								elsif vec32(1 downto 0) = "11" then
-									memb_wdata_skid_data <= std_logic_vector(get_reg_u(instruction_data_i.rt)(7 downto 0)) & x"000000";
-									memb_wdata_skid_strobe <= "1000";
+									pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
+									instruction_address_skid_valid <= '1';
+									instruction_data_skid_ready <= '1';
 								end if;
-								memb_wdata_skid_valid <= '1';
-						
-								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
-								instruction_address_skid_valid <= '1';
-								instruction_data_skid_ready <= '1';
 							end if;
 						end if;
 					end if;
