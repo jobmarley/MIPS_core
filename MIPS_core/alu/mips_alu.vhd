@@ -9,20 +9,20 @@ entity mips_alu is
 	    add_in_tready : out std_logic;
 	    add_in_tvalid : in std_logic;
 	    add_in_tdata : in std_logic_vector(63 downto 0);
-	    add_in_tuser : in std_logic_vector(5 downto 0);
+	    add_in_tuser : in std_logic_vector(7 downto 0);
 	    add_out_tready : in std_logic;
 	    add_out_tvalid : out std_logic;
 	    add_out_tdata : out std_logic_vector(32 downto 0);
-	    add_out_tuser : out std_logic_vector(5 downto 0);
+	    add_out_tuser : out std_logic_vector(7 downto 0);
 		
 	    sub_in_tready : out std_logic;
 	    sub_in_tvalid : in std_logic;
 	    sub_in_tdata : in std_logic_vector(63 downto 0);
-	    sub_in_tuser : in std_logic_vector(5 downto 0);
+	    sub_in_tuser : in std_logic_vector(7 downto 0);
 	    sub_out_tready : in std_logic;
 	    sub_out_tvalid : out std_logic;
 	    sub_out_tdata : out std_logic_vector(32 downto 0);
-	    sub_out_tuser : out std_logic_vector(5 downto 0);
+	    sub_out_tuser : out std_logic_vector(7 downto 0);
 	
 	    mul_in_tready : out std_logic;
 	    mul_in_tvalid : in std_logic;
@@ -102,12 +102,12 @@ architecture mips_alu_behavioral of mips_alu is
 	
 	signal add_result_pending : std_logic;
 	signal add_result_pending_next : std_logic;
-	signal add_tuser_reg : std_logic_vector(5 downto 0);
-	signal add_tuser_reg_next : std_logic_vector(5 downto 0);
+	signal add_tuser_reg : std_logic_vector(7 downto 0);
+	signal add_tuser_reg_next : std_logic_vector(7 downto 0);
 	signal sub_result_pending : std_logic;
 	signal sub_result_pending_next : std_logic;
-	signal sub_tuser_reg : std_logic_vector(5 downto 0);
-	signal sub_tuser_reg_next : std_logic_vector(5 downto 0);
+	signal sub_tuser_reg : std_logic_vector(7 downto 0);
+	signal sub_tuser_reg_next : std_logic_vector(7 downto 0);
 	COMPONENT mult_gen_0
 	  PORT (
 		CLK : IN STD_LOGIC;
