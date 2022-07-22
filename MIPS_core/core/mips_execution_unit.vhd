@@ -862,6 +862,8 @@ begin
 		variable vzero_count : NATURAL;
 		variable vregister_id : NATURAL;
 		variable vinstruction_handled : BOOLEAN;
+		variable vregisters_r_pending : BOOLEAN;
+		variable vregisters_i_pending : BOOLEAN;
 	begin
 		
 		instruction_address_skid_valid <= '0';
@@ -1316,7 +1318,6 @@ begin
 				-- increment the clock counter (even though we might not execute anything)
 				cp0_registers_next(COP0_REGISTER_COUNT) <= std_logic_vector(unsigned(cp0_registers(COP0_REGISTER_COUNT)) + to_unsigned(1, 32));
 			
-				
 			
 				if instruction_data_skid_valid = '1' then -- execute instruction
 				
@@ -1328,12 +1329,15 @@ begin
 				
 					vinstruction_handled := FALSE;
 					
+					vregisters_r_pending := is_register_pending(instruction_data_r, registers_pending);
+					vregisters_i_pending := is_register_pending(instruction_data_i, registers_pending);
+					
 					-- add
 					-- NOTE: for all unsigned version, it does the same operation but does not trap on overflow
 					if instruction_cmp(instr_add_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								add_in_tvalid <= '1';
 								add_in_tuser <= "000" & instruction_data_r.rd;
@@ -1351,7 +1355,7 @@ begin
 					if instruction_cmp(instr_addu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								add_in_tvalid <= '1';
 								add_in_tuser <= "000" & instruction_data_r.rd;
@@ -1369,7 +1373,7 @@ begin
 					if instruction_cmp(instr_addi_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "000" & instruction_data_i.rt;
@@ -1387,7 +1391,7 @@ begin
 					if instruction_cmp(instr_addiu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								add_in_tvalid <= '1';
 								add_in_tuser <= "000" & instruction_data_i.rt;
@@ -1406,7 +1410,7 @@ begin
 					if instruction_cmp(instr_sub_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								sub_in_tvalid <= '1';
 								sub_in_tuser <= "000" & instruction_data_r.rd;
@@ -1424,7 +1428,7 @@ begin
 					if instruction_cmp(instr_subu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								sub_in_tvalid <= '1';
 								sub_in_tuser <= "000" & instruction_data_r.rd;
@@ -1444,7 +1448,7 @@ begin
 					if instruction_cmp(instr_div_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								div_in_tvalid <= '1';
 								div_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1462,7 +1466,7 @@ begin
 					if instruction_cmp(instr_divu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								divu_in_tvalid <= '1';
 								divu_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1481,7 +1485,7 @@ begin
 					if instruction_cmp(instr_mul_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								mul_in_tvalid <= '1';
 								mul_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1499,7 +1503,7 @@ begin
 					if instruction_cmp(instr_mult_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								mul_in_tvalid <= '1';
 								mul_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1518,7 +1522,7 @@ begin
 					if instruction_cmp(instr_multu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								multu_in_tvalid <= '1';
 								multu_in_tdata <= std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1536,7 +1540,7 @@ begin
 					if instruction_cmp(instr_madd_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								multadd_in_tvalid <= '1';
 								multadd_in_tdata <= '0' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1554,7 +1558,7 @@ begin
 					if instruction_cmp(instr_maddu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								multaddu_in_tvalid <= '1';
 								multaddu_in_tdata <= '0' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1572,7 +1576,7 @@ begin
 					if instruction_cmp(instr_msub_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								multadd_in_tvalid <= '1';
 								multadd_in_tdata <= '1' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1590,7 +1594,7 @@ begin
 					if instruction_cmp(instr_msubu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								multaddu_in_tvalid <= '1';
 								multaddu_in_tdata <= '1' & register_hi & register_lo & std_logic_vector(get_reg_s(instruction_data_r.rs) & get_reg_s(instruction_data_r.rt));
@@ -1618,7 +1622,7 @@ begin
 					if instruction_cmp(instr_and_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) and get_reg_u(instruction_data_r.rt));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1630,7 +1634,7 @@ begin
 					if instruction_cmp(instr_andi_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(get_reg_u(instruction_data_i.rs) and (unsigned(sign_extend(instruction_data_i.immediate, 32))));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1643,7 +1647,7 @@ begin
 					if instruction_cmp(instr_or_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) or get_reg_u(instruction_data_r.rt));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1655,7 +1659,7 @@ begin
 					if instruction_cmp(instr_ori_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(get_reg_u(instruction_data_i.rs) + (unsigned(sign_extend(instruction_data_i.immediate, 32))));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1668,7 +1672,7 @@ begin
 					if instruction_cmp(instr_xor_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) xor get_reg_u(instruction_data_r.rt));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1680,7 +1684,7 @@ begin
 					if instruction_cmp(instr_xori_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) xor (unsigned(sign_extend(instruction_data_i.immediate, 32))));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1693,7 +1697,7 @@ begin
 					if instruction_cmp(instr_nor_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rs) nor get_reg_u(instruction_data_r.rt));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1707,7 +1711,7 @@ begin
 					if instruction_cmp(instr_sll_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rt) sll to_integer(unsigned(instruction_data_r.shamt)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1719,7 +1723,7 @@ begin
 					if instruction_cmp(instr_sllv_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rt) sll to_integer(get_reg_u(instruction_data_r.rs)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1732,7 +1736,7 @@ begin
 					if instruction_cmp(instr_sra_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= shift_right_arith(std_logic_vector(get_reg_u(instruction_data_r.rt)), to_integer(unsigned(instruction_data_r.shamt)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1744,7 +1748,7 @@ begin
 					if instruction_cmp(instr_srl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rt) srl to_integer(unsigned(instruction_data_r.shamt)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1756,7 +1760,7 @@ begin
 					if instruction_cmp(instr_srlv_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(get_reg_u(instruction_data_r.rt) srl to_integer(get_reg_u(instruction_data_r.rs)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -1769,7 +1773,7 @@ begin
 					if instruction_cmp(instr_slt_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								if get_reg_s(instruction_data_r.rs) < get_reg_s(instruction_data_r.rt) then
 									registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(to_unsigned(1, 32));
@@ -1785,7 +1789,7 @@ begin
 					if instruction_cmp(instr_sltu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								if get_reg_u(instruction_data_r.rs) < get_reg_u(instruction_data_r.rt) then
 									registers_next(to_integer(unsigned(instruction_data_r.rd))) <= std_logic_vector(to_unsigned(1, 32));
@@ -1801,7 +1805,7 @@ begin
 					if instruction_cmp(instr_slti_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								if get_reg_s(instruction_data_i.rs) < signed(instruction_data_i.immediate) then
 									registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(to_unsigned(1, 32));
@@ -1817,7 +1821,7 @@ begin
 					if instruction_cmp(instr_sltiu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								if get_reg_u(instruction_data_i.rs) < unsigned(instruction_data_i.immediate) then
 									registers_next(to_integer(unsigned(instruction_data_i.rt))) <= std_logic_vector(to_unsigned(1, 32));
@@ -1834,7 +1838,7 @@ begin
 					if instruction_cmp(instr_clo_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								vzero_count := 32;
 								for i in 31 downto 0 loop
@@ -1852,7 +1856,7 @@ begin
 					if instruction_cmp(instr_clz_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								vzero_count := 32;
 								for i in 31 downto 0 loop
@@ -1873,7 +1877,7 @@ begin
 					if instruction_cmp(instr_beq_opc, vinstruction_data) or instruction_cmp(instr_beql_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								if get_reg_u(instruction_data_i.rs) = get_reg_u(instruction_data_i.rt) then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1889,7 +1893,7 @@ begin
 					if instruction_cmp(instr_bgez_opc, vinstruction_data) or instruction_cmp(instr_bgezl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								if get_reg_u(instruction_data_i.rs) >= 0 then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1905,7 +1909,7 @@ begin
 					if instruction_cmp(instr_bgezal_opc, vinstruction_data) or instruction_cmp(instr_bgezall_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								if get_reg_u(instruction_data_i.rs) >= 0 then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1922,7 +1926,7 @@ begin
 					if instruction_cmp(instr_bgtz_opc, vinstruction_data) or instruction_cmp(instr_bgtzl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								if get_reg_u(instruction_data_i.rs) > 0 then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1938,7 +1942,7 @@ begin
 					if instruction_cmp(instr_blez_opc, vinstruction_data) or instruction_cmp(instr_blezl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								if get_reg_u(instruction_data_i.rs) <= 0 then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1954,7 +1958,7 @@ begin
 					if instruction_cmp(instr_bltz_opc, vinstruction_data) or instruction_cmp(instr_bltzl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								if get_reg_u(instruction_data_i.rs) < 0 then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1970,7 +1974,7 @@ begin
 					if instruction_cmp(instr_bltzal_opc, vinstruction_data) or instruction_cmp(instr_bltzall_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 							
 								if get_reg_u(instruction_data_i.rs) < 0 then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -1987,7 +1991,7 @@ begin
 					if instruction_cmp(instr_bne_opc, vinstruction_data) or instruction_cmp(instr_bnel_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								if get_reg_u(instruction_data_i.rs) /= get_reg_u(instruction_data_i.rt) then
 									pc_next <= std_logic_vector(unsigned(pc) + (unsigned(sign_extend(instruction_data_i.immediate, 30)) & "00"));
@@ -2052,7 +2056,7 @@ begin
 					if instruction_cmp(instr_lb_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
 								add_in_tdata <= std_logic_vector(get_reg_u(instruction_data_i.rs) & unsigned(sign_extend(instruction_data_i.immediate, 32)));
@@ -2074,7 +2078,7 @@ begin
 					if instruction_cmp(instr_lbu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 							
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2097,7 +2101,7 @@ begin
 					if instruction_cmp(instr_lh_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2120,7 +2124,7 @@ begin
 					if instruction_cmp(instr_lhu_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2143,7 +2147,7 @@ begin
 					if instruction_cmp(instr_lui_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_i.rt))) <= instruction_data_i.immediate & x"0000";
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -2155,7 +2159,7 @@ begin
 					if instruction_cmp(instr_lw_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 							
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2178,7 +2182,7 @@ begin
 					if instruction_cmp(instr_ll_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2201,7 +2205,7 @@ begin
 					if instruction_cmp(instr_mfhi_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= register_hi;
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -2213,7 +2217,7 @@ begin
 					if instruction_cmp(instr_mflo_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 								registers_next(to_integer(unsigned(instruction_data_r.rd))) <= register_lo;
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
 								instruction_address_skid_valid <= '1';
@@ -2224,7 +2228,7 @@ begin
 					if instruction_cmp(instr_mthi_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 							
 								register_hi_next <= registers(to_integer(unsigned(instruction_data_r.rs)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -2236,7 +2240,7 @@ begin
 					if instruction_cmp(instr_mtlo_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 						
 								register_lo_next <= registers(to_integer(unsigned(instruction_data_r.rs)));
 								pc_next <= std_logic_vector(unsigned(pc) + to_unsigned(4, 32));
@@ -2248,7 +2252,7 @@ begin
 					if instruction_cmp(instr_lwl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2271,7 +2275,7 @@ begin
 					if instruction_cmp(instr_lwr_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_raddress_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and load_pending = FALSE then
+							if vregisters_i_pending = FALSE and load_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "001" & instruction_data_i.rt;
@@ -2294,7 +2298,7 @@ begin
 					if instruction_cmp(instr_sb_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "010" & instruction_data_i.rt;
@@ -2315,7 +2319,7 @@ begin
 					if instruction_cmp(instr_sh_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "010" & instruction_data_i.rt;
@@ -2336,7 +2340,7 @@ begin
 					if instruction_cmp(instr_sw_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "010" & instruction_data_i.rt;
@@ -2357,7 +2361,7 @@ begin
 					if instruction_cmp(instr_sc_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE and store_pending = FALSE then
+							if vregisters_i_pending = FALSE and store_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "010" & instruction_data_i.rt;
@@ -2381,7 +2385,7 @@ begin
 					if instruction_cmp(instr_swl_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "010" & instruction_data_i.rt;
@@ -2402,7 +2406,7 @@ begin
 					if instruction_cmp(instr_swr_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' and memb_waddress_skid_ready = '1' and memb_wdata_skid_ready = '1' then
-							if is_register_pending(instruction_data_i, registers_pending) = FALSE then
+							if vregisters_i_pending = FALSE then
 						
 								add_in_tvalid <= '1';
 								add_in_tuser <= "010" & instruction_data_i.rt;
@@ -2446,7 +2450,7 @@ begin
 					if instruction_cmp(instr_movn_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 								if get_reg_u(instruction_data_r.rt) /= 0 then
 									registers_next(to_integer(unsigned(instruction_data_r.rd))) <= registers(to_integer(unsigned(instruction_data_r.rs)));
 								end if;
@@ -2459,7 +2463,7 @@ begin
 					if instruction_cmp(instr_movz_opc, vinstruction_data) then
 						vinstruction_handled := TRUE;
 						if instruction_address_skid_ready = '1' then
-							if is_register_pending(instruction_data_r, registers_pending) = FALSE then
+							if vregisters_r_pending = FALSE then
 								if get_reg_u(instruction_data_r.rt) = 0 then
 									registers_next(to_integer(unsigned(instruction_data_r.rd))) <= registers(to_integer(unsigned(instruction_data_r.rs)));
 								end if;
