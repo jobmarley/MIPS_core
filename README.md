@@ -22,7 +22,7 @@ Note that this reference project is configured for a KC705 board, so modificatio
 
 ## Features
 - Mips I instructions
-- 50Mhz processor clock
+- 50Mhz processor clock (100Mhz under good conditions)
 - Breakpoint with instruction SDBBP<sup>**[1](#SDBBP)**</sup> (pause the processor and triggers interrupt to notify the driver)
 - SC and LL instruction<sup>**[2](#SC&#32;&&#32;LL)**</sup>
 
