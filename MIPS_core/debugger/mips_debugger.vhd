@@ -103,8 +103,10 @@ architecture mips_debugger_behavioral of mips_debugger is
 	constant AXI_RESP_DECERR : std_logic_vector(1 downto 0) := "11";
 	
 	
+	attribute ASYNC_REG : string;
 	signal interrupt_reg1 : std_logic := '0';
 	signal interrupt_reg2 : std_logic := '0';
+	attribute ASYNC_REG of interrupt_reg1 : signal is "true";
 begin	
 	processor_enable <= status_reg(status_enable_index);
 	debug <= leds_reg;
@@ -118,8 +120,13 @@ begin
 	clock_to_xdma_clock_sync : process(xdma_clock) is
 	begin
 		if rising_edge(xdma_clock) then
-			interrupt_reg1 <= status_reg(status_breakpoint_index);
-			interrupt_reg2 <= interrupt_reg1;
+			if resetn = '0' then
+				interrupt_reg1 <= '0';
+				interrupt_reg2 <= '0';
+			else
+				interrupt_reg1 <= status_reg(status_breakpoint_index);
+				interrupt_reg2 <= interrupt_reg1;
+			end if;
 		end if;
 	end process;
 	
@@ -169,6 +176,7 @@ begin
 		register_in <= (others => '0');
 		register_address <= (others => '0');
 		
+		
 		if resetn = '0' then
 			s_axi_rresp_reg_next <= (others => '0');
 			s_axi_rdata_reg_next <= (others => '0');
@@ -184,7 +192,7 @@ begin
 			debugger_state_next <= debugger_state;
 			leds_reg_next <= leds_reg;
 			status_reg_next <= status_reg;
-						
+			
 			if breakpoint = '1' then
 				status_reg_next(status_enable_index) <= '0';
 				status_reg_next(status_breakpoint_index) <= '1';

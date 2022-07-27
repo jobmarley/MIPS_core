@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.numeric_std.all;
 
 entity mips_alu is
     port (
@@ -9,20 +10,20 @@ entity mips_alu is
 	    add_in_tready : out std_logic;
 	    add_in_tvalid : in std_logic;
 	    add_in_tdata : in std_logic_vector(63 downto 0);
-	    add_in_tuser : in std_logic_vector(7 downto 0);
+	    add_in_tuser : in std_logic_vector(9 downto 0);
 	    add_out_tready : in std_logic;
 	    add_out_tvalid : out std_logic;
 	    add_out_tdata : out std_logic_vector(32 downto 0);
-	    add_out_tuser : out std_logic_vector(7 downto 0);
+	    add_out_tuser : out std_logic_vector(9 downto 0);
 		
 	    sub_in_tready : out std_logic;
 	    sub_in_tvalid : in std_logic;
 	    sub_in_tdata : in std_logic_vector(63 downto 0);
-	    sub_in_tuser : in std_logic_vector(7 downto 0);
+	    sub_in_tuser : in std_logic_vector(4 downto 0);
 	    sub_out_tready : in std_logic;
 	    sub_out_tvalid : out std_logic;
 	    sub_out_tdata : out std_logic_vector(32 downto 0);
-	    sub_out_tuser : out std_logic_vector(7 downto 0);
+	    sub_out_tuser : out std_logic_vector(4 downto 0);
 	
 	    mul_in_tready : out std_logic;
 	    mul_in_tvalid : in std_logic;
@@ -76,7 +77,16 @@ entity mips_alu is
 	    multaddu_out_tready : in std_logic;
 	    multaddu_out_tvalid : out std_logic;
 	    multaddu_out_tdata : out std_logic_vector(63 downto 0);
-	    multaddu_out_tuser : out std_logic_vector(5 downto 0)
+	    multaddu_out_tuser : out std_logic_vector(5 downto 0);
+	
+	    cmp_in_tready : out std_logic;
+	    cmp_in_tvalid : in std_logic;
+	    cmp_in_tdata : in std_logic_vector(63 downto 0);
+	    cmp_in_tuser : in std_logic_vector(17 downto 0);
+	    cmp_out_tready : in std_logic;
+	    cmp_out_tvalid : out std_logic;
+	    cmp_out_tdata : out std_logic_vector(0 downto 0);
+	    cmp_out_tuser : out std_logic_vector(17 downto 0)
 	);
 end mips_alu;
 
@@ -102,12 +112,12 @@ architecture mips_alu_behavioral of mips_alu is
 	
 	signal add_result_pending : std_logic;
 	signal add_result_pending_next : std_logic;
-	signal add_tuser_reg : std_logic_vector(7 downto 0);
-	signal add_tuser_reg_next : std_logic_vector(7 downto 0);
+	signal add_tuser_reg : std_logic_vector(add_in_tuser'LENGTH-1 downto 0);
+	signal add_tuser_reg_next : std_logic_vector(add_in_tuser'LENGTH-1 downto 0);
 	signal sub_result_pending : std_logic;
 	signal sub_result_pending_next : std_logic;
-	signal sub_tuser_reg : std_logic_vector(7 downto 0);
-	signal sub_tuser_reg_next : std_logic_vector(7 downto 0);
+	signal sub_tuser_reg : std_logic_vector(sub_in_tuser'LENGTH-1 downto 0);
+	signal sub_tuser_reg_next : std_logic_vector(sub_in_tuser'LENGTH-1 downto 0);
 	COMPONENT mult_gen_0
 	  PORT (
 		CLK : IN STD_LOGIC;
@@ -222,6 +232,22 @@ architecture mips_alu_behavioral of mips_alu is
 	
 	signal multaddu_c_shift_reg : multadd_c_shift_reg_t(MULTADD_C_DELAY-1 downto 0);
 	signal multaddu_c_shift_reg_next : multadd_c_shift_reg_t(MULTADD_C_DELAY-1 downto 0);
+	
+	signal cmp_result : std_logic;
+	signal cmp_result_next : std_logic;
+	signal cmp_result_tuser : std_logic_vector(cmp_in_tuser'LENGTH-1 downto 0);
+	signal cmp_result_tuser_next : std_logic_vector(cmp_in_tuser'LENGTH-1 downto 0);
+	signal cmp_result_pending : std_logic;
+	signal cmp_result_pending_next : std_logic;
+	
+	constant CMP_TUSER_EQ : NATURAL := 10;
+	constant CMP_TUSER_GE : NATURAL := 11;
+	constant CMP_TUSER_LE : NATURAL := 12;
+	constant CMP_TUSER_INVERT : NATURAL := 13;
+	constant CMP_TUSER_MOV : NATURAL := 14;
+	constant CMP_TUSER_JMP : NATURAL := 15;
+	constant CMP_TUSER_ADD : NATURAL := 16;
+	constant CMP_TUSER_LINK : NATURAL := 17;
 begin
 	
 	process (clock) is
@@ -238,6 +264,10 @@ begin
 			multadd_c_shift_reg <= multadd_c_shift_reg_next;
 			multaddu_sh_reg <= multaddu_sh_reg_next;
 			multaddu_c_shift_reg <= multaddu_c_shift_reg_next;
+			
+			cmp_result <= cmp_result_next;
+			cmp_result_tuser <= cmp_result_tuser_next;
+			cmp_result_pending <= cmp_result_pending_next;
 		end if;
 	end process;
 	
@@ -489,6 +519,63 @@ begin
 					multaddu_c_shift_reg_next(i + 1) <= multaddu_c_shift_reg(i);
 				end loop;
 				multaddu_c_shift_reg_next(0) <= multaddu_in_tdata(127 downto 64);
+			end if;
+		end if;
+	end process;
+	
+	
+	process (
+		resetn,
+		cmp_in_tdata,
+		cmp_in_tuser,
+		cmp_in_tvalid,
+		cmp_out_tready,
+		cmp_result_pending,
+		cmp_result_tuser,
+		cmp_result
+		)
+		variable vadvance : std_logic;
+	begin
+		
+		cmp_out_tdata(0) <= cmp_result;
+		cmp_out_tuser <= cmp_result_tuser;
+		cmp_out_tvalid <= cmp_result_pending;
+		
+		if resetn = '0' then
+			cmp_result_pending_next <= '0';
+			cmp_result_tuser_next <= (others => '0');
+			cmp_in_tready <= '0';
+			cmp_result_next <= '0';
+		else
+			cmp_result_pending_next <= cmp_in_tvalid or (cmp_result_pending and not cmp_out_tready);
+			cmp_in_tready <= '0';
+			cmp_result_tuser_next <= cmp_result_tuser;
+			cmp_result_next <= cmp_result;
+			
+			if cmp_in_tvalid = '1' and (cmp_out_tready = '1' or cmp_result_pending = '0') then
+				cmp_in_tready <= '1';
+				cmp_result_tuser_next <= cmp_in_tuser;
+				if cmp_in_tuser(CMP_TUSER_EQ) = '1' then
+					if cmp_in_tdata(31 downto 0) = cmp_in_tdata(63 downto 32) then
+						cmp_result_next <= '1';
+					else
+						cmp_result_next <= '0';
+					end if;
+				end if;
+				if cmp_in_tuser(CMP_TUSER_GE) = '1' then
+					if unsigned(cmp_in_tdata(31 downto 0)) >= unsigned(cmp_in_tdata(63 downto 32)) then
+						cmp_result_next <= '1';
+					else
+						cmp_result_next <= '0';
+					end if;
+				end if;
+				if cmp_in_tuser(CMP_TUSER_LE) = '1' then
+					if unsigned(cmp_in_tdata(31 downto 0)) <= unsigned(cmp_in_tdata(63 downto 32)) then
+						cmp_result_next <= '1';
+					else
+						cmp_result_next <= '0';
+					end if;
+				end if;
 			end if;
 		end if;
 	end process;
