@@ -1164,38 +1164,40 @@ begin
 						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
 						memb_waddress_skid_valid <= '1';
 						memb_wdata_skid_valid <= '1';
-						if add_out_tdata(1 downto 0) = "00" then
-							memb_wdata_skid_data <= x"000000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 24));
-							memb_wdata_skid_strobe <= "0001";
-						elsif add_out_tdata(1 downto 0) = "01" then
-							memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 16));
-							memb_wdata_skid_strobe <= "0011";
-						elsif add_out_tdata(1 downto 0) = "10" then
-							memb_wdata_skid_data <= x"00" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 8));
-							memb_wdata_skid_strobe <= "0111";
-						elsif add_out_tdata(1 downto 0) = "11" then
-							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
-							memb_wdata_skid_strobe <= "1111";
-						end if;
+						case add_out_tdata(1 downto 0) is
+							when "00" =>
+								memb_wdata_skid_data <= x"000000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 24));
+								memb_wdata_skid_strobe <= "0001";
+							when "01" =>
+								memb_wdata_skid_data <= x"0000" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 16));
+								memb_wdata_skid_strobe <= "0011";
+							when "10" =>
+								memb_wdata_skid_data <= x"00" & std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(31 downto 8));
+								memb_wdata_skid_strobe <= "0111";
+							when "11" =>
+								memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+								memb_wdata_skid_strobe <= "1111";
+						end case;
 					end if;
 					if store_type = store_type_word_right then
 						registers_pending_next(get_reg_id(add_out_tuser(4 downto 0))) <= '0';
 						memb_waddress_skid_data <= add_out_tdata(31 downto 2) & "00";
 						memb_waddress_skid_valid <= '1';
 						memb_wdata_skid_valid <= '1';
-						if add_out_tdata(1 downto 0) = "00" then
-							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
-							memb_wdata_skid_strobe <= "1111";
-						elsif add_out_tdata(1 downto 0) = "01" then
-							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(23 downto 0)) & x"00";
-							memb_wdata_skid_strobe <= "1110";
-						elsif add_out_tdata(1 downto 0) = "10" then
-							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(15 downto 0)) & x"0000";
-							memb_wdata_skid_strobe <= "1100";
-						elsif add_out_tdata(1 downto 0) = "11" then
-							memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(7 downto 0)) & x"000000";
-							memb_wdata_skid_strobe <= "1000";
-						end if;
+						case add_out_tdata(1 downto 0) is
+							when "00" =>
+								memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0)));
+								memb_wdata_skid_strobe <= "1111";
+							when "01" =>
+								memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(23 downto 0)) & x"00";
+								memb_wdata_skid_strobe <= "1110";
+							when "10" =>
+								memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(15 downto 0)) & x"0000";
+								memb_wdata_skid_strobe <= "1100";
+							when "11" =>
+								memb_wdata_skid_data <= std_logic_vector(get_reg_u(add_out_tuser(4 downto 0))(7 downto 0)) & x"000000";
+								memb_wdata_skid_strobe <= "1000";
+						end case;
 					end if;
 				end if;
 				if add_out_tuser(ADD_TUSER_LOAD) = '1' then
@@ -1345,25 +1347,27 @@ begin
 					
 					case load_type is
 						when load_type_byte_signed =>
-							if load_address(1 downto 0) = "00" then
-								registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(7 downto 0), 32);
-							elsif load_address(1 downto 0) = "01" then
-								registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(15 downto 8), 32);
-							elsif load_address(1 downto 0) = "10" then
-								registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(23 downto 16), 32);
-							elsif load_address(1 downto 0) = "11" then
-								registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(31 downto 24), 32);
-							end if;
+							case load_address(1 downto 0) is
+								when "00" =>
+									registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(7 downto 0), 32);
+								when "01" =>
+									registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(15 downto 8), 32);
+								when "10" =>
+									registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(23 downto 16), 32);
+								when "11" =>
+									registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(31 downto 24), 32);
+							end case;
 						when load_type_byte_unsigned =>
-							if load_address(1 downto 0) = "00" then
-								registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(7 downto 0);
-							elsif load_address(1 downto 0) = "01" then
-								registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(15 downto 8);
-							elsif load_address(1 downto 0) = "10" then
-								registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(23 downto 16);
-							elsif load_address(1 downto 0) = "11" then
-								registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(31 downto 24);
-							end if;
+							case load_address(1 downto 0) is
+								when "00" =>
+									registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(7 downto 0);
+								when "01" =>
+									registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(15 downto 8);
+								when "10" =>
+									registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(23 downto 16);
+								when "11" =>
+									registers_next(vregister_id) <= x"000000" & memb_rdata_skid_data(31 downto 24);
+							end case;
 						when load_type_halfword_signed =>
 							if load_address(1 downto 0) = "10" then
 								registers_next(vregister_id) <= sign_extend(memb_rdata_skid_data(31 downto 16), 32);
@@ -1386,25 +1390,27 @@ begin
 					
 						-- NOTE: those two are dependent on endianess
 						when load_type_word_left =>
-							if load_address(1 downto 0) = "00" then
-								registers_next(vregister_id) <= memb_rdata_skid_data(7 downto 0) & registers(vregister_id)(23 downto 0);
-							elsif load_address(1 downto 0) = "01" then
-								registers_next(vregister_id) <= memb_rdata_skid_data(15 downto 0) & registers(vregister_id)(15 downto 0);
-							elsif load_address(1 downto 0) = "10" then
-								registers_next(vregister_id) <= memb_rdata_skid_data(23 downto 0) & registers(vregister_id)(7 downto 0);
-							elsif load_address(1 downto 0) = "11" then
-								registers_next(vregister_id) <= memb_rdata_skid_data;
-							end if;
+							case load_address(1 downto 0) is
+								when "00" =>
+									registers_next(vregister_id) <= memb_rdata_skid_data(7 downto 0) & registers(vregister_id)(23 downto 0);
+								when "01" =>
+									registers_next(vregister_id) <= memb_rdata_skid_data(15 downto 0) & registers(vregister_id)(15 downto 0);
+								when "10" =>
+									registers_next(vregister_id) <= memb_rdata_skid_data(23 downto 0) & registers(vregister_id)(7 downto 0);
+								when "11" =>
+									registers_next(vregister_id) <= memb_rdata_skid_data;
+							end case;
 						when load_type_word_right =>
-							if load_address(1 downto 0) = "00" then
-								registers_next(vregister_id) <= memb_rdata_skid_data;
-							elsif load_address(1 downto 0) = "01" then
-								registers_next(vregister_id) <= registers(vregister_id)(31 downto 24) & memb_rdata_skid_data(31 downto 8);
-							elsif load_address(1 downto 0) = "10" then
-								registers_next(vregister_id) <= registers(vregister_id)(31 downto 16) & memb_rdata_skid_data(31 downto 16);
-							elsif load_address(1 downto 0) = "11" then
-								registers_next(vregister_id) <= registers(vregister_id)(31 downto 8) & memb_rdata_skid_data(31 downto 24);
-							end if;
+							case load_address(1 downto 0) is
+								when "00" =>
+									registers_next(vregister_id) <= memb_rdata_skid_data;
+								when "01" =>
+									registers_next(vregister_id) <= registers(vregister_id)(31 downto 24) & memb_rdata_skid_data(31 downto 8);
+								when "10" =>
+									registers_next(vregister_id) <= registers(vregister_id)(31 downto 16) & memb_rdata_skid_data(31 downto 16);
+								when "11" =>
+									registers_next(vregister_id) <= registers(vregister_id)(31 downto 8) & memb_rdata_skid_data(31 downto 24);
+							end case;
 					end case;
 				end if;
 			end if;
