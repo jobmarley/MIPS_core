@@ -23,13 +23,13 @@
 ## Data Mask: 1
 ##################################################################################################
           
-set_property BITSTREAM.CONFIG.BPI_SYNC_MODE Type2 [current_design]
-set_property BITSTREAM.CONFIG.EXTMASTERCCLK_EN div-2 [current_design]
-set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-set_property BITSTREAM.CONFIG.UNUSEDPIN Pullup [current_design]
-set_property CONFIG_MODE BPI16 [current_design]
-set_property CFGBVS VCCO [current_design]
-set_property CONFIG_VOLTAGE 2.5 [current_design]
+#set_property BITSTREAM.CONFIG.BPI_SYNC_MODE Type2 [current_design]
+#set_property BITSTREAM.CONFIG.EXTMASTERCCLK_EN div-2 [current_design]
+#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+#set_property BITSTREAM.CONFIG.UNUSEDPIN Pullup [current_design]
+#set_property CONFIG_MODE BPI16 [current_design]
+#set_property CFGBVS VCCO [current_design]
+#set_property CONFIG_VOLTAGE 2.5 [current_design]
 
 # Set DCI_CASCADE          
 set_property slave_banks {32 34} [get_iobanks 33]

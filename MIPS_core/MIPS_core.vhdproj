@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
-	  <CustomProjectExtensionsPath Condition="Exists('$(LocalAppData)\CustomProjectSystems\vhdl4vs\vhdl4vsProjectType.props')">$(LocalAppData)\CustomProjectSystems\vhdl4vs\</CustomProjectExtensionsPath>
-	  <CustomProjectExtensionsPath Condition="'$(CustomProjectExtensionsPath)' == ''">$(MSBuildExtensionsPath)\CustomProjectSystems\vhdl4vs\</CustomProjectExtensionsPath>
+    <CustomProjectExtensionsPath Condition="Exists('$(LocalAppData)\CustomProjectSystems\vhdl4vs\vhdl4vsProjectType.props')">$(LocalAppData)\CustomProjectSystems\vhdl4vs\</CustomProjectExtensionsPath>
+    <CustomProjectExtensionsPath Condition="'$(CustomProjectExtensionsPath)' == ''">$(MSBuildExtensionsPath)\CustomProjectSystems\vhdl4vs\</CustomProjectExtensionsPath>
     <ProjectGuid>b2df4f95-fda6-4e3c-aca8-43eb82c995d9</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(CustomProjectExtensionsPath)vhdl4vsProjectType.props" />
@@ -13,6 +13,18 @@
     <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;$(LibraryPaths)</LibraryPaths>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="..\vivado\constraints\example_top.xdc">
+      <Link>constraints\example_top.xdc</Link>
+    </None>
+    <None Include="..\vivado\constraints\KC705_Rev1_0_U1.ucf.xdc">
+      <Link>constraints\KC705_Rev1_0_U1.ucf.xdc</Link>
+    </None>
+    <None Include="..\vivado\constraints\KC705_target_constraints.xdc">
+      <Link>constraints\KC705_target_constraints.xdc</Link>
+    </None>
+    <None Include="..\vivado\constraints\KC705_test.xdc">
+      <Link>constraints\KC705_test.xdc</Link>
+    </None>
     <None Include="cache\cache_memory_coe_generator.py" />
     <None Include="core\axi_lite_adapter\axi_lite_adapter_test_data.coe" />
     <None Include="core\test\core_test_traffic_address.coe" />
@@ -46,6 +58,9 @@
     <VHDLSource Include="core\xdma_test.vhd" />
     <VHDLSource Include="debugger\mips_debugger.vhd" />
     <VHDLSource Include="debugger\mips_debugger_test.vhd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="constraints\" />
   </ItemGroup>
   <Import Project="$(CustomProjectExtensionsPath)vhdl4vsProjectType.targets" />
 </Project>
