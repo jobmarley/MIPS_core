@@ -285,6 +285,22 @@ architecture mips_alu_behavioral of mips_alu is
 	constant CMP_TUSER_LINK : NATURAL := 17;
 begin
 	
+	and_out_tvalid <= and_out_tvalid_reg;
+	and_out_tdata <= and_out_tdata_reg;
+	and_out_tuser <= and_out_tuser_reg;
+	
+	or_out_tvalid <= or_out_tvalid_reg;
+	or_out_tdata <= or_out_tdata_reg;
+	or_out_tuser <= or_out_tuser_reg;
+	
+	xor_out_tvalid <= xor_out_tvalid_reg;
+	xor_out_tdata <= xor_out_tdata_reg;
+	xor_out_tuser <= xor_out_tuser_reg;
+	
+	nor_out_tvalid <= nor_out_tvalid_reg;
+	nor_out_tdata <= nor_out_tdata_reg;
+	nor_out_tuser <= nor_out_tuser_reg;
+	
 	process (clock) is
 	begin
 		if rising_edge(clock) then
