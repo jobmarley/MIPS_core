@@ -16,9 +16,27 @@ entity mips_writeback is
 	sub_out_tdata : in std_logic_vector(32 downto 0);
 	sub_out_tuser : in std_logic_vector(4 downto 0);
 	
+	and_out_tvalid : in std_logic;
+	and_out_tdata : in std_logic_vector(31 downto 0);
+	and_out_tuser : in std_logic_vector(5 downto 0);
+	
+	or_out_tvalid : in std_logic;
+	or_out_tdata : in std_logic_vector(31 downto 0);
+	or_out_tuser : in std_logic_vector(5 downto 0);
+	
+	xor_out_tvalid : in std_logic;
+	xor_out_tdata : in std_logic_vector(31 downto 0);
+	xor_out_tuser : in std_logic_vector(5 downto 0);
+	
+	nor_out_tvalid : in std_logic;
+	nor_out_tdata : in std_logic_vector(31 downto 0);
+	nor_out_tuser : in std_logic_vector(5 downto 0);
+	
 	-- registers
 	register_port_in_a : out register_port_in_t;
-	register_port_out_a : in register_port_out_t
+	register_port_out_a : in register_port_out_t;
+	register_port_in_b : out register_port_in_t;
+	register_port_out_b : in register_port_out_t
 	
 	);
 end mips_writeback;
@@ -43,17 +61,59 @@ begin
 	process (
 		resetn,
 		
-		add_out_tvalid,
-		add_out_tdata,
-		add_out_tuser,
+		and_out_tdata,
+		and_out_tuser,
+		and_out_tvalid,
+		or_out_tdata,
+		or_out_tuser,
+		or_out_tvalid,
+		xor_out_tdata,
+		xor_out_tuser,
+		xor_out_tvalid,
+		nor_out_tdata,
+		nor_out_tuser,
+		nor_out_tvalid
 		
-		add_tuser
 	)
+		variable andorxornor : std_logic_vector(3 downto 0);
 	begin
 		
+		register_port_in_b.address <= (others => '0');
+		register_port_in_b.write_data <= (others => '0');
+		register_port_in_b.write_enable <= '0';
+		register_port_in_b.write_pending <= '0';
+		register_port_in_b.write_strobe <= x"0";
+		
+		andorxornor := and_out_tvalid & or_out_tvalid & xor_out_tvalid & nor_out_tvalid;
 		if resetn = '0' then
-		else			
-			
+		else
+			case (andorxornor) is
+				when "1000" =>
+					register_port_in_b.address <= and_out_tuser(4 downto 0);
+					register_port_in_b.write_data <= and_out_tdata;
+					register_port_in_b.write_enable <= '1';
+					register_port_in_b.write_pending <= '0';
+					register_port_in_b.write_strobe <= x"F";
+				when "0100" =>
+					register_port_in_b.address <= or_out_tuser(4 downto 0);
+					register_port_in_b.write_data <= or_out_tdata;
+					register_port_in_b.write_enable <= '1';
+					register_port_in_b.write_pending <= '0';
+					register_port_in_b.write_strobe <= x"F";
+				when "0010" =>
+					register_port_in_b.address <= xor_out_tuser(4 downto 0);
+					register_port_in_b.write_data <= xor_out_tdata;
+					register_port_in_b.write_enable <= '1';
+					register_port_in_b.write_pending <= '0';
+					register_port_in_b.write_strobe <= x"F";
+				when "0001" =>
+					register_port_in_b.address <= nor_out_tuser(4 downto 0);
+					register_port_in_b.write_data <= nor_out_tdata;
+					register_port_in_b.write_enable <= '1';
+					register_port_in_b.write_pending <= '0';
+					register_port_in_b.write_strobe <= x"F";
+				when others =>
+			end case;
 		end if;
 	end process;
 end mips_writeback_behavioral;

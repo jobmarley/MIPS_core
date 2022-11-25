@@ -275,6 +275,12 @@ package mips_utils is
 	constant OPERATION_INDEX_SUB : NATURAL := 1;
 	constant OPERATION_INDEX_MUL : NATURAL := 2;
 	constant OPERATION_INDEX_DIV : NATURAL := 3;
+	constant OPERATION_INDEX_AND : NATURAL := 4;
+	constant OPERATION_INDEX_OR : NATURAL := 5;
+	constant OPERATION_INDEX_XOR : NATURAL := 6;
+	constant OPERATION_INDEX_NOR : NATURAL := 7;
+	constant OPERATION_INDEX_UNSIGNED : NATURAL := 8;
+	constant OPERATION_INDEX_END : NATURAL := 9;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
 	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";

@@ -63,6 +63,34 @@ entity mips_alu is
 	    multaddu_out_tdata : out std_logic_vector(63 downto 0);
 	    multaddu_out_tuser : out std_logic_vector(5 downto 0);
 	
+	    and_in_tvalid : in std_logic;
+	    and_in_tdata : in std_logic_vector(63 downto 0);
+	    and_in_tuser : in std_logic_vector(5 downto 0);
+		and_out_tvalid : out std_logic;
+	    and_out_tdata : out std_logic_vector(31 downto 0);
+	    and_out_tuser : out std_logic_vector(5 downto 0);
+	
+	    or_in_tvalid : in std_logic;
+	    or_in_tdata : in std_logic_vector(63 downto 0);
+	    or_in_tuser : in std_logic_vector(5 downto 0);
+		or_out_tvalid : out std_logic;
+	    or_out_tdata : out std_logic_vector(31 downto 0);
+	    or_out_tuser : out std_logic_vector(5 downto 0);
+	
+	    xor_in_tvalid : in std_logic;
+	    xor_in_tdata : in std_logic_vector(63 downto 0);
+	    xor_in_tuser : in std_logic_vector(5 downto 0);
+		xor_out_tvalid : out std_logic;
+	    xor_out_tdata : out std_logic_vector(31 downto 0);
+	    xor_out_tuser : out std_logic_vector(5 downto 0);
+	
+	    nor_in_tvalid : in std_logic;
+	    nor_in_tdata : in std_logic_vector(63 downto 0);
+	    nor_in_tuser : in std_logic_vector(5 downto 0);
+		nor_out_tvalid : out std_logic;
+	    nor_out_tdata : out std_logic_vector(31 downto 0);
+	    nor_out_tuser : out std_logic_vector(5 downto 0);
+	
 	    cmp_in_tvalid : in std_logic;
 	    cmp_in_tdata : in std_logic_vector(63 downto 0);
 	    cmp_in_tuser : in std_logic_vector(17 downto 0);
@@ -219,6 +247,34 @@ architecture mips_alu_behavioral of mips_alu is
 	signal cmp_result_pending : std_logic;
 	signal cmp_result_pending_next : std_logic;
 	
+	signal and_out_tdata_reg : std_logic_vector(31 downto 0);
+	signal and_out_tdata_reg_next : std_logic_vector(31 downto 0);
+	signal and_out_tuser_reg : std_logic_vector(and_in_tuser'LENGTH-1 downto 0);
+	signal and_out_tuser_reg_next : std_logic_vector(and_in_tuser'LENGTH-1 downto 0);
+	signal and_out_tvalid_reg : std_logic;
+	signal and_out_tvalid_reg_next : std_logic;
+	
+	signal or_out_tdata_reg : std_logic_vector(31 downto 0);
+	signal or_out_tdata_reg_next : std_logic_vector(31 downto 0);
+	signal or_out_tuser_reg : std_logic_vector(or_in_tuser'LENGTH-1 downto 0);
+	signal or_out_tuser_reg_next : std_logic_vector(or_in_tuser'LENGTH-1 downto 0);
+	signal or_out_tvalid_reg : std_logic;
+	signal or_out_tvalid_reg_next : std_logic;
+	
+	signal xor_out_tdata_reg : std_logic_vector(31 downto 0);
+	signal xor_out_tdata_reg_next : std_logic_vector(31 downto 0);
+	signal xor_out_tuser_reg : std_logic_vector(xor_in_tuser'LENGTH-1 downto 0);
+	signal xor_out_tuser_reg_next : std_logic_vector(xor_in_tuser'LENGTH-1 downto 0);
+	signal xor_out_tvalid_reg : std_logic;
+	signal xor_out_tvalid_reg_next : std_logic;
+	
+	signal nor_out_tdata_reg : std_logic_vector(31 downto 0);
+	signal nor_out_tdata_reg_next : std_logic_vector(31 downto 0);
+	signal nor_out_tuser_reg : std_logic_vector(nor_in_tuser'LENGTH-1 downto 0);
+	signal nor_out_tuser_reg_next : std_logic_vector(nor_in_tuser'LENGTH-1 downto 0);
+	signal nor_out_tvalid_reg : std_logic;
+	signal nor_out_tvalid_reg_next : std_logic;
+	
 	constant CMP_TUSER_EQ : NATURAL := 10;
 	constant CMP_TUSER_GE : NATURAL := 11;
 	constant CMP_TUSER_LE : NATURAL := 12;
@@ -247,6 +303,22 @@ begin
 			cmp_result <= cmp_result_next;
 			cmp_result_tuser <= cmp_result_tuser_next;
 			cmp_result_pending <= cmp_result_pending_next;
+			
+			and_out_tdata_reg <= and_out_tdata_reg_next;
+			and_out_tuser_reg <= and_out_tuser_reg_next;
+			and_out_tvalid_reg <= and_out_tvalid_reg_next;
+			
+			or_out_tdata_reg <= or_out_tdata_reg_next;
+			or_out_tuser_reg <= or_out_tuser_reg_next;
+			or_out_tvalid_reg <= or_out_tvalid_reg_next;
+			
+			xor_out_tdata_reg <= xor_out_tdata_reg_next;
+			xor_out_tuser_reg <= xor_out_tuser_reg_next;
+			xor_out_tvalid_reg <= xor_out_tvalid_reg_next;
+			
+			nor_out_tdata_reg <= nor_out_tdata_reg_next;
+			nor_out_tuser_reg <= nor_out_tuser_reg_next;
+			nor_out_tvalid_reg <= nor_out_tvalid_reg_next;
 		end if;
 	end process;
 	
@@ -520,6 +592,92 @@ begin
 	--		end if;
 	--	end if;
 	--end process;
+	
+	process (
+		resetn,
+		and_in_tvalid,
+		and_in_tuser,
+		and_in_tdata,
+		
+		or_in_tvalid,
+		or_in_tuser,
+		or_in_tdata,
+		
+		xor_in_tvalid,
+		xor_in_tuser,
+		xor_in_tdata,
+		
+		nor_in_tvalid,
+		nor_in_tuser,
+		nor_in_tdata,
+		
+		and_out_tdata_reg,
+		and_out_tuser_reg,
+		and_out_tvalid_reg,
+		
+		or_out_tdata_reg,
+		or_out_tuser_reg,
+		or_out_tvalid_reg,
+		
+		xor_out_tdata_reg,
+		xor_out_tuser_reg,
+		xor_out_tvalid_reg,
+		
+		nor_out_tdata_reg,
+		nor_out_tuser_reg,
+		nor_out_tvalid_reg
+		)
+	begin
+		and_out_tdata_reg_next <= and_out_tdata_reg;
+		and_out_tuser_reg_next <= and_out_tuser_reg;
+		and_out_tvalid_reg_next <= and_out_tvalid_reg;
+		
+		or_out_tdata_reg_next <= or_out_tdata_reg;
+		or_out_tuser_reg_next <= or_out_tuser_reg;
+		or_out_tvalid_reg_next <= or_out_tvalid_reg;
+		
+		xor_out_tdata_reg_next <= xor_out_tdata_reg;
+		xor_out_tuser_reg_next <= xor_out_tuser_reg;
+		xor_out_tvalid_reg_next <= xor_out_tvalid_reg;
+		
+		nor_out_tdata_reg_next <= nor_out_tdata_reg;
+		nor_out_tuser_reg_next <= nor_out_tuser_reg;
+		nor_out_tvalid_reg_next <= nor_out_tvalid_reg;
+					
+		if resetn = '0' then
+			and_out_tdata_reg_next <= (others => '0');
+			and_out_tuser_reg_next <= (others => '0');
+			and_out_tvalid_reg_next <= '0';
+			
+			or_out_tdata_reg_next <= (others => '0');
+			or_out_tuser_reg_next <= (others => '0');
+			or_out_tvalid_reg_next <= '0';
+			
+			xor_out_tdata_reg_next <= (others => '0');
+			xor_out_tuser_reg_next <= (others => '0');
+			xor_out_tvalid_reg_next <= '0';
+			
+			nor_out_tdata_reg_next <= (others => '0');
+			nor_out_tuser_reg_next <= (others => '0');
+			nor_out_tvalid_reg_next <= '0';
+		else
+			and_out_tvalid_reg_next <= and_in_tvalid;
+			and_out_tdata_reg_next <= and_in_tdata(63 downto 32) and and_in_tdata(31 downto 0);
+			and_out_tuser_reg_next <= and_in_tuser;
+			
+			or_out_tvalid_reg_next <= or_in_tvalid;
+			or_out_tdata_reg_next <= or_in_tdata(63 downto 32) or or_in_tdata(31 downto 0);
+			or_out_tuser_reg_next <= or_in_tuser;
+			
+			xor_out_tvalid_reg_next <= xor_in_tvalid;
+			xor_out_tdata_reg_next <= xor_in_tdata(63 downto 32) xor xor_in_tdata(31 downto 0);
+			xor_out_tuser_reg_next <= xor_in_tuser;
+			
+			nor_out_tvalid_reg_next <= nor_in_tvalid;
+			nor_out_tdata_reg_next <= nor_in_tdata(63 downto 32) nor nor_in_tdata(31 downto 0);
+			nor_out_tuser_reg_next <= nor_in_tuser;
+		end if;
+	end process;
 	
 	add_sub_i : c_addsub_0
 	  PORT MAP (

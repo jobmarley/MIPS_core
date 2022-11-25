@@ -13,7 +13,7 @@ entity mips_readreg is
 	register_c : in std_logic_vector(4 downto 0);
 	immediate : in std_logic_vector(31 downto 0);
 	immediate_valid : in std_logic;
-	operation : in std_logic_vector(7 downto 0);
+	operation : in std_logic_vector(OPERATION_INDEX_END-1 downto 0);
 	operation_valid : in std_logic;
 	load : in std_logic;
 	store : in std_logic;
@@ -38,6 +38,22 @@ entity mips_readreg is
 	alu_sub_in_tdata : out std_logic_vector(63 downto 0);
 	alu_sub_in_tuser : out std_logic_vector(4 downto 0);
 	
+	alu_and_in_tvalid : out std_logic;
+	alu_and_in_tdata : out std_logic_vector(63 downto 0);
+	alu_and_in_tuser : out std_logic_vector(5 downto 0);
+	
+	alu_or_in_tvalid : out std_logic;
+	alu_or_in_tdata : out std_logic_vector(63 downto 0);
+	alu_or_in_tuser : out std_logic_vector(5 downto 0);
+	
+	alu_xor_in_tvalid : out std_logic;
+	alu_xor_in_tdata : out std_logic_vector(63 downto 0);
+	alu_xor_in_tuser : out std_logic_vector(5 downto 0);
+	
+	alu_nor_in_tvalid : out std_logic;
+	alu_nor_in_tdata : out std_logic_vector(63 downto 0);
+	alu_nor_in_tuser : out std_logic_vector(5 downto 0);
+	
 	stall : out std_logic
 	);
 end mips_readreg;
@@ -53,8 +69,8 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal immediate_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_valid_reg : std_logic;
 	signal immediate_valid_reg_next : std_logic;
-	signal operation_reg : std_logic_vector(7 downto 0);
-	signal operation_reg_next : std_logic_vector(7 downto 0);
+	signal operation_reg : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
+	signal operation_reg_next : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
 	signal operation_valid_reg : std_logic;
 	signal operation_valid_reg_next : std_logic;
 	signal load_reg : std_logic;
@@ -96,6 +112,23 @@ begin
 	alu_sub_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
 	alu_sub_in_tvalid <= operation_reg(OPERATION_INDEX_SUB) and not stall_reg;
 	alu_sub_in_tuser <= register_c_reg;
+	
+	alu_and_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_and_in_tvalid <= operation_reg(OPERATION_INDEX_AND) and not stall_reg;
+	alu_and_in_tuser <= '0' & register_c_reg;
+	
+	alu_or_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_or_in_tvalid <= operation_reg(OPERATION_INDEX_OR) and not stall_reg;
+	alu_or_in_tuser <= '0' & register_c_reg;
+	
+	alu_xor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_xor_in_tvalid <= operation_reg(OPERATION_INDEX_XOR) and not stall_reg;
+	alu_xor_in_tuser <= '0' & register_c_reg;
+	
+	alu_nor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_reg;
+	alu_nor_in_tuser <= '0' & register_c_reg;
+	
 		
 	stall <= stall_reg;
 	

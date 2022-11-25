@@ -18,7 +18,7 @@ entity mips_decode is
 	register_c : out std_logic_vector(4 downto 0);
 	immediate : out std_logic_vector(31 downto 0);
 	immediate_valid : out std_logic;
-	operation : out std_logic_vector(7 downto 0);
+	operation : out std_logic_vector(OPERATION_INDEX_END-1 downto 0);
 	operation_valid : out std_logic;
 	load : out std_logic;
 	store : out std_logic;
@@ -40,8 +40,8 @@ architecture mips_decode_behavioral of mips_decode is
 	signal immediate_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_valid_reg : std_logic;
 	signal immediate_valid_reg_next : std_logic;
-	signal operation_reg : std_logic_vector(7 downto 0);
-	signal operation_reg_next : std_logic_vector(7 downto 0);
+	signal operation_reg : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
+	signal operation_reg_next : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
 	signal operation_valid_reg : std_logic;
 	signal operation_valid_reg_next : std_logic;
 	signal load_reg : std_logic;
@@ -61,7 +61,6 @@ architecture mips_decode_behavioral of mips_decode is
 	end function;
 begin
 
-	instr_data_ready <= operation_valid_reg_next;
 	
 	register_a <= register_a_reg;
 	register_b <= register_b_reg;
@@ -111,6 +110,7 @@ begin
         variable instruction_data_r : instruction_r_t;
         variable instruction_data_i : instruction_i_t;
         variable instruction_data_j : instruction_j_t;
+        variable instruction_data_cop0 : instruction_cop0_t;
 	begin
 		register_a_reg_next <= (others => '0');
 		register_b_reg_next <= (others => '0');
@@ -123,6 +123,7 @@ begin
 		store_reg_next <= '0';
 		memop_type_reg_next <= (others => '0');
 		
+		instr_data_ready <= '0';
 		panic <= '0';
 		
 		if resetn = '0' then
@@ -137,39 +138,206 @@ begin
 			store_reg_next <= '0';
 			memop_type_reg_next <= (others => '0');
 		else
+			instr_data_ready <= '1';
 			if instr_data_valid = '1' then
 				
 				instruction_data_r := slv_to_instruction_r(instr_data);
 				instruction_data_i := slv_to_instruction_i(instr_data);
 				instruction_data_j := slv_to_instruction_j(instr_data);
+				instruction_data_cop0 := slv_to_instruction_cop0(instr_data);
 				
 				case (instruction_data_r.opcode) is
-					when "000000" => -- add/u, sub/u, div/u, mult/u, noop, and, or, sll, sra, srl xor, nor, slt/u, jr/alr, mfc0, movn
+					when instr_add_opc.opcode => -- add/u, sub/u, div/u, mult/u, noop, and, or, sll, sra, srl xor, nor, slt/u, jr/alr, mfc0, movn
 						case (instruction_data_r.funct) is
-							when instr_add_opc.funct => -- add
+							when instr_add_opc.funct | instr_addu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
 								register_a_reg_next <= instruction_data_r.rs;
 								register_b_reg_next <= instruction_data_r.rt;
 								register_c_reg_next <= instruction_data_r.rd;
-							when instr_addu_opc.funct => -- addu
+							when instr_and_opc.funct =>
 								operation_valid_reg_next <= '1';
-								operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+								operation_reg_next <= (OPERATION_INDEX_AND => '1', others => '0');
 								register_a_reg_next <= instruction_data_r.rs;
 								register_b_reg_next <= instruction_data_r.rt;
 								register_c_reg_next <= instruction_data_r.rd;
+							when instr_div_opc.funct =>
+							when instr_divu_opc.funct =>
+							when instr_mult_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_MUL => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							when instr_multu_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_MUL => '1', OPERATION_INDEX_UNSIGNED => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							-- -- noop is sll 0, 0, 0
+							--when instr_noop_opc.funct =>
+							--	operation_valid_reg_next <= '0';
+							when instr_or_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_OR => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							when instr_sll_opc.funct =>
+							when instr_sllv_opc.funct =>
+							when instr_sra_opc.funct =>
+							when instr_srl_opc.funct =>
+							when instr_srlv_opc.funct =>
+							when instr_sub_opc.funct | instr_subu_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_SUB => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							when instr_xor_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_XOR => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							when instr_nor_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_NOR => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							when instr_slt_opc.funct =>
+							when instr_sltu_opc.funct =>
+							when instr_jalr_opc.funct =>
+							when instr_jr_opc.funct =>
+							
+							when instr_mfhi_opc.funct =>
+							when instr_mflo_opc.funct =>
+							when instr_mthi_opc.funct =>
+							when instr_mtlo_opc.funct =>
+	
+							when instr_movn_opc.funct =>
+							when instr_movz_opc.funct =>
+	
+							when instr_syscall_opc.funct =>
+							when instr_break_opc.funct =>
+	
+							when instr_sync_opc.funct =>
 							
 							when others =>
+								panic <= '1';
 						end case;
-					when "001000" =>
+					when instr_addi_opc.opcode | instr_addiu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
 						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_r.rt;
+						register_c_reg_next <= instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
-						
+					when instr_andi_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_AND => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+					when instr_mul_opc.opcode =>
+						case (instruction_data_r.funct) is
+							when instr_mul_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_MUL => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+							when instr_madd_opc.funct =>
+							when instr_maddu_opc.funct =>
+							when instr_msub_opc.funct =>
+							when instr_msubu_opc.funct =>
+							when instr_clo_opc.funct =>
+							when instr_clz_opc.funct =>
+							when instr_sdbbp_opc.funct =>
+							when others =>
+								panic <= '1';
+						end case;
+					when instr_ori_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_OR => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+					when instr_xori_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_XOR => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+					when instr_slti_opc.opcode =>
+					when instr_sltiu_opc.opcode =>
+					when instr_beq_opc.opcode =>
+					when instr_beql_opc.opcode =>
+					when instr_bltz_opc.opcode =>
+						case (instruction_data_i.rt) is
+							when instr_bltz_opc.rt =>
+							when instr_bltzl_opc.rt =>
+							when instr_bltzal_opc.rt =>
+							when instr_bltzall_opc.rt =>
+							when instr_bgez_opc.rt =>
+							when instr_bgezl_opc.rt =>
+							when instr_bgezal_opc.rt =>
+							when instr_bgezall_opc.rt =>
+							
+							when others =>
+								panic <= '1';
+						end case;
+					when instr_bgtz_opc.opcode =>
+					when instr_bgtzl_opc.opcode =>
+					when instr_blez_opc.opcode =>
+					when instr_blezl_opc.opcode =>
+					when instr_bne_opc.opcode =>
+					when instr_bnel_opc.opcode =>
+					when instr_j_opc.opcode =>
+					when instr_jal_opc.opcode =>
+					
+					when instr_lb_opc.opcode =>
+					when instr_lbu_opc.opcode =>
+					when instr_lh_opc.opcode =>
+					when instr_lhu_opc.opcode =>
+					when instr_lui_opc.opcode =>
+					when instr_lw_opc.opcode =>
+					
+					when instr_sb_opc.opcode =>
+					when instr_sh_opc.opcode =>
+					when instr_sw_opc.opcode =>
+					when instr_sc_opc.opcode =>
+	
+					when instr_ll_opc.opcode =>
+					when instr_lwl_opc.opcode =>
+					when instr_lwr_opc.opcode =>
+					when instr_swl_opc.opcode =>
+					when instr_swr_opc.opcode =>
+	
+		
+					when instr_cache_opc.opcode =>
+					when instr_pref_opc.opcode =>
+	
+					
+					when instr_mfc0_opc.opcode =>
+						-- -- hmmm...
+						--case (instruction_data_cop0.funct) is
+						--	when instr_mfc0_opc.funct =>
+						--	when instr_mtc0_opc.funct =>
+						--	when instr_deret_opc.funct =>
+						--	when instr_eret_opc.funct =>
+						--							
+						--	when others =>
+						--		panic <= '1';
+						--end case;
+					
 					when others =>
+						panic <= '1';
 				end case;
 			end if;
 		end if;
