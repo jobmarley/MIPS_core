@@ -60,7 +60,6 @@ architecture mips_decode_behavioral of mips_decode is
 		return result;
 	end function;
 begin
-
 	
 	register_a <= register_a_reg;
 	register_b <= register_b_reg;
@@ -302,11 +301,57 @@ begin
 					when instr_jal_opc.opcode =>
 					
 					when instr_lb_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_byte;
 					when instr_lbu_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= x"0000" & instruction_data_i.immediate;
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_byte;
 					when instr_lh_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half;
 					when instr_lhu_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= x"0000" & instruction_data_i.immediate;
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half;
 					when instr_lui_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= instruction_data_i.immediate & x"FFFF";
+						immediate_valid_reg_next <= '1';
 					when instr_lw_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_word;
 					
 					when instr_sb_opc.opcode =>
 					when instr_sh_opc.opcode =>
