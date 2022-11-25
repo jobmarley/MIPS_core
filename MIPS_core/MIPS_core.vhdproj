@@ -34,6 +34,7 @@
     <None Include="core\test\core_test_traffic_init_data.coe" />
     <None Include="core\test\core_test_traffic_mask.coe" />
     <None Include="core\test\core_test_traffic_coe_generator.py" />
+    <None Include="core\test\test.coe" />
     <None Include="debugger\test\debugger_test_traffic_address.coe" />
     <None Include="debugger\test\debugger_test_traffic_control.coe" />
     <None Include="debugger\test\debugger_test_traffic_data.coe" />
@@ -51,9 +52,15 @@
     <VHDLSource Include="core\axi_lite_adapter\axi_lite_adapter.vhd" />
     <VHDLSource Include="core\mips_core.vhd" />
     <VHDLSource Include="core\mips_core_impl_simple.vhd" />
+    <VHDLSource Include="core\mips_decode.vhd" />
     <VHDLSource Include="core\mips_execution_unit.vhd" />
     <VHDLSource Include="core\mips_core_test.vhd" />
+    <VHDLSource Include="core\mips_fetch.vhd" />
+    <VHDLSource Include="core\mips_readmem.vhd" />
+    <VHDLSource Include="core\mips_readreg.vhd" />
+    <VHDLSource Include="core\mips_registers.vhd" />
     <VHDLSource Include="core\mips_utils.vhd" />
+    <VHDLSource Include="core\mips_writeback.vhd" />
     <VHDLSource Include="core\skid_buffer.vhd" />
     <VHDLSource Include="core\xdma_test.vhd" />
     <VHDLSource Include="debugger\mips_debugger.vhd" />

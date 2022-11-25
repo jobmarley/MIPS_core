@@ -121,4 +121,264 @@ package mips_utils is
 	constant COP0_EXCCODE_WATCH : std_logic_vector(4 downto 0) := '1' & x"7";		-- Reference to WatchHi/WatchLo address
 	constant COP0_EXCCODE_MCHECK : std_logic_vector(4 downto 0) := '1' & x"8";		-- Machine check
 	constant COP0_EXCCODE_CACHEERR : std_logic_vector(4 downto 0) := '1' & x"E";	-- Cache error
+	
+	subtype slv32_t is std_logic_vector(31 downto 0);
+	type slv32_array_t is array(NATURAL RANGE <>) of slv32_t;
+	type cop0_register_t is array(31 downto 0) of slv32_array_t(7 downto 0);
+	
+	type register_port_in_t is record
+		address : std_logic_vector(4 DOWNTO 0);
+		write_enable : std_logic;
+		write_data : std_logic_vector(31 downto 0);
+		write_strobe : std_logic_vector(3 downto 0);
+		write_pending : std_logic;
+	end record;
+	type register_port_out_t is record
+		data : std_logic_vector(31 downto 0);
+		pending : std_logic;
+	end record;
+	type register_port_in_array_t is array(NATURAL RANGE <>) of register_port_in_t;
+	type register_port_out_array_t is array(NATURAL RANGE <>) of register_port_out_t;
+	
+	type instruction_r_t is record
+		opcode : std_logic_vector(5 downto 0);
+		rs : std_logic_vector(4 downto 0);
+		rt : std_logic_vector(4 downto 0);
+		rd : std_logic_vector(4 downto 0);
+		shamt : std_logic_vector(4 downto 0);
+		funct : std_logic_vector(5 downto 0);
+	end record;
+	type instruction_i_t is record
+		opcode : std_logic_vector(5 downto 0);
+		rs : std_logic_vector(4 downto 0);
+		rt : std_logic_vector(4 downto 0);
+		immediate : std_logic_vector(15 downto 0);
+	end record;
+	type instruction_j_t is record
+		opcode : std_logic_vector(5 downto 0);
+		address : std_logic_vector(25 downto 0);
+	end record;
+	type instruction_cop0_t is record
+		opcode : std_logic_vector(5 downto 0);
+		funct : std_logic_vector(4 downto 0);
+		rt : std_logic_vector(4 downto 0);
+		rd : std_logic_vector(4 downto 0);
+		zero : std_logic_vector(7 downto 0);
+		sel : std_logic_vector(2 downto 0);
+	end record;
+	
+	function slv_to_instruction_r(v : std_logic_vector(31 downto 0)) return instruction_r_t;
+	function slv_to_instruction_i(v : std_logic_vector(31 downto 0)) return instruction_i_t;
+	function slv_to_instruction_j(v : std_logic_vector(31 downto 0)) return instruction_j_t;
+	function slv_to_instruction_cop0(v : std_logic_vector(31 downto 0)) return instruction_cop0_t;
+	
+	function instruction_to_slv(i : instruction_r_t) return std_logic_vector;
+	function instruction_to_slv(i : instruction_i_t) return std_logic_vector;
+	function instruction_to_slv(i : instruction_j_t) return std_logic_vector;
+	function instruction_to_slv(i : instruction_cop0_t) return std_logic_vector;
+	
+	constant instr_add_opc : instruction_r_t := ( opcode => "000000", funct => "100000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_addu_opc : instruction_r_t := ( opcode => "000000", funct => "100001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_addi_opc : instruction_i_t := ( opcode => "001000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_addiu_opc : instruction_i_t := ( opcode => "001001", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_and_opc : instruction_r_t := ( opcode => "000000", funct => "100100", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_andi_opc : instruction_i_t := ( opcode => "001100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_div_opc : instruction_r_t := ( opcode => "000000", funct => "011010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_divu_opc : instruction_r_t := ( opcode => "000000", funct => "011011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_mul_opc : instruction_r_t := ( opcode => "011100", funct => "000010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_mult_opc : instruction_r_t := ( opcode => "000000", funct => "011000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_multu_opc : instruction_r_t := ( opcode => "000000", funct => "011001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_madd_opc : instruction_r_t := ( opcode => "011100", funct => "000000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_maddu_opc : instruction_r_t := ( opcode => "011100", funct => "000001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_msub_opc : instruction_r_t := ( opcode => "011100", funct => "000100", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_msubu_opc : instruction_r_t := ( opcode => "011100", funct => "000101", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '0') );
+	constant instr_noop_opc : instruction_r_t := ( opcode => "000000", funct => "000000", shamt => (others => '0'), rs => (others => '0'), rt => (others => '0'), rd => (others => '0') );
+	constant instr_or_opc : instruction_r_t := ( opcode => "000000", funct => "100101", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_ori_opc : instruction_i_t := ( opcode => "001101", rs => (others => '-'), rt => (others => '-'), immediate => (others => '-') );
+	constant instr_sll_opc : instruction_r_t := ( opcode => "000000", funct => "000000", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_sllv_opc : instruction_r_t := ( opcode => "000000", funct => "000100", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_sra_opc : instruction_r_t := ( opcode => "000000", funct => "000011", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_srl_opc : instruction_r_t := ( opcode => "000000", funct => "000010", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_srlv_opc : instruction_r_t := ( opcode => "000000", funct => "000110", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_sub_opc : instruction_r_t := ( opcode => "000000", funct => "100010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_subu_opc : instruction_r_t := ( opcode => "000000", funct => "100011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_xor_opc : instruction_r_t := ( opcode => "000000", funct => "100110", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_xori_opc : instruction_i_t := ( opcode => "001110", rs => (others => '-'), rt => (others => '-'), immediate => (others => '-') );
+	constant instr_nor_opc : instruction_r_t := ( opcode => "000000", funct => "100111", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	
+	constant instr_slt_opc : instruction_r_t := ( opcode => "000000", funct => "101010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_slti_opc : instruction_i_t := ( opcode => "001010", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sltiu_opc : instruction_i_t := ( opcode => "001011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sltu_opc : instruction_r_t := ( opcode => "000000", funct => "101011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	
+	constant instr_clo_opc : instruction_r_t := ( opcode => "011100", funct => "100001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_clz_opc : instruction_r_t := ( opcode => "011100", funct => "100000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	
+	
+	constant instr_beq_opc : instruction_i_t := ( opcode => "000100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_beql_opc : instruction_i_t := ( opcode => "010100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_bltz_opc : instruction_i_t := ( opcode => "000001", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_bltzl_opc : instruction_i_t := ( opcode => "000001", rt => "00010", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00010
+	constant instr_bltzal_opc : instruction_i_t := ( opcode => "000001", rt => "10000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10000
+	constant instr_bltzall_opc : instruction_i_t := ( opcode => "000001", rt => "10010", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10010
+	constant instr_bgez_opc : instruction_i_t := ( opcode => "000001", rt => "00001", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00001
+	constant instr_bgezl_opc : instruction_i_t := ( opcode => "000001", rt => "00011", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00011
+	constant instr_bgezal_opc : instruction_i_t := ( opcode => "000001", rt => "10001", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10001
+	constant instr_bgezall_opc : instruction_i_t := ( opcode => "000001", rt => "10011", rs => (others => '-'), immediate => (others => '-') );	-- rt is 10011
+	constant instr_bgtz_opc : instruction_i_t := ( opcode => "000111", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_bgtzl_opc : instruction_i_t := ( opcode => "010111", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_blez_opc : instruction_i_t := ( opcode => "000110", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_blezl_opc : instruction_i_t := ( opcode => "010110", rt => "00000", rs => (others => '-'), immediate => (others => '-') );	-- rt is 00000
+	constant instr_bne_opc : instruction_i_t := ( opcode => "000101", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_bnel_opc : instruction_i_t := ( opcode => "010101", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+
+	constant instr_j_opc : instruction_j_t := ( opcode => "000010", address => (others => '-') );
+	constant instr_jal_opc : instruction_j_t := ( opcode => "000011", address => (others => '-') );
+	constant instr_jalr_opc : instruction_r_t := ( opcode => "000000", funct => "001001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '0'), rd => (others => '-') );
+	constant instr_jr_opc : instruction_r_t := ( opcode => "000000", funct => "001000", shamt => (others => '0'), rs => (others => '-'), rt => (others => '0'), rd => (others => '0') );
+	
+	constant instr_lb_opc : instruction_i_t := ( opcode => "100000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lbu_opc : instruction_i_t := ( opcode => "100100", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lh_opc : instruction_i_t := ( opcode => "100001", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lhu_opc : instruction_i_t := ( opcode => "100101", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lui_opc : instruction_i_t := ( opcode => "001111", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lw_opc : instruction_i_t := ( opcode => "100011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_mfhi_opc : instruction_r_t := ( opcode => "000000", funct => "010000", shamt => (others => '0'), rs => (others => '0'), rt => (others => '0'), rd => (others => '-') );
+	constant instr_mflo_opc : instruction_r_t := ( opcode => "000000", funct => "010010", shamt => (others => '0'), rs => (others => '0'), rt => (others => '0'), rd => (others => '-') );
+	constant instr_mthi_opc : instruction_r_t := ( opcode => "000000", funct => "010001", shamt => (others => '0'), rs => (others => '-'), rt => (others => '0'), rd => (others => '0') );
+	constant instr_mtlo_opc : instruction_r_t := ( opcode => "000000", funct => "010011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '0'), rd => (others => '0') );
+	constant instr_sb_opc : instruction_i_t := ( opcode => "101000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sh_opc : instruction_i_t := ( opcode => "101001", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sw_opc : instruction_i_t := ( opcode => "101011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sc_opc : instruction_i_t := ( opcode => "111000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_mfc0_opc : instruction_cop0_t := ( opcode => "010000", funct => "00000", rt => (others => '-'), rd => (others => '-'), zero => (others => '0'), sel => "---" );
+	constant instr_mtc0_opc : instruction_cop0_t := ( opcode => "010000", funct => "00100", rt => (others => '-'), rd => (others => '-'), zero => (others => '0'), sel => "---" );
+	constant instr_ll_opc : instruction_i_t := ( opcode => "110000", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lwl_opc : instruction_i_t := ( opcode => "100010", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_lwr_opc : instruction_i_t := ( opcode => "100110", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_swl_opc : instruction_i_t := ( opcode => "101010", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_swr_opc : instruction_i_t := ( opcode => "101110", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_movn_opc : instruction_r_t := ( opcode => "000000", funct => "001011", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_movz_opc : instruction_r_t := ( opcode => "000000", funct => "001010", shamt => (others => '0'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	
+	constant instr_syscall_opc : instruction_r_t := ( opcode => "000000", funct => "001100", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_break_opc : instruction_r_t := ( opcode => "000000", funct => "001101", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+	constant instr_sdbbp_opc : instruction_r_t := ( opcode => "011100", funct => "111111", shamt => (others => '-'), rs => (others => '-'), rt => (others => '-'), rd => (others => '-') );
+		
+	constant instr_cache_opc : instruction_i_t := ( opcode => "101111", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_pref_opc : instruction_i_t := ( opcode => "110011", rt => (others => '-'), rs => (others => '-'), immediate => (others => '-') );
+	constant instr_sync_opc : instruction_r_t := ( opcode => "000000", funct => "001111", shamt => (others => '-'), rs => (others => '0'), rt => (others => '0'), rd => (others => '0') );
+	constant instr_deret_opc : instruction_r_t := ( opcode => "010000", funct => "011111", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
+	constant instr_eret_opc : instruction_r_t := ( opcode => "010000", funct => "011000", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
+	
+	constant OPERATION_INDEX_ADD : NATURAL := 0;
+	constant OPERATION_INDEX_SUB : NATURAL := 1;
+	constant OPERATION_INDEX_MUL : NATURAL := 2;
+	constant OPERATION_INDEX_DIV : NATURAL := 3;
+	
+	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
+	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";
+	constant memory_op_type_half : std_logic_vector(2 downto 0) := "010";
+	constant memory_op_type_half_left : std_logic_vector(2 downto 0) := "100";
+	constant memory_op_type_half_right : std_logic_vector(2 downto 0) := "101";
+	type alu_add_out_tuser_t is record
+		exclusive : std_logic;
+		signed : std_logic;
+		memop_type : std_logic_vector(2 downto 0);
+		store : std_logic;
+		store_data : std_logic_vector(31 downto 0);
+		load : std_logic;
+		rt : std_logic_vector(4 downto 0);
+	end record;
+	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
+	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
 end package;
+
+
+package body mips_utils is
+	
+	function slv_to_instruction_r(v : std_logic_vector(31 downto 0)) return instruction_r_t is
+		variable r : instruction_r_t;
+	begin
+		r.opcode := v(31 downto 26);
+		r.rs := v(25 downto 21);
+		r.rt := v(20 downto 16);
+		r.rd := v(15 downto 11);
+		r.shamt := v(10 downto 6);
+		r.funct := v(5 downto 0);
+		return r;
+	end function;
+	function slv_to_instruction_i(v : std_logic_vector(31 downto 0)) return instruction_i_t is
+		variable r : instruction_i_t;
+	begin
+		r.opcode := v(31 downto 26);
+		r.rs := v(25 downto 21);
+		r.rt := v(20 downto 16);
+		r.immediate := v(15 downto 0);
+		return r;
+	end function;
+	function slv_to_instruction_j(v : std_logic_vector(31 downto 0)) return instruction_j_t is
+		variable r : instruction_j_t;
+	begin
+		r.opcode := v(31 downto 26);
+		r.address := v(25 downto 0);
+		return r;
+	end function;
+	function slv_to_instruction_cop0(v : std_logic_vector(31 downto 0)) return instruction_cop0_t is
+		variable r : instruction_cop0_t;
+	begin
+		r.opcode := v(31 downto 26);
+		r.funct := v(25 downto 21);
+		r.rt := v(20 downto 16);
+		r.rd := v(15 downto 11);
+		r.zero := v(10 downto 3);
+		r.sel := v(2 downto 0);
+		return r;
+	end function;
+	
+	function instruction_to_slv(i : instruction_r_t) return std_logic_vector is
+	begin
+		return i.opcode & i.rs & i.rt & i.rd & i.shamt & i.funct;
+	end function;
+	
+	function instruction_to_slv(i : instruction_i_t) return std_logic_vector is
+	begin
+		return i.opcode & i.rs & i.rt & i.immediate;
+	end function;
+	
+	function instruction_to_slv(i : instruction_j_t) return std_logic_vector is
+	begin
+		return i.opcode & i.address;
+	end function;
+	
+	function instruction_to_slv(i : instruction_cop0_t) return std_logic_vector is
+	begin
+		return i.opcode & i.funct & i.rt & i.rd & i.zero & i.sel;
+	end function;
+	
+	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t is
+		variable vresult : alu_add_out_tuser_t;
+	begin
+		vresult.rt := data(4 downto 0);
+		vresult.load := data(5);
+		vresult.store := data(6);
+		vresult.store_data := data(38 downto 7);
+		vresult.memop_type := data(41 downto 39);
+		vresult.signed := data(42);
+		vresult.exclusive := data(43);
+		return vresult;
+	end function;
+	
+	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector is
+		variable vresult : std_logic_vector(43 downto 0);
+	begin
+		vresult(4 downto 0) := tuser.rt;
+		vresult(5) := tuser.load;
+		vresult(6) := tuser.store;
+		vresult(38 downto 7) := tuser.store_data;
+		vresult(41 downto 39) := tuser.memop_type;
+		vresult(42) := tuser.signed;
+		vresult(43) := tuser.exclusive;
+		return vresult;
+	end function;
+end mips_utils;
