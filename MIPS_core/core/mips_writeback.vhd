@@ -10,7 +10,7 @@ entity mips_writeback is
 	-- alu
 	add_out_tvalid : in std_logic;
 	add_out_tdata : in std_logic_vector(32 downto 0);
-	add_out_tuser : in std_logic_vector(43 downto 0);
+	add_out_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 	sub_out_tvalid : in std_logic;
 	sub_out_tdata : in std_logic_vector(32 downto 0);
@@ -38,6 +38,10 @@ entity mips_writeback is
 	register_port_in_b : out register_port_in_t;
 	register_port_out_b : in register_port_out_t
 	
+	-- fetch
+	--fetch_override_address : out std_logic_vector(31 downto 0);
+	--fetch_override_address_valid : out std_logic
+	
 	);
 end mips_writeback;
 
@@ -51,6 +55,9 @@ begin
 	register_port_in_a.write_data <= add_out_tdata(31 downto 0);
 	register_port_in_a.write_strobe <= x"F";
 	register_port_in_a.write_pending <= '0';
+	
+	--fetch_override_address <= add_out_tdata(31 downto 0);
+	--fetch_override_address_valid <= add_tuser.jump and add_out_tvalid;
 	
 	process(clock)
 	begin

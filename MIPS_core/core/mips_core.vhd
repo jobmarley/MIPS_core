@@ -194,7 +194,7 @@ architecture mips_core_behavioral of mips_core is
 		
 		add_out_tvalid : in std_logic;
 		add_out_tdata : in std_logic_vector(32 downto 0);
-		add_out_tuser : in std_logic_vector(43 downto 0);
+		add_out_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 	
 		-- registers
 		register_port_in_a : out register_port_in_t;
@@ -254,10 +254,10 @@ architecture mips_core_behavioral of mips_core is
 	
 			add_in_tvalid : in std_logic;
 			add_in_tdata : in std_logic_vector(63 downto 0);
-			add_in_tuser : in std_logic_vector(43 downto 0);
+			add_in_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 			add_out_tvalid : out std_logic;
 			add_out_tdata : out std_logic_vector(32 downto 0);
-			add_out_tuser : out std_logic_vector(43 downto 0);
+			add_out_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 			sub_in_tvalid : in std_logic;
 			sub_in_tdata : in std_logic_vector(63 downto 0);
@@ -367,7 +367,7 @@ architecture mips_core_behavioral of mips_core is
 		-- alu
 		add_out_tvalid : in std_logic;
 		add_out_tdata : in std_logic_vector(32 downto 0);
-		add_out_tuser : in std_logic_vector(43 downto 0);
+		add_out_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 		sub_out_tvalid : in std_logic;
 		sub_out_tdata : in std_logic_vector(32 downto 0);
@@ -395,6 +395,9 @@ architecture mips_core_behavioral of mips_core is
 		register_port_in_b : out register_port_in_t;
 		register_port_out_b : in register_port_out_t
 	
+		-- fetch
+		--fetch_override_address : out std_logic_vector(31 downto 0);
+		--fetch_override_address_valid : out std_logic
 		);
 	end component;
 	
@@ -435,12 +438,16 @@ architecture mips_core_behavioral of mips_core is
 			m_axi_mem_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
 			m_axi_mem_wvalid : out STD_LOGIC;
 	
+			instruction_address_plus_8 : out std_logic_vector(31 downto 0);
+			instruction_address : out std_logic_vector(31 downto 0);
 			instruction_data : out std_logic_vector(31 downto 0);
 			instruction_data_valid : out std_logic;
 			instruction_data_ready : in std_logic;
 		
-			--override_address : in std_logic_vector(31 downto 0);
-			--override_address_valid : in std_logic;
+			override_address : in std_logic_vector(31 downto 0);
+			override_address_valid : in std_logic;
+		
+			delay_slot : in std_logic;
 	
 			error : out std_logic
 		);
@@ -451,6 +458,8 @@ architecture mips_core_behavioral of mips_core is
 		resetn : in std_logic;
 		clock : in std_logic;
 	
+		instr_address_plus_8 : in std_logic_vector(31 downto 0);
+		instr_address : in std_logic_vector(31 downto 0);
 		instr_data : in std_logic_vector(31 downto 0);
 		instr_data_valid : in std_logic;
 		instr_data_ready : out std_logic;
@@ -465,6 +474,10 @@ architecture mips_core_behavioral of mips_core is
 		load : out std_logic;
 		store : out std_logic;
 		memop_type : out std_logic_vector(2 downto 0);
+	
+		override_address : out std_logic_vector(31 downto 0);
+		override_address_valid : out std_logic;
+		delay_slot : out std_logic;
 	
 		panic : out std_logic
 		);
@@ -499,7 +512,7 @@ architecture mips_core_behavioral of mips_core is
 		-- alu
 		alu_add_in_tvalid : out std_logic;
 		alu_add_in_tdata : out std_logic_vector(63 downto 0);
-		alu_add_in_tuser : out std_logic_vector(43 downto 0);
+		alu_add_in_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 		alu_sub_in_tvalid : out std_logic;
 		alu_sub_in_tdata : out std_logic_vector(63 downto 0);
@@ -521,6 +534,9 @@ architecture mips_core_behavioral of mips_core is
 		alu_nor_in_tdata : out std_logic_vector(63 downto 0);
 		alu_nor_in_tuser : out std_logic_vector(5 downto 0);
 	
+		override_address : out std_logic_vector(31 downto 0);
+		override_address_valid : out std_logic;
+	
 		stall : out std_logic
 		);
 	end component;
@@ -534,10 +550,10 @@ architecture mips_core_behavioral of mips_core is
 	
 	signal alu_add_in_tvalid : std_logic;
 	signal alu_add_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_add_in_tuser : std_logic_vector(43 downto 0);
+	signal alu_add_in_tuser : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 	signal alu_add_out_tvalid : std_logic;
 	signal alu_add_out_tdata : std_logic_vector(32 downto 0);
-	signal alu_add_out_tuser : std_logic_vector(43 downto 0);
+	signal alu_add_out_tuser : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 	signal alu_sub_in_tvalid : std_logic;
 	signal alu_sub_in_tdata : std_logic_vector(63 downto 0);
@@ -637,13 +653,16 @@ architecture mips_core_behavioral of mips_core is
 	signal register_port_in : register_port_in_array_t(register_port_count-1 downto 0);
 	
 	-- fetch
+	signal fetch_instruction_address_plus_8 : std_logic_vector(31 downto 0);
+	signal fetch_instruction_address : std_logic_vector(31 downto 0);
 	signal fetch_instruction_data : std_logic_vector(31 downto 0);
 	signal fetch_instruction_data_valid : std_logic;
 	signal fetch_instruction_data_ready : std_logic;
-		
-	--signal fetch_override_address : std_logic_vector(31 downto 0);
-	--signal fetch_override_address_valid : std_logic;
 	
+	signal fetch_override_address : std_logic_vector(31 downto 0);
+	signal fetch_override_address_valid : std_logic;
+	signal fetch_delay_slot : std_logic;
+			
 	signal fetch_error : std_logic;
 	
 	-- decode	
@@ -658,11 +677,22 @@ architecture mips_core_behavioral of mips_core is
 	signal decode_store : std_logic;
 	signal decode_memop_type : std_logic_vector(2 downto 0);
 	
+	signal decode_override_address : std_logic_vector(31 downto 0);
+	signal decode_override_address_valid : std_logic;
+	
 	signal decode_panic : std_logic;
 	
 	-- readreg
 	signal readreg_stall : std_logic;
+	signal readreg_override_address : std_logic_vector(31 downto 0);
+	signal readreg_override_address_valid : std_logic;
+	
+	-- writeback
+	--signal writeback_override_address : std_logic_vector(31 downto 0);
+	--signal writeback_override_address_valid : std_logic;
 begin
+	fetch_override_address <= decode_override_address when decode_override_address_valid = '1' else readreg_override_address;-- when readreg_override_address_valid = '1' else writeback_override_address;
+	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid;-- or writeback_override_address_valid;
 	
 	mips_readreg_i0 : mips_readreg port map(
 		resetn => resetn,
@@ -715,6 +745,9 @@ begin
 		alu_nor_in_tdata => alu_nor_in_tdata,
 		alu_nor_in_tuser => alu_nor_in_tuser,
 	
+		override_address => readreg_override_address,
+		override_address_valid => readreg_override_address_valid,
+	
 		stall => readreg_stall
 		);
 	
@@ -722,6 +755,8 @@ begin
 		resetn => resetn,
 		clock => clock,
 	
+		instr_address_plus_8 => fetch_instruction_address_plus_8,
+		instr_address => fetch_instruction_address,
 		instr_data => fetch_instruction_data,
 		instr_data_valid => fetch_instruction_data_valid,
 		instr_data_ready => fetch_instruction_data_ready,
@@ -736,6 +771,10 @@ begin
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
+	
+		override_address => decode_override_address,
+		override_address_valid => decode_override_address_valid,
+		delay_slot => fetch_delay_slot,
 	
 		panic => decode_panic
 		);
@@ -776,12 +815,15 @@ begin
 			m_axi_mem_wstrb => m_axi_mema_wstrb,
 			m_axi_mem_wvalid => m_axi_mema_wvalid,
 	
+			instruction_address_plus_8 => fetch_instruction_address_plus_8,
+			instruction_address => fetch_instruction_address,
 			instruction_data => fetch_instruction_data,
 			instruction_data_valid => fetch_instruction_data_valid,
 			instruction_data_ready => fetch_instruction_data_ready,
 		
-			--override_address : in std_logic_vector(31 downto 0);
-			--override_address_valid : in std_logic;
+			override_address => fetch_override_address,
+			override_address_valid => fetch_override_address_valid,
+			delay_slot => fetch_delay_slot,
 	
 			error => fetch_error
 		);
@@ -821,6 +863,9 @@ begin
 		register_port_in_b => register_port_in(2),
 		register_port_out_b => register_port_out(2)
 	
+		-- fetch
+		--fetch_override_address => fetch_override_address,
+		--fetch_override_address_valid => fetch_override_address_valid
 		);
 	
 	mips_registers_i0 : mips_registers 

@@ -32,7 +32,7 @@ entity mips_readreg is
 	-- alu
 	alu_add_in_tvalid : out std_logic;
 	alu_add_in_tdata : out std_logic_vector(63 downto 0);
-	alu_add_in_tuser : out std_logic_vector(43 downto 0);
+	alu_add_in_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 	alu_sub_in_tvalid : out std_logic;
 	alu_sub_in_tdata : out std_logic_vector(63 downto 0);
@@ -53,6 +53,9 @@ entity mips_readreg is
 	alu_nor_in_tvalid : out std_logic;
 	alu_nor_in_tdata : out std_logic_vector(63 downto 0);
 	alu_nor_in_tuser : out std_logic_vector(5 downto 0);
+	
+	override_address : out std_logic_vector(31 downto 0);
+	override_address_valid : out std_logic;
 	
 	stall : out std_logic
 	);
@@ -108,6 +111,7 @@ begin
 	alu_add_tuser.store_data <= register_port_out_c.data;
 	alu_add_tuser.load <= load_reg;
 	alu_add_tuser.rt <= register_c_reg;
+	alu_add_tuser.jump <= '0';
 	
 	alu_sub_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
 	alu_sub_in_tvalid <= operation_reg(OPERATION_INDEX_SUB) and not stall_reg;
@@ -129,6 +133,8 @@ begin
 	alu_nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_reg;
 	alu_nor_in_tuser <= '0' & register_c_reg;
 	
+	override_address_valid <= operation_reg(OPERATION_INDEX_JUMP);
+	override_address <= register_port_out_a.data;
 		
 	stall <= stall_reg;
 	
@@ -223,6 +229,9 @@ begin
 		
 		stall <= '0';
 		
+		override_address <= (others => '0');
+		override_address_valid <= '0';
+		
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
 			register_b_reg_next <= (others => '0');
@@ -265,7 +274,7 @@ begin
 				-- write register pending for target register
 				register_port_in_d.address <= register_c_reg;
 				register_port_in_d.write_enable <= operation_valid_reg;
-				
+								
 				-- this is used to simply write a register
 				if operation_reg(OPERATION_INDEX_MOV) = '1' then
 					register_port_in_d.write_data <= immediate_reg;

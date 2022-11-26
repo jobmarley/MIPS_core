@@ -40,12 +40,16 @@ entity mips_fetch is
 		m_axi_mem_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
 		m_axi_mem_wvalid : out STD_LOGIC;
 	
+		instruction_address_plus_8 : out std_logic_vector(31 downto 0);
+		instruction_address : out std_logic_vector(31 downto 0);
 		instruction_data : out std_logic_vector(31 downto 0);
 		instruction_data_valid : out std_logic;
 		instruction_data_ready : in std_logic;
 		
-		--override_address : in std_logic_vector(31 downto 0);
-		--override_address_valid : in std_logic;
+		override_address : in std_logic_vector(31 downto 0);
+		override_address_valid : in std_logic;
+		
+		delay_slot : in std_logic;
 	
 		error : out std_logic
 	);
@@ -54,15 +58,30 @@ end mips_fetch;
 architecture mips_fetch_behavioral of mips_fetch is
 	signal current_address : std_logic_vector(31 downto 0);
 	signal current_address_next : std_logic_vector(31 downto 0);
+	signal instruction_address_plus_8_reg : std_logic_vector(31 downto 0);
+	signal instruction_address_plus_8_reg_next : std_logic_vector(31 downto 0);
+	signal instruction_address_reg : std_logic_vector(31 downto 0);
+	signal instruction_address_reg_next : std_logic_vector(31 downto 0);
 	signal instruction_data_reg : std_logic_vector(31 downto 0);
 	signal instruction_data_reg_next : std_logic_vector(31 downto 0);
 	signal instruction_data_valid_reg : std_logic;
 	signal instruction_data_valid_reg_next : std_logic;
 	
-	type state_t is (read_address, read_data);
+	type state_t is (state_read_address, state_read_data, state_wait_override);
 	signal state : state_t;
 	signal state_next : state_t;
+	
+	signal delay_slot_reg : std_logic;
+	signal delay_slot_reg_next : std_logic;
+	
+	signal override_address_reg : std_logic_vector(31 downto 0);
+	signal override_address_reg_next : std_logic_vector(31 downto 0);
+	signal override_address_valid_reg : std_logic;
+	signal override_address_valid_reg_next : std_logic;
+		
 begin
+	instruction_address_plus_8 <= instruction_address_plus_8_reg;
+	instruction_address <= instruction_address_reg;
 	instruction_data <= instruction_data_reg;
 	instruction_data_valid <= instruction_data_valid_reg;
 	
@@ -70,9 +89,15 @@ begin
 	begin
 		if rising_edge(clock) then
 			current_address <= current_address_next;
+			instruction_address_plus_8_reg <= instruction_address_plus_8_reg_next;
+			instruction_address_reg <= instruction_address_reg_next;
 			instruction_data_reg <= instruction_data_reg_next;
 			instruction_data_valid_reg <= instruction_data_valid_reg_next;
 			state <= state_next;
+			
+			delay_slot_reg <= delay_slot_reg_next;
+			override_address_reg <= override_address_reg_next;
+			override_address_valid_reg <= override_address_valid_reg_next;
 		end if;
 	end process;
 
@@ -82,6 +107,8 @@ begin
 		current_address,
 		state,
 		
+		instruction_address_plus_8_reg,
+		instruction_address_reg,
 		instruction_data_reg,
 		instruction_data_valid_reg,
 		instruction_data_ready,
@@ -89,10 +116,14 @@ begin
 		m_axi_mem_arready,
 		m_axi_mem_rvalid,
 		m_axi_mem_rdata,
-		m_axi_mem_rresp--,
+		m_axi_mem_rresp,
 		
-		--override_address,
-		--override_address_valid
+		delay_slot,
+		delay_slot_reg,
+		override_address_valid,
+		override_address_valid_reg,
+		override_address,
+		override_address_reg
 		)
 	begin
 		m_axi_mem_awaddr <= (others => '0');
@@ -121,6 +152,8 @@ begin
 		m_axi_mem_awsize <= (others => '0');
 		m_axi_mem_wlast <= '0';
 		
+		instruction_address_plus_8_reg_next <= instruction_address_plus_8_reg;
+		instruction_address_reg_next <= instruction_address_reg;
 		instruction_data_reg_next <= instruction_data_reg;
 		current_address_next <= current_address;
 		state_next <= state;
@@ -129,33 +162,56 @@ begin
 		
 		instruction_data_valid_reg_next <= instruction_data_valid_reg and not instruction_data_ready;
 		
+		override_address_valid_reg_next <= override_address_valid_reg;
+		override_address_reg_next <= override_address_reg;
+		
+		delay_slot_reg_next <= delay_slot_reg or delay_slot;
+		if override_address_valid = '1' then
+			override_address_valid_reg_next <= '1';
+			override_address_reg_next <= override_address;
+		end if;
+		
 		if resetn = '0' then
 			current_address_next <= (others => '0');
 			instruction_data_reg_next <= (others => '0');
 			instruction_data_valid_reg_next <= '0';
+			delay_slot_reg_next <= '0';
+			override_address_reg_next <= (others => '0');
+			override_address_valid_reg_next <= '0';
 		else
 			case state is
-				when read_address =>
-					-- override_address_valid = '1' then
-					--	m_axi_mem_araddr <= override_address;
-					--	instruction_data_valid_reg_next <= '0';
-					--else
-						m_axi_mem_araddr <= current_address;
-					--end if;
+				when state_read_address =>
+					m_axi_mem_araddr <= current_address;
+					instruction_address_reg_next <= current_address;
+					instruction_address_plus_8_reg_next <= std_logic_vector(UNSIGNED(current_address) + 8);
+					
 					m_axi_mem_arvalid <= '1';
 					if m_axi_mem_arready = '1' then
-						state_next <= read_data;
+						state_next <= state_read_data;
 						current_address_next <= std_logic_vector(UNSIGNED(current_address) + 4);
 					end if;
-				when read_data =>
-					if instruction_data_valid_reg = '0' or instruction_data_ready = '1' then--or override_address_valid = '1' then
+				when state_read_data =>
+					if instruction_data_valid_reg = '0' or instruction_data_ready = '1' then
 						m_axi_mem_rready <= '1';
 						if m_axi_mem_rvalid = '1' then
 							instruction_data_valid_reg_next <= '1';
 							instruction_data_reg_next <= m_axi_mem_rdata;
 							error <= m_axi_mem_rresp(1);
-							state_next <= read_address;
+							
+							if delay_slot_reg = '1' then
+								state_next <= state_wait_override;
+							else
+								state_next <= state_read_address;
+							end if;
+							
 						end if;
+					end if;
+				when state_wait_override =>
+					if override_address_valid_reg = '1' then
+						state_next <= state_read_address;
+						current_address_next <= override_address_reg;
+						delay_slot_reg_next <= '0';
+						override_address_valid_reg_next <= '0';
 					end if;
 				when others =>
 			end case;

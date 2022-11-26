@@ -279,9 +279,12 @@ package mips_utils is
 	constant OPERATION_INDEX_OR : NATURAL := 5;
 	constant OPERATION_INDEX_XOR : NATURAL := 6;
 	constant OPERATION_INDEX_NOR : NATURAL := 7;
+	-- regc <= immediate | regb
 	constant OPERATION_INDEX_MOV : NATURAL := 8;
-	constant OPERATION_INDEX_UNSIGNED : NATURAL := 9;
-	constant OPERATION_INDEX_END : NATURAL := 10;
+	-- jump rega
+	constant OPERATION_INDEX_JUMP : NATURAL := 9;
+	constant OPERATION_INDEX_UNSIGNED : NATURAL := 10;
+	constant OPERATION_INDEX_END : NATURAL := 11;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
 	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";
@@ -289,6 +292,7 @@ package mips_utils is
 	constant memory_op_type_half_left : std_logic_vector(2 downto 0) := "100";
 	constant memory_op_type_half_right : std_logic_vector(2 downto 0) := "101";
 	type alu_add_out_tuser_t is record
+		jump : std_logic;
 		exclusive : std_logic;
 		signed : std_logic;
 		memop_type : std_logic_vector(2 downto 0);
@@ -297,6 +301,8 @@ package mips_utils is
 		load : std_logic;
 		rt : std_logic_vector(4 downto 0);
 	end record;
+	constant alu_add_out_tuser_length : NATURAL := 45;
+	
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
 end package;
@@ -373,11 +379,12 @@ package body mips_utils is
 		vresult.memop_type := data(41 downto 39);
 		vresult.signed := data(42);
 		vresult.exclusive := data(43);
+		vresult.jump := data(44);
 		return vresult;
 	end function;
 	
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector is
-		variable vresult : std_logic_vector(43 downto 0);
+		variable vresult : std_logic_vector(44 downto 0);
 	begin
 		vresult(4 downto 0) := tuser.rt;
 		vresult(5) := tuser.load;
@@ -386,6 +393,7 @@ package body mips_utils is
 		vresult(41 downto 39) := tuser.memop_type;
 		vresult(42) := tuser.signed;
 		vresult(43) := tuser.exclusive;
+		vresult(44) := tuser.jump;
 		return vresult;
 	end function;
 end mips_utils;

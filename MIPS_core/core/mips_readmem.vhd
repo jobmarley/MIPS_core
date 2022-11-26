@@ -42,7 +42,7 @@ entity mips_readmem is
 		
 	add_out_tvalid : in std_logic;
 	add_out_tdata : in std_logic_vector(32 downto 0);
-	add_out_tuser : in std_logic_vector(43 downto 0);
+	add_out_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 	
 	-- registers
 	register_port_in_a : out register_port_in_t;

@@ -9,6 +9,8 @@ entity mips_decode is
 	resetn : in std_logic;
 	clock : in std_logic;
 	
+	instr_address_plus_8 : in std_logic_vector(31 downto 0);
+	instr_address : in std_logic_vector(31 downto 0);
 	instr_data : in std_logic_vector(31 downto 0);
 	instr_data_valid : in std_logic;
 	instr_data_ready : out std_logic;
@@ -23,6 +25,10 @@ entity mips_decode is
 	load : out std_logic;
 	store : out std_logic;
 	memop_type : out std_logic_vector(2 downto 0);
+	
+	override_address : out std_logic_vector(31 downto 0);
+	override_address_valid : out std_logic;
+	delay_slot : out std_logic;
 	
 	panic : out std_logic
 	);
@@ -50,6 +56,10 @@ architecture mips_decode_behavioral of mips_decode is
 	signal store_reg_next : std_logic;
 	signal memop_type_reg : std_logic_vector(2 downto 0);
 	signal memop_type_reg_next : std_logic_vector(2 downto 0);
+	signal override_address_reg : std_logic_vector(31 downto 0);
+	signal override_address_reg_next : std_logic_vector(31 downto 0);
+	signal override_address_valid_reg : std_logic;
+	signal override_address_valid_reg_next : std_logic;
 	
 	function sign_extend(u : std_logic_vector; l : natural) return std_logic_vector is
         alias uu: std_logic_vector(u'LENGTH-1 downto 0) is u;
@@ -71,6 +81,8 @@ begin
 	load <= load_reg;
 	store <= store_reg;
 	memop_type <= memop_type_reg;
+	override_address <= override_address_reg;
+	override_address_valid <= override_address_valid_reg;
 	
 	process(clock)
 	begin
@@ -85,6 +97,8 @@ begin
 			load_reg <= load_reg_next;
 			store_reg <= store_reg_next;
 			memop_type_reg <= memop_type_reg_next;
+			override_address_reg <= override_address_reg_next;
+			override_address_valid_reg <= override_address_valid_reg_next;
 		end if;
 	end process;
 	
@@ -102,6 +116,7 @@ begin
 		store_reg,
 		memop_type_reg,
 		
+		instr_address_plus_8,
 		instr_data,
 		instr_data_valid
 		
@@ -121,9 +136,12 @@ begin
 		load_reg_next <= '0';
 		store_reg_next <= '0';
 		memop_type_reg_next <= (others => '0');
+		override_address_reg_next <= (others => '0');
+		override_address_valid_reg_next <= '0';
 		
 		instr_data_ready <= '0';
 		panic <= '0';
+		delay_slot <= '0';
 		
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
@@ -209,7 +227,18 @@ begin
 							when instr_slt_opc.funct =>
 							when instr_sltu_opc.funct =>
 							when instr_jalr_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_JUMP => '1', OPERATION_INDEX_MOV => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_c_reg_next <= instruction_data_r.rd;
+								immediate_reg_next <= instr_address_plus_8;
+								immediate_valid_reg_next <= '1';
+								delay_slot <= '1';
 							when instr_jr_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_JUMP => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								delay_slot <= '1';
 							
 							when instr_mfhi_opc.funct =>
 							when instr_mflo_opc.funct =>
@@ -298,7 +327,19 @@ begin
 					when instr_bne_opc.opcode =>
 					when instr_bnel_opc.opcode =>
 					when instr_j_opc.opcode =>
+						override_address_reg_next <= instr_address(31 downto 28) & instruction_data_j.address & "00";
+						override_address_valid_reg_next <= '1';
+						delay_slot <= '1';
 					when instr_jal_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						override_address_reg_next <= instr_address(31 downto 28) & instruction_data_j.address & "00";
+						override_address_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
+						register_a_reg_next <= "00000";
+						register_c_reg_next <= "11111";
+						immediate_reg_next <= instr_address_plus_8;
+						immediate_valid_reg_next <= '1';
+						delay_slot <= '1';
 					
 					when instr_lb_opc.opcode =>
 						operation_valid_reg_next <= '1';
@@ -339,7 +380,7 @@ begin
 					when instr_lui_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
+						register_a_reg_next <= "00000";
 						register_c_reg_next <= instruction_data_i.rt;
 						immediate_reg_next <= instruction_data_i.immediate & x"FFFF";
 						immediate_valid_reg_next <= '1';

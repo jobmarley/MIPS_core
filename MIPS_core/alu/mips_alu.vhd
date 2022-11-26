@@ -1,6 +1,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.numeric_std.all;
+use work.mips_utils.all;
 
 entity mips_alu is
     port (
@@ -9,10 +10,10 @@ entity mips_alu is
 	
 	    add_in_tvalid : in std_logic;
 	    add_in_tdata : in std_logic_vector(63 downto 0);
-	    add_in_tuser : in std_logic_vector(43 downto 0);
+	    add_in_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 	    add_out_tvalid : out std_logic;
 	    add_out_tdata : out std_logic_vector(32 downto 0);
-	    add_out_tuser : out std_logic_vector(43 downto 0);
+	    add_out_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 		
 	    sub_in_tvalid : in std_logic;
 	    sub_in_tdata : in std_logic_vector(63 downto 0);
