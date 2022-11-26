@@ -260,8 +260,8 @@ begin
 				-- write register pending for target register
 				register_port_in_d.address <= register_c_reg;
 				register_port_in_d.write_enable <= operation_valid_reg;
-								
-				-- this is used to simply write a register
+				
+				-- OPERATION_INDEX_MOV is used to simply write a register
 				if operation_reg(OPERATION_INDEX_MOV) = '1' then
 					register_port_in_d.write_data <= immediate_reg;
 					register_port_in_d.write_strobe <= x"F";
@@ -270,7 +270,11 @@ begin
 					register_port_in_d.write_pending <= '1';
 				end if;
 				target_register_address_next <= register_c_reg;
-				target_register_pending_next <= operation_valid_reg;
+				
+				-- register pending bypass, only when reg != $0
+				if register_c_reg /= "00000" then
+					target_register_pending_next <= operation_valid_reg;
+				end if;
 			end if;
 			
 			
