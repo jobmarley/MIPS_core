@@ -30,29 +30,7 @@ entity mips_readreg is
 	register_port_out_d : in register_port_out_t;
 	
 	-- alu
-	alu_add_in_tvalid : out std_logic;
-	alu_add_in_tdata : out std_logic_vector(63 downto 0);
-	alu_add_in_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
-		
-	alu_sub_in_tvalid : out std_logic;
-	alu_sub_in_tdata : out std_logic_vector(63 downto 0);
-	alu_sub_in_tuser : out std_logic_vector(4 downto 0);
-	
-	alu_and_in_tvalid : out std_logic;
-	alu_and_in_tdata : out std_logic_vector(63 downto 0);
-	alu_and_in_tuser : out std_logic_vector(5 downto 0);
-	
-	alu_or_in_tvalid : out std_logic;
-	alu_or_in_tdata : out std_logic_vector(63 downto 0);
-	alu_or_in_tuser : out std_logic_vector(5 downto 0);
-	
-	alu_xor_in_tvalid : out std_logic;
-	alu_xor_in_tdata : out std_logic_vector(63 downto 0);
-	alu_xor_in_tuser : out std_logic_vector(5 downto 0);
-	
-	alu_nor_in_tvalid : out std_logic;
-	alu_nor_in_tdata : out std_logic_vector(63 downto 0);
-	alu_nor_in_tuser : out std_logic_vector(5 downto 0);
+	alu_in_ports : out alu_in_ports_t;
 	
 	override_address : out std_logic_vector(31 downto 0);
 	override_address_valid : out std_logic;
@@ -101,9 +79,9 @@ begin
 	register_b_pending_bypass <= target_register_pending when target_register_address = register_b_reg else register_port_out_b.pending;
 	register_c_pending_bypass <= target_register_pending when target_register_address = register_c_reg else register_port_out_c.pending;
 	
-	alu_add_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_add_in_tvalid <= operation_reg(OPERATION_INDEX_ADD) and not stall_reg;
-	alu_add_in_tuser <= add_out_tuser_to_slv(alu_add_tuser);
+	alu_in_ports.add_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.add_in_tvalid <= operation_reg(OPERATION_INDEX_ADD) and not stall_reg;
+	alu_in_ports.add_in_tuser <= add_out_tuser_to_slv(alu_add_tuser);
 	alu_add_tuser.exclusive <= '0';
 	alu_add_tuser.signed <= '0';
 	alu_add_tuser.memop_type <= memop_type_reg;
@@ -113,25 +91,33 @@ begin
 	alu_add_tuser.rt <= register_c_reg;
 	alu_add_tuser.jump <= '0';
 	
-	alu_sub_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_sub_in_tvalid <= operation_reg(OPERATION_INDEX_SUB) and not stall_reg;
-	alu_sub_in_tuser <= register_c_reg;
+	alu_in_ports.sub_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.sub_in_tvalid <= operation_reg(OPERATION_INDEX_SUB) and not stall_reg;
+	alu_in_ports.sub_in_tuser <= register_c_reg;
 	
-	alu_and_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_and_in_tvalid <= operation_reg(OPERATION_INDEX_AND) and not stall_reg;
-	alu_and_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.and_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.and_in_tvalid <= operation_reg(OPERATION_INDEX_AND) and not stall_reg;
+	alu_in_ports.and_in_tuser <= '0' & register_c_reg;
 	
-	alu_or_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_or_in_tvalid <= operation_reg(OPERATION_INDEX_OR) and not stall_reg;
-	alu_or_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.or_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.or_in_tvalid <= operation_reg(OPERATION_INDEX_OR) and not stall_reg;
+	alu_in_ports.or_in_tuser <= '0' & register_c_reg;
 	
-	alu_xor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_xor_in_tvalid <= operation_reg(OPERATION_INDEX_XOR) and not stall_reg;
-	alu_xor_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.xor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.xor_in_tvalid <= operation_reg(OPERATION_INDEX_XOR) and not stall_reg;
+	alu_in_ports.xor_in_tuser <= '0' & register_c_reg;
 	
-	alu_nor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_reg;
-	alu_nor_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.nor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_reg;
+	alu_in_ports.nor_in_tuser <= '0' & register_c_reg;
+	
+	alu_in_ports.shl_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
+	alu_in_ports.shl_in_tvalid <= operation_reg(OPERATION_INDEX_SLL) and not stall_reg;
+	alu_in_ports.shl_in_tuser <= '0' & register_c_reg;
+	
+	alu_in_ports.shr_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
+	alu_in_ports.shr_in_tvalid <= operation_reg(OPERATION_INDEX_SRL) and not stall_reg;
+	alu_in_ports.shr_in_tuser <= operation_reg(OPERATION_INDEX_SRA) & register_c_reg;
 	
 	override_address_valid <= operation_reg(OPERATION_INDEX_JUMP);
 	override_address <= register_port_out_a.data;

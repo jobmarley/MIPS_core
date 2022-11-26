@@ -252,96 +252,8 @@ architecture mips_core_behavioral of mips_core is
 			clock : in std_logic;
 			resetn : in std_logic;
 	
-			add_in_tvalid : in std_logic;
-			add_in_tdata : in std_logic_vector(63 downto 0);
-			add_in_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
-			add_out_tvalid : out std_logic;
-			add_out_tdata : out std_logic_vector(32 downto 0);
-			add_out_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
-		
-			sub_in_tvalid : in std_logic;
-			sub_in_tdata : in std_logic_vector(63 downto 0);
-			sub_in_tuser : in std_logic_vector(4 downto 0);
-			sub_out_tvalid : out std_logic;
-			sub_out_tdata : out std_logic_vector(32 downto 0);
-			sub_out_tuser : out std_logic_vector(4 downto 0);
-	
-			mul_in_tvalid : in std_logic;
-			mul_in_tdata : in std_logic_vector(63 downto 0);
-			mul_in_tuser : in std_logic_vector(5 downto 0);
-			mul_out_tvalid : out std_logic;
-			mul_out_tdata : out std_logic_vector(63 downto 0);
-			mul_out_tuser : out std_logic_vector(5 downto 0);
-	
-			multu_in_tvalid : in std_logic;
-			multu_in_tdata : in std_logic_vector(63 downto 0);
-			multu_in_tuser : in std_logic_vector(5 downto 0);
-			multu_out_tvalid : out std_logic;
-			multu_out_tdata : out std_logic_vector(63 downto 0);
-			multu_out_tuser : out std_logic_vector(5 downto 0);
-	
-			div_in_tvalid : in std_logic;
-			div_in_tdata : in std_logic_vector(63 downto 0);
-			div_in_tuser : in std_logic_vector(5 downto 0);
-			div_out_tvalid : out std_logic;
-			div_out_tdata : out std_logic_vector(63 downto 0);
-			div_out_tuser : out std_logic_vector(5 downto 0);
-	
-			divu_in_tvalid : in std_logic;
-			divu_in_tdata : in std_logic_vector(63 downto 0);
-			divu_in_tuser : in std_logic_vector(5 downto 0);
-			divu_out_tvalid : out std_logic;
-			divu_out_tdata : out std_logic_vector(63 downto 0);
-			divu_out_tuser : out std_logic_vector(5 downto 0);
-	
-			multadd_in_tvalid : in std_logic;
-			multadd_in_tdata : in std_logic_vector(128 downto 0);
-			multadd_in_tuser : in std_logic_vector(5 downto 0);
-			multadd_out_tvalid : out std_logic;
-			multadd_out_tdata : out std_logic_vector(63 downto 0);
-			multadd_out_tuser : out std_logic_vector(5 downto 0);
-	
-			multaddu_in_tvalid : in std_logic;
-			multaddu_in_tdata : in std_logic_vector(128 downto 0);
-			multaddu_in_tuser : in std_logic_vector(5 downto 0);
-			multaddu_out_tvalid : out std_logic;
-			multaddu_out_tdata : out std_logic_vector(63 downto 0);
-			multaddu_out_tuser : out std_logic_vector(5 downto 0);
-	
-			and_in_tvalid : in std_logic;
-			and_in_tdata : in std_logic_vector(63 downto 0);
-			and_in_tuser : in std_logic_vector(5 downto 0);
-			and_out_tvalid : out std_logic;
-			and_out_tdata : out std_logic_vector(31 downto 0);
-			and_out_tuser : out std_logic_vector(5 downto 0);
-	
-			or_in_tvalid : in std_logic;
-			or_in_tdata : in std_logic_vector(63 downto 0);
-			or_in_tuser : in std_logic_vector(5 downto 0);
-			or_out_tvalid : out std_logic;
-			or_out_tdata : out std_logic_vector(31 downto 0);
-			or_out_tuser : out std_logic_vector(5 downto 0);
-	
-			xor_in_tvalid : in std_logic;
-			xor_in_tdata : in std_logic_vector(63 downto 0);
-			xor_in_tuser : in std_logic_vector(5 downto 0);
-			xor_out_tvalid : out std_logic;
-			xor_out_tdata : out std_logic_vector(31 downto 0);
-			xor_out_tuser : out std_logic_vector(5 downto 0);
-	
-			nor_in_tvalid : in std_logic;
-			nor_in_tdata : in std_logic_vector(63 downto 0);
-			nor_in_tuser : in std_logic_vector(5 downto 0);
-			nor_out_tvalid : out std_logic;
-			nor_out_tdata : out std_logic_vector(31 downto 0);
-			nor_out_tuser : out std_logic_vector(5 downto 0);
-	
-			cmp_in_tvalid : in std_logic;
-			cmp_in_tdata : in std_logic_vector(63 downto 0);
-			cmp_in_tuser : in std_logic_vector(17 downto 0);
-			cmp_out_tvalid : out std_logic;
-			cmp_out_tdata : out std_logic_vector(0 downto 0);
-			cmp_out_tuser : out std_logic_vector(17 downto 0)
+			in_ports : in alu_in_ports_t;
+			out_ports : out alu_out_ports_t
 		);
 	end component;
 	
@@ -365,29 +277,7 @@ architecture mips_core_behavioral of mips_core is
 		clock : in std_logic;
 	
 		-- alu
-		add_out_tvalid : in std_logic;
-		add_out_tdata : in std_logic_vector(32 downto 0);
-		add_out_tuser : in std_logic_vector(alu_add_out_tuser_length-1 downto 0);
-		
-		sub_out_tvalid : in std_logic;
-		sub_out_tdata : in std_logic_vector(32 downto 0);
-		sub_out_tuser : in std_logic_vector(4 downto 0);
-	
-		and_out_tvalid : in std_logic;
-		and_out_tdata : in std_logic_vector(31 downto 0);
-		and_out_tuser : in std_logic_vector(5 downto 0);
-	
-		or_out_tvalid : in std_logic;
-		or_out_tdata : in std_logic_vector(31 downto 0);
-		or_out_tuser : in std_logic_vector(5 downto 0);
-	
-		xor_out_tvalid : in std_logic;
-		xor_out_tdata : in std_logic_vector(31 downto 0);
-		xor_out_tuser : in std_logic_vector(5 downto 0);
-	
-		nor_out_tvalid : in std_logic;
-		nor_out_tdata : in std_logic_vector(31 downto 0);
-		nor_out_tuser : in std_logic_vector(5 downto 0);
+		alu_out_ports : in alu_out_ports_t;
 	
 		-- registers
 		register_port_in_a : out register_port_in_t;
@@ -510,29 +400,7 @@ architecture mips_core_behavioral of mips_core is
 		register_port_out_d : in register_port_out_t;
 	
 		-- alu
-		alu_add_in_tvalid : out std_logic;
-		alu_add_in_tdata : out std_logic_vector(63 downto 0);
-		alu_add_in_tuser : out std_logic_vector(alu_add_out_tuser_length-1 downto 0);
-		
-		alu_sub_in_tvalid : out std_logic;
-		alu_sub_in_tdata : out std_logic_vector(63 downto 0);
-		alu_sub_in_tuser : out std_logic_vector(4 downto 0);
-	
-		alu_and_in_tvalid : out std_logic;
-		alu_and_in_tdata : out std_logic_vector(63 downto 0);
-		alu_and_in_tuser : out std_logic_vector(5 downto 0);
-	
-		alu_or_in_tvalid : out std_logic;
-		alu_or_in_tdata : out std_logic_vector(63 downto 0);
-		alu_or_in_tuser : out std_logic_vector(5 downto 0);
-	
-		alu_xor_in_tvalid : out std_logic;
-		alu_xor_in_tdata : out std_logic_vector(63 downto 0);
-		alu_xor_in_tuser : out std_logic_vector(5 downto 0);
-	
-		alu_nor_in_tvalid : out std_logic;
-		alu_nor_in_tdata : out std_logic_vector(63 downto 0);
-		alu_nor_in_tuser : out std_logic_vector(5 downto 0);
+		alu_in_ports : out alu_in_ports_t;
 	
 		override_address : out std_logic_vector(31 downto 0);
 		override_address_valid : out std_logic;
@@ -548,102 +416,9 @@ architecture mips_core_behavioral of mips_core is
 	signal processor_enable : std_logic;
 	signal breakpoint : std_logic;
 	
-	signal alu_add_in_tvalid : std_logic;
-	signal alu_add_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_add_in_tuser : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
-	signal alu_add_out_tvalid : std_logic;
-	signal alu_add_out_tdata : std_logic_vector(32 downto 0);
-	signal alu_add_out_tuser : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
+	signal alu_in_ports : alu_in_ports_t;
+	signal alu_out_ports : alu_out_ports_t;
 		
-	signal alu_sub_in_tvalid : std_logic;
-	signal alu_sub_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_sub_in_tuser : std_logic_vector(4 downto 0);
-	signal alu_sub_out_tvalid : std_logic;
-	signal alu_sub_out_tdata : std_logic_vector(32 downto 0);
-	signal alu_sub_out_tuser : std_logic_vector(4 downto 0);
-	
-	signal alu_mul_in_tvalid : std_logic;
-	signal alu_mul_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_mul_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_mul_out_tvalid : std_logic;
-	signal alu_mul_out_tdata : std_logic_vector(63 downto 0);
-	signal alu_mul_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_multu_in_tvalid : std_logic;
-	signal alu_multu_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_multu_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_multu_out_tvalid : std_logic;
-	signal alu_multu_out_tdata : std_logic_vector(63 downto 0);
-	signal alu_multu_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_div_in_tvalid : std_logic;
-	signal alu_div_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_div_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_div_out_tvalid : std_logic;
-	signal alu_div_out_tdata : std_logic_vector(63 downto 0);
-	signal alu_div_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_divu_in_tvalid : std_logic;
-	signal alu_divu_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_divu_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_divu_out_tvalid : std_logic;
-	signal alu_divu_out_tdata : std_logic_vector(63 downto 0);
-	signal alu_divu_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_multadd_in_tvalid : std_logic;
-	signal alu_multadd_in_tdata : std_logic_vector(128 downto 0);
-	signal alu_multadd_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_multadd_out_tvalid : std_logic;
-	signal alu_multadd_out_tdata : std_logic_vector(63 downto 0);
-	signal alu_multadd_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_multaddu_in_tvalid : std_logic;
-	signal alu_multaddu_in_tdata : std_logic_vector(128 downto 0);
-	signal alu_multaddu_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_multaddu_out_tvalid : std_logic;
-	signal alu_multaddu_out_tdata : std_logic_vector(63 downto 0);
-	signal alu_multaddu_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_and_in_tvalid : std_logic;
-	signal alu_and_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_and_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_and_out_tvalid : std_logic;
-	signal alu_and_out_tdata : std_logic_vector(31 downto 0);
-	signal alu_and_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_or_in_tvalid : std_logic;
-	signal alu_or_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_or_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_or_out_tvalid : std_logic;
-	signal alu_or_out_tdata : std_logic_vector(31 downto 0);
-	signal alu_or_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_xor_in_tvalid : std_logic;
-	signal alu_xor_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_xor_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_xor_out_tvalid : std_logic;
-	signal alu_xor_out_tdata : std_logic_vector(31 downto 0);
-	signal alu_xor_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_nor_in_tvalid : std_logic;
-	signal alu_nor_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_nor_in_tuser : std_logic_vector(5 downto 0);
-	signal alu_nor_out_tvalid : std_logic;
-	signal alu_nor_out_tdata : std_logic_vector(31 downto 0);
-	signal alu_nor_out_tuser : std_logic_vector(5 downto 0);
-	
-	signal alu_cmp_in_tvalid : std_logic;
-	signal alu_cmp_in_tdata : std_logic_vector(63 downto 0);
-	signal alu_cmp_in_tuser : std_logic_vector(17 downto 0);
-	signal alu_cmp_out_tvalid : std_logic;
-	signal alu_cmp_out_tdata : std_logic_vector(0 downto 0);
-	signal alu_cmp_out_tuser : std_logic_vector(17 downto 0);
-	signal alu_cmp_add_ready : std_logic;
-	
-	signal alu_cmp_in_skid_tvalid : std_logic;
-	signal alu_cmp_in_skid_tdata : std_logic_vector(63 downto 0);
-	signal alu_cmp_in_skid_tuser : std_logic_vector(17 downto 0);
-	
 	signal readmem_ready : std_logic;
 	signal readmem_error : std_logic;
 	
@@ -721,29 +496,7 @@ begin
 		register_port_out_d => register_port_out(6),
 	
 		-- alu
-		alu_add_in_tvalid => alu_add_in_tvalid,
-		alu_add_in_tdata => alu_add_in_tdata,
-		alu_add_in_tuser => alu_add_in_tuser,
-		
-		alu_sub_in_tvalid => alu_sub_in_tvalid,
-		alu_sub_in_tdata => alu_sub_in_tdata,
-		alu_sub_in_tuser => alu_sub_in_tuser,
-	
-		alu_and_in_tvalid => alu_and_in_tvalid,
-		alu_and_in_tdata => alu_and_in_tdata,
-		alu_and_in_tuser => alu_and_in_tuser,
-	
-		alu_or_in_tvalid => alu_or_in_tvalid,
-		alu_or_in_tdata => alu_or_in_tdata,
-		alu_or_in_tuser => alu_or_in_tuser,
-	
-		alu_xor_in_tvalid => alu_xor_in_tvalid,
-		alu_xor_in_tdata => alu_xor_in_tdata,
-		alu_xor_in_tuser => alu_xor_in_tuser,
-	
-		alu_nor_in_tvalid => alu_nor_in_tvalid,
-		alu_nor_in_tdata => alu_nor_in_tdata,
-		alu_nor_in_tuser => alu_nor_in_tuser,
+		alu_in_ports => alu_in_ports,
 	
 		override_address => readreg_override_address,
 		override_address_valid => readreg_override_address_valid,
@@ -833,29 +586,7 @@ begin
 		clock => clock,
 	
 		-- alu
-		add_out_tvalid => alu_add_out_tvalid,
-		add_out_tdata => alu_add_out_tdata,
-		add_out_tuser => alu_add_out_tuser,
-		
-		sub_out_tvalid => alu_sub_out_tvalid,
-		sub_out_tdata => alu_sub_out_tdata,
-		sub_out_tuser => alu_sub_out_tuser,
-	
-		and_out_tvalid => alu_and_out_tvalid,
-		and_out_tdata => alu_and_out_tdata,
-		and_out_tuser => alu_and_out_tuser,
-	
-		or_out_tvalid => alu_or_out_tvalid,
-		or_out_tdata => alu_or_out_tdata,
-		or_out_tuser => alu_or_out_tuser,
-	
-		xor_out_tvalid => alu_xor_out_tvalid,
-		xor_out_tdata => alu_xor_out_tdata,
-		xor_out_tuser => alu_xor_out_tuser,
-	
-		nor_out_tvalid => alu_nor_out_tvalid,
-		nor_out_tdata => alu_nor_out_tdata,
-		nor_out_tuser => alu_nor_out_tuser,
+		alu_out_ports => alu_out_ports,
 	
 		-- registers
 		register_port_in_a => register_port_in(1),
@@ -914,9 +645,9 @@ begin
 		m_axi_mem_wstrb => m_axi_memb_wstrb,
 		m_axi_mem_wvalid => m_axi_memb_wvalid,
 		
-		add_out_tvalid => alu_add_out_tvalid,
-		add_out_tdata => alu_add_out_tdata,
-		add_out_tuser => alu_add_out_tuser,
+		add_out_tvalid => alu_out_ports.add_out_tvalid,
+		add_out_tdata => alu_out_ports.add_out_tdata,
+		add_out_tuser => alu_out_ports.add_out_tuser,
 	
 		-- registers
 		register_port_in_a => register_port_in(0),
@@ -930,96 +661,8 @@ begin
 			clock => clock,
 			resetn => resetn,
 		
-			add_in_tvalid => alu_add_in_tvalid,
-			add_in_tdata => alu_add_in_tdata,
-			add_in_tuser => alu_add_in_tuser,
-			add_out_tvalid => alu_add_out_tvalid,
-			add_out_tdata => alu_add_out_tdata,
-			add_out_tuser => alu_add_out_tuser,
-			
-			sub_in_tvalid => alu_sub_in_tvalid,
-			sub_in_tdata => alu_sub_in_tdata,
-			sub_in_tuser => alu_sub_in_tuser,
-			sub_out_tvalid => alu_sub_out_tvalid,
-			sub_out_tdata => alu_sub_out_tdata,
-			sub_out_tuser => alu_sub_out_tuser,
-		
-			mul_in_tvalid => alu_mul_in_tvalid,
-			mul_in_tdata => alu_mul_in_tdata,
-			mul_in_tuser => alu_mul_in_tuser,
-			mul_out_tvalid => alu_mul_out_tvalid,
-			mul_out_tdata => alu_mul_out_tdata,
-			mul_out_tuser => alu_mul_out_tuser,
-		
-			multu_in_tvalid => alu_multu_in_tvalid,
-			multu_in_tdata => alu_multu_in_tdata,
-			multu_in_tuser => alu_multu_in_tuser,
-			multu_out_tvalid => alu_multu_out_tvalid,
-			multu_out_tdata => alu_multu_out_tdata,
-			multu_out_tuser => alu_multu_out_tuser,
-		
-			div_in_tvalid => alu_div_in_tvalid,
-			div_in_tdata => alu_div_in_tdata,
-			div_in_tuser => alu_div_in_tuser,
-			div_out_tvalid => alu_div_out_tvalid,
-			div_out_tdata => alu_div_out_tdata,
-			div_out_tuser => alu_div_out_tuser,
-		
-			divu_in_tvalid => alu_divu_in_tvalid,
-			divu_in_tdata => alu_divu_in_tdata,
-			divu_in_tuser => alu_divu_in_tuser,
-			divu_out_tvalid => alu_divu_out_tvalid,
-			divu_out_tdata => alu_divu_out_tdata,
-			divu_out_tuser => alu_divu_out_tuser,
-		
-			multadd_in_tvalid => alu_multadd_in_tvalid,
-			multadd_in_tdata => alu_multadd_in_tdata,
-			multadd_in_tuser => alu_multadd_in_tuser,
-			multadd_out_tvalid => alu_multadd_out_tvalid,
-			multadd_out_tdata => alu_multadd_out_tdata,
-			multadd_out_tuser => alu_multadd_out_tuser,
-		
-			multaddu_in_tvalid => alu_multaddu_in_tvalid,
-			multaddu_in_tdata => alu_multaddu_in_tdata,
-			multaddu_in_tuser => alu_multaddu_in_tuser,
-			multaddu_out_tvalid => alu_multaddu_out_tvalid,
-			multaddu_out_tdata => alu_multaddu_out_tdata,
-			multaddu_out_tuser => alu_multaddu_out_tuser,
-		
-	    	and_in_tvalid => alu_and_in_tvalid,
-	    	and_in_tdata => alu_and_in_tdata,
-	    	and_in_tuser => alu_and_in_tuser,
-			and_out_tvalid => alu_and_out_tvalid,
-	    	and_out_tdata => alu_and_out_tdata,
-	    	and_out_tuser => alu_and_out_tuser,
-	
-	    	or_in_tvalid => alu_or_in_tvalid,
-	    	or_in_tdata => alu_or_in_tdata,
-	    	or_in_tuser => alu_or_in_tuser,
-			or_out_tvalid => alu_or_out_tvalid,
-	    	or_out_tdata => alu_or_out_tdata,
-	    	or_out_tuser => alu_or_out_tuser,
-	
-	    	xor_in_tvalid => alu_xor_in_tvalid,
-	    	xor_in_tdata => alu_xor_in_tdata,
-	    	xor_in_tuser => alu_xor_in_tuser,
-			xor_out_tvalid => alu_xor_out_tvalid,
-	    	xor_out_tdata => alu_xor_out_tdata,
-	    	xor_out_tuser => alu_xor_out_tuser,
-	
-	    	nor_in_tvalid => alu_nor_in_tvalid,
-	    	nor_in_tdata => alu_nor_in_tdata,
-	    	nor_in_tuser => alu_nor_in_tuser,
-			nor_out_tvalid => alu_nor_out_tvalid,
-	    	nor_out_tdata => alu_nor_out_tdata,
-	    	nor_out_tuser => alu_nor_out_tuser,
-	
-			cmp_in_tvalid => alu_cmp_in_tvalid,
-			cmp_in_tdata => alu_cmp_in_tdata,
-			cmp_in_tuser => alu_cmp_in_tuser,
-			cmp_out_tvalid => alu_cmp_out_tvalid,
-			cmp_out_tdata => alu_cmp_out_tdata,
-			cmp_out_tuser => alu_cmp_out_tuser
+			in_ports => alu_in_ports,
+			out_ports => alu_out_ports
 			);
 	
 	mips_debugger_i : mips_debugger port map(

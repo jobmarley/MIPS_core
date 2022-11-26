@@ -283,8 +283,11 @@ package mips_utils is
 	constant OPERATION_INDEX_MOV : NATURAL := 8;
 	-- jump rega
 	constant OPERATION_INDEX_JUMP : NATURAL := 9;
-	constant OPERATION_INDEX_UNSIGNED : NATURAL := 10;
-	constant OPERATION_INDEX_END : NATURAL := 11;
+	constant OPERATION_INDEX_SLL : NATURAL := 10;
+	constant OPERATION_INDEX_SRL : NATURAL := 11;
+	constant OPERATION_INDEX_SRA : NATURAL := 12;
+	constant OPERATION_INDEX_UNSIGNED : NATURAL := 13;
+	constant OPERATION_INDEX_END : NATURAL := 14;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
 	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";
@@ -305,6 +308,131 @@ package mips_utils is
 	
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
+	
+	type alu_in_ports_t is record
+		add_in_tvalid : std_logic;
+	    add_in_tdata : std_logic_vector(63 downto 0);
+	    add_in_tuser : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
+		
+	    sub_in_tvalid : std_logic;
+	    sub_in_tdata : std_logic_vector(63 downto 0);
+	    sub_in_tuser : std_logic_vector(4 downto 0);
+	
+	    mul_in_tvalid : std_logic;
+	    mul_in_tdata : std_logic_vector(63 downto 0);
+	    mul_in_tuser : std_logic_vector(5 downto 0);
+	
+	    multu_in_tvalid : std_logic;
+	    multu_in_tdata : std_logic_vector(63 downto 0);
+	    multu_in_tuser : std_logic_vector(5 downto 0);
+	
+	    div_in_tvalid : std_logic;
+	    div_in_tdata : std_logic_vector(63 downto 0);
+	    div_in_tuser : std_logic_vector(5 downto 0);
+	
+	    divu_in_tvalid : std_logic;
+	    divu_in_tdata : std_logic_vector(63 downto 0);
+	    divu_in_tuser : std_logic_vector(5 downto 0);
+	
+	    multadd_in_tvalid : std_logic;
+	    multadd_in_tdata : std_logic_vector(128 downto 0);
+	    multadd_in_tuser : std_logic_vector(5 downto 0);
+	
+	    multaddu_in_tvalid : std_logic;
+	    multaddu_in_tdata : std_logic_vector(128 downto 0);
+	    multaddu_in_tuser : std_logic_vector(5 downto 0);
+	
+	    and_in_tvalid : std_logic;
+	    and_in_tdata : std_logic_vector(63 downto 0);
+	    and_in_tuser : std_logic_vector(5 downto 0);
+	
+	    or_in_tvalid : std_logic;
+	    or_in_tdata : std_logic_vector(63 downto 0);
+	    or_in_tuser : std_logic_vector(5 downto 0);
+	
+	    xor_in_tvalid : std_logic;
+	    xor_in_tdata : std_logic_vector(63 downto 0);
+	    xor_in_tuser : std_logic_vector(5 downto 0);
+	
+	    nor_in_tvalid : std_logic;
+	    nor_in_tdata : std_logic_vector(63 downto 0);
+	    nor_in_tuser : std_logic_vector(5 downto 0);
+	
+	    shl_in_tvalid : std_logic;
+	    shl_in_tdata : std_logic_vector(36 downto 0);
+	    shl_in_tuser : std_logic_vector(5 downto 0);
+	
+	    shr_in_tvalid : std_logic;
+	    shr_in_tdata : std_logic_vector(36 downto 0);
+	    shr_in_tuser : std_logic_vector(5 downto 0);
+	
+	    cmp_in_tvalid : std_logic;
+	    cmp_in_tdata : std_logic_vector(63 downto 0);
+	    cmp_in_tuser : std_logic_vector(17 downto 0);
+	end record;
+	
+	type alu_out_ports_t is record
+	    add_out_tvalid : std_logic;
+	    add_out_tdata : std_logic_vector(32 downto 0);
+	    add_out_tuser : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
+		
+	    sub_out_tvalid : std_logic;
+	    sub_out_tdata : std_logic_vector(32 downto 0);
+	    sub_out_tuser : std_logic_vector(4 downto 0);
+	
+	    mul_out_tvalid : std_logic;
+	    mul_out_tdata : std_logic_vector(63 downto 0);
+	    mul_out_tuser : std_logic_vector(5 downto 0);
+	
+	    multu_out_tvalid : std_logic;
+	    multu_out_tdata : std_logic_vector(63 downto 0);
+	    multu_out_tuser : std_logic_vector(5 downto 0);
+	
+	    div_out_tvalid : std_logic;
+	    div_out_tdata : std_logic_vector(63 downto 0);
+	    div_out_tuser : std_logic_vector(5 downto 0);
+	
+	    divu_out_tvalid : std_logic;
+	    divu_out_tdata : std_logic_vector(63 downto 0);
+	    divu_out_tuser : std_logic_vector(5 downto 0);
+	
+	    multadd_out_tvalid : std_logic;
+	    multadd_out_tdata : std_logic_vector(63 downto 0);
+	    multadd_out_tuser : std_logic_vector(5 downto 0);
+	
+	    multaddu_out_tvalid : std_logic;
+	    multaddu_out_tdata : std_logic_vector(63 downto 0);
+	    multaddu_out_tuser : std_logic_vector(5 downto 0);
+	
+		and_out_tvalid : std_logic;
+	    and_out_tdata : std_logic_vector(31 downto 0);
+	    and_out_tuser : std_logic_vector(5 downto 0);
+	
+		or_out_tvalid : std_logic;
+	    or_out_tdata : std_logic_vector(31 downto 0);
+	    or_out_tuser : std_logic_vector(5 downto 0);
+	
+		xor_out_tvalid : std_logic;
+	    xor_out_tdata : std_logic_vector(31 downto 0);
+	    xor_out_tuser : std_logic_vector(5 downto 0);
+	
+		nor_out_tvalid : std_logic;
+	    nor_out_tdata : std_logic_vector(31 downto 0);
+	    nor_out_tuser : std_logic_vector(5 downto 0);
+	
+		shl_out_tvalid : std_logic;
+	    shl_out_tdata : std_logic_vector(31 downto 0);
+	    shl_out_tuser : std_logic_vector(5 downto 0);
+	
+		shr_out_tvalid : std_logic;
+	    shr_out_tdata : std_logic_vector(31 downto 0);
+	    shr_out_tuser : std_logic_vector(5 downto 0);
+	
+	    cmp_out_tvalid : std_logic;
+	    cmp_out_tdata : std_logic_vector(0 downto 0);
+	    cmp_out_tuser : std_logic_vector(17 downto 0);
+	end record;
+	
 end package;
 
 

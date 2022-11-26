@@ -202,10 +202,38 @@ begin
 								register_b_reg_next <= instruction_data_r.rt;
 								register_c_reg_next <= instruction_data_r.rd;
 							when instr_sll_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_SLL => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+								immediate_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
+								immediate_valid_reg_next <= '1';
 							when instr_sllv_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_SLL => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rt;
+								register_b_reg_next <= instruction_data_r.rs;
+								register_c_reg_next <= instruction_data_r.rd;
 							when instr_sra_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_SRA => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+								immediate_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
+								immediate_valid_reg_next <= '1';
 							when instr_srl_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_SRL => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
+								immediate_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
+								immediate_valid_reg_next <= '1';
 							when instr_srlv_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_SRL => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rt;
+								register_b_reg_next <= instruction_data_r.rs;
+								register_c_reg_next <= instruction_data_r.rd;
 							when instr_sub_opc.funct | instr_subu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SUB => '1', others => '0');
