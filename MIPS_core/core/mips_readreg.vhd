@@ -73,6 +73,16 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal target_register_pending_next : std_logic;
 	
 	signal alu_add_tuser : alu_add_out_tuser_t;
+	signal alu_cmp_tuser : alu_cmp_tuser_t;
+	
+	function reorder(data : std_logic_vector; invert : std_logic) return std_logic_vector is
+	begin
+		if invert = '1' then
+			return data(31 downto 0) & data(63 downto 31);
+		else
+			return data(63 downto 0);
+		end if;
+	end function;
 begin
 
 	register_a_pending_bypass <= target_register_pending when target_register_address = register_a_reg else register_port_out_a.pending;
@@ -118,6 +128,15 @@ begin
 	alu_in_ports.shr_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
 	alu_in_ports.shr_in_tvalid <= operation_reg(OPERATION_INDEX_SRL) and not stall_reg;
 	alu_in_ports.shr_in_tuser <= operation_reg(OPERATION_INDEX_SRA) & register_c_reg;
+	
+	alu_in_ports.cmp_in_tdata <= reorder(immediate_reg & register_port_out_a.data, operation_reg(OPERATION_INDEX_CMP_INVERT)) when immediate_valid_reg = '1' else reorder(register_port_out_b.data & register_port_out_a.data, operation_reg(OPERATION_INDEX_CMP_INVERT));
+	alu_in_ports.cmp_in_tvalid <= operation_reg(OPERATION_INDEX_CMP) and not stall_reg;
+	alu_in_ports.cmp_in_tuser <= cmp_tuser_to_slv(alu_cmp_tuser);
+	alu_cmp_tuser.eq <= operation_reg(OPERATION_INDEX_EQ);
+	alu_cmp_tuser.ge <= operation_reg(OPERATION_INDEX_GE);
+	alu_cmp_tuser.le <= operation_reg(OPERATION_INDEX_LE);
+	alu_cmp_tuser.rd <= register_c_reg;
+	alu_cmp_tuser.unsigned <= operation_reg(OPERATION_INDEX_UNSIGNED);
 	
 	override_address_valid <= operation_reg(OPERATION_INDEX_JUMP);
 	override_address <= register_port_out_a.data;

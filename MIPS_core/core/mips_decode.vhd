@@ -253,7 +253,17 @@ begin
 								register_b_reg_next <= instruction_data_r.rt;
 								register_c_reg_next <= instruction_data_r.rd;
 							when instr_slt_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
 							when instr_sltu_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', OPERATION_INDEX_UNSIGNED => '1', others => '0');
+								register_a_reg_next <= instruction_data_r.rs;
+								register_b_reg_next <= instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_r.rd;
 							when instr_jalr_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_JUMP => '1', OPERATION_INDEX_MOV => '1', others => '0');
@@ -331,7 +341,19 @@ begin
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_slti_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
 					when instr_sltiu_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', OPERATION_INDEX_UNSIGNED => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
 					when instr_beq_opc.opcode =>
 					when instr_beql_opc.opcode =>
 					when instr_bltz_opc.opcode =>

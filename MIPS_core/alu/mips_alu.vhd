@@ -157,8 +157,8 @@ architecture mips_alu_behavioral of mips_alu is
 	signal cmp_result_next : std_logic;
 	signal cmp_result_tuser : std_logic_vector(in_ports.cmp_in_tuser'LENGTH-1 downto 0);
 	signal cmp_result_tuser_next : std_logic_vector(in_ports.cmp_in_tuser'LENGTH-1 downto 0);
-	signal cmp_result_pending : std_logic;
-	signal cmp_result_pending_next : std_logic;
+	signal cmp_valid_reg : std_logic;
+	signal cmp_valid_reg_next : std_logic;
 	
 	signal and_out_tdata_reg : std_logic_vector(31 downto 0);
 	signal and_out_tdata_reg_next : std_logic_vector(31 downto 0);
@@ -201,16 +201,7 @@ architecture mips_alu_behavioral of mips_alu is
 	signal shr_out_tuser_reg_next : std_logic_vector(in_ports.shr_in_tuser'LENGTH-1 downto 0);
 	signal shr_out_tvalid_reg : std_logic;
 	signal shr_out_tvalid_reg_next : std_logic;
-	
-	constant CMP_TUSER_EQ : NATURAL := 10;
-	constant CMP_TUSER_GE : NATURAL := 11;
-	constant CMP_TUSER_LE : NATURAL := 12;
-	constant CMP_TUSER_INVERT : NATURAL := 13;
-	constant CMP_TUSER_MOV : NATURAL := 14;
-	constant CMP_TUSER_JMP : NATURAL := 15;
-	constant CMP_TUSER_ADD : NATURAL := 16;
-	constant CMP_TUSER_LINK : NATURAL := 17;
-	
+		
 	function shift_right_arith(data : std_logic_vector; n : NATURAL) return std_logic_vector is
 		variable result : std_logic_vector(data'range);
 	begin
@@ -223,7 +214,10 @@ architecture mips_alu_behavioral of mips_alu is
 		end loop;
 		return result;
 	end function;
+	
+	signal cmp_tuser : alu_cmp_tuser_t;
 begin
+	cmp_tuser <= slv_to_cmp_tuser(in_ports.cmp_in_tuser);
 	
 	out_ports.and_out_tvalid <= and_out_tvalid_reg;
 	out_ports.and_out_tdata <= and_out_tdata_reg;
@@ -240,6 +234,18 @@ begin
 	out_ports.nor_out_tvalid <= nor_out_tvalid_reg;
 	out_ports.nor_out_tdata <= nor_out_tdata_reg;
 	out_ports.nor_out_tuser <= nor_out_tuser_reg;
+	
+	out_ports.shl_out_tvalid <= shl_out_tvalid_reg;
+	out_ports.shl_out_tdata <= shl_out_tdata_reg;
+	out_ports.shl_out_tuser <= shl_out_tuser_reg;
+	
+	out_ports.shr_out_tvalid <= shr_out_tvalid_reg;
+	out_ports.shr_out_tdata <= shr_out_tdata_reg;
+	out_ports.shr_out_tuser <= shr_out_tuser_reg;
+	
+	out_ports.cmp_out_tdata(0) <= cmp_result;
+	out_ports.cmp_out_tuser <= cmp_result_tuser;
+	out_ports.cmp_out_tvalid <= cmp_valid_reg;
 	
 	process (clock) is
 	begin
@@ -258,7 +264,7 @@ begin
 			
 			cmp_result <= cmp_result_next;
 			cmp_result_tuser <= cmp_result_tuser_next;
-			cmp_result_pending <= cmp_result_pending_next;
+			cmp_valid_reg <= cmp_valid_reg_next;
 			
 			and_out_tdata_reg <= and_out_tdata_reg_next;
 			and_out_tuser_reg <= and_out_tuser_reg_next;
@@ -481,61 +487,63 @@ begin
 	end process;
 		
 		
-	--process (
-	--	resetn,
-	--	cmp_in_tdata,
-	--	cmp_in_tuser,
-	--	cmp_in_tvalid,
-	--	cmp_out_tready,
-	--	cmp_result_pending,
-	--	cmp_result_tuser,
-	--	cmp_result
-	--	)
-	--	variable vadvance : std_logic;
-	--begin
-	--		
-	--	cmp_out_tdata(0) <= cmp_result;
-	--	cmp_out_tuser <= cmp_result_tuser;
-	--	cmp_out_tvalid <= cmp_result_pending;
-	--		
-	--	if resetn = '0' then
-	--		cmp_result_pending_next <= '0';
-	--		cmp_result_tuser_next <= (others => '0');
-	--		cmp_in_tready <= '0';
-	--		cmp_result_next <= '0';
-	--	else
-	--		cmp_result_pending_next <= cmp_in_tvalid or (cmp_result_pending and not cmp_out_tready);
-	--		cmp_in_tready <= '0';
-	--		cmp_result_tuser_next <= cmp_result_tuser;
-	--		cmp_result_next <= cmp_result;
-	--			
-	--		if cmp_in_tvalid = '1' and (cmp_out_tready = '1' or cmp_result_pending = '0') then
-	--			cmp_in_tready <= '1';
-	--			cmp_result_tuser_next <= cmp_in_tuser;
-	--			if cmp_in_tuser(CMP_TUSER_EQ) = '1' then
-	--				if cmp_in_tdata(31 downto 0) = cmp_in_tdata(63 downto 32) then
-	--					cmp_result_next <= '1';
-	--				else
-	--					cmp_result_next <= '0';
-	--				end if;
-	--			end if;
-	--			if cmp_in_tuser(CMP_TUSER_GE) = '1' then
-	--				if unsigned(cmp_in_tdata(31 downto 0)) >= unsigned(cmp_in_tdata(63 downto 32)) then
-	--					cmp_result_next <= '1';
-	--				else
-	--					cmp_result_next <= '0';
-	--				end if;
-	--			end if;
-	--			if cmp_in_tuser(CMP_TUSER_LE) = '1' then
-	--				if unsigned(cmp_in_tdata(31 downto 0)) <= unsigned(cmp_in_tdata(63 downto 32)) then
-	--					cmp_result_next <= '1';
-	--				else
-	--					cmp_result_next <= '0';
-	--				end if;
-	--			end if;
-	--		end if;
-	--	end if;
-	--end process;
+	process (
+		resetn,
+		in_ports,
+		cmp_result_tuser,
+		cmp_result,
+		cmp_tuser
+		)
+	begin
+		if resetn = '0' then
+			cmp_valid_reg_next <= '0';
+			cmp_result_tuser_next <= (others => '0');
+			cmp_result_next <= '0';
+		else
+			cmp_valid_reg_next <= in_ports.cmp_in_tvalid;
+			cmp_result_tuser_next <= cmp_result_tuser;
+			cmp_result_next <= cmp_result;
+				
+			cmp_result_tuser_next <= in_ports.cmp_in_tuser;
+			if cmp_tuser.eq = '1' then
+				if in_ports.cmp_in_tdata(31 downto 0) = in_ports.cmp_in_tdata(63 downto 32) then
+					cmp_result_next <= not cmp_tuser.invert;
+				else
+					cmp_result_next <= cmp_tuser.invert;
+				end if;
+			end if;
+			if cmp_tuser.ge = '1' then
+				if cmp_tuser.unsigned = '1' then
+					if unsigned(in_ports.cmp_in_tdata(31 downto 0)) >= unsigned(in_ports.cmp_in_tdata(63 downto 32)) then
+						cmp_result_next <= not cmp_tuser.invert;
+					else
+						cmp_result_next <= cmp_tuser.invert;
+					end if;
+				else
+					if signed(in_ports.cmp_in_tdata(31 downto 0)) >= signed(in_ports.cmp_in_tdata(63 downto 32)) then
+						cmp_result_next <= not cmp_tuser.invert;
+					else
+						cmp_result_next <= cmp_tuser.invert;
+					end if;
+				end if;
+			end if;
+			if cmp_tuser.le = '1' then
+				if cmp_tuser.unsigned = '1' then
+					if unsigned(in_ports.cmp_in_tdata(31 downto 0)) <= unsigned(in_ports.cmp_in_tdata(63 downto 32)) then
+						cmp_result_next <= not cmp_tuser.invert;
+					else
+						cmp_result_next <= cmp_tuser.invert;
+					end if;
+				else
+					if signed(in_ports.cmp_in_tdata(31 downto 0)) <= signed(in_ports.cmp_in_tdata(63 downto 32)) then
+						cmp_result_next <= not cmp_tuser.invert;
+					else
+						cmp_result_next <= cmp_tuser.invert;
+					end if;
+				end if;
+			end if;
+		end if;
+	end process;
 	
 	process (
 		resetn,

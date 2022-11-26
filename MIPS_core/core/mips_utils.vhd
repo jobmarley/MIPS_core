@@ -286,9 +286,15 @@ package mips_utils is
 	constant OPERATION_INDEX_SLL : NATURAL := 10;
 	constant OPERATION_INDEX_SRL : NATURAL := 11;
 	constant OPERATION_INDEX_SRA : NATURAL := 12;
-	constant OPERATION_INDEX_UNSIGNED : NATURAL := 13;
-	constant OPERATION_INDEX_END : NATURAL := 14;
-	
+	constant OPERATION_INDEX_CMP : NATURAL := 13;
+	constant OPERATION_INDEX_EQ : NATURAL := 14;
+	constant OPERATION_INDEX_GE : NATURAL := 15;
+	constant OPERATION_INDEX_LE : NATURAL := 16;
+	constant OPERATION_INDEX_CMP_INVERT : NATURAL := 17;
+	constant OPERATION_INDEX_REORDER : NATURAL := 18;
+	constant OPERATION_INDEX_UNSIGNED : NATURAL := 19;
+	constant OPERATION_INDEX_END : NATURAL := 20;
+		
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
 	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";
 	constant memory_op_type_half : std_logic_vector(2 downto 0) := "010";
@@ -308,6 +314,19 @@ package mips_utils is
 	
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
+	
+	type alu_cmp_tuser_t is record
+		unsigned : std_logic;
+		eq : std_logic;
+		ge : std_logic;
+		le : std_logic;
+		invert : std_logic;
+		rd : std_logic_vector(4 downto 0);
+	end record;
+	constant alu_cmp_tuser_length : NATURAL := 10;
+	
+	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
+	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
 	
 	type alu_in_ports_t is record
 		add_in_tvalid : std_logic;
@@ -522,6 +541,29 @@ package body mips_utils is
 		vresult(42) := tuser.signed;
 		vresult(43) := tuser.exclusive;
 		vresult(44) := tuser.jump;
+		return vresult;
+	end function;
+	
+	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t is
+		variable vresult : alu_cmp_tuser_t;
+	begin
+		vresult.unsigned := data(9);
+		vresult.eq := data(8);
+		vresult.ge := data(7);
+		vresult.le := data(6);
+		vresult.invert := data(5);
+		vresult.rd <= data(4 downto 0);
+		return vresult;
+	end function;
+	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
+		variable vresult : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
+	begin
+		vresult(9) := tuser.unsigned;
+		vresult(8) := tuser.eq;
+		vresult(7) := tuser.ge;
+		vresult(6) := tuser.le;
+		vresult(5) := tuser.invert;
+		vresult(4 downto 0) <= tuser.rd;
 		return vresult;
 	end function;
 end mips_utils;
