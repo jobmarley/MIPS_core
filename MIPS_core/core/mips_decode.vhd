@@ -427,7 +427,7 @@ begin
 						operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
 						register_a_reg_next <= "00000";
 						register_c_reg_next <= instruction_data_i.rt;
-						immediate_reg_next <= instruction_data_i.immediate & x"FFFF";
+						immediate_reg_next <= instruction_data_i.immediate & x"0000";
 						immediate_valid_reg_next <= '1';
 					when instr_lw_opc.opcode =>
 						operation_valid_reg_next <= '1';
@@ -438,18 +438,73 @@ begin
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
 						memop_type_reg_next <= memory_op_type_word;
+					when instr_lwl_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half_left;
+					when instr_lwr_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						load_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half_right;
 					
 					when instr_sb_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						store_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_byte;
 					when instr_sh_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						store_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half;
 					when instr_sw_opc.opcode =>
-					when instr_sc_opc.opcode =>
-	
-					when instr_ll_opc.opcode =>
-					when instr_lwl_opc.opcode =>
-					when instr_lwr_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						store_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_word;
 					when instr_swl_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						store_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half_left;
 					when instr_swr_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
+						register_a_reg_next <= instruction_data_i.rs;
+						register_c_reg_next <= instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_valid_reg_next <= '1';
+						store_reg_next <= '1';
+						memop_type_reg_next <= memory_op_type_half_right;
 	
+					when instr_sc_opc.opcode =>
+					when instr_ll_opc.opcode =>
 		
 					when instr_cache_opc.opcode =>
 					when instr_pref_opc.opcode =>

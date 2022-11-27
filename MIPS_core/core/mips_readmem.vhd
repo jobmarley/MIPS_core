@@ -48,40 +48,37 @@ entity mips_readmem is
 	register_port_in_a : out register_port_in_t;
 	register_port_out_a : in register_port_out_t;
 	
-	ready : out std_logic;
+	stall : out std_logic;
 	error : out std_logic
 	);
 end mips_readmem;
 
 architecture mips_readmem_behavioral of mips_readmem is
-	type reader_state_t is (reader_state_read_address, reader_state_read_address2, reader_state_read_data, reader_state_read_data2);
-	signal reader_state : reader_state_t;
-	signal reader_state_next : reader_state_t;
+	type state_t is (state_read_address,
+		state_read_address2,
+		state_read_data,
+		state_read_data2,
+		state_write_address,
+		state_write_address2,
+		state_write_data,
+		state_write_data2,
+		state_write_resp);
+	signal state : state_t;
+	signal state_next : state_t;
 	
 	signal add_tuser : alu_add_out_tuser_t;
 	
 	-- read
-	signal read_address_reg : std_logic_vector(31 downto 0);
-	signal read_address_reg_next : std_logic_vector(31 downto 0);
+	signal address_reg : std_logic_vector(31 downto 0);
+	signal address_reg_next : std_logic_vector(31 downto 0);
 	
 	signal read_data : std_logic_vector(31 downto 0);
 	signal read_data_next : std_logic_vector(31 downto 0);
 	signal read_data_valid : std_logic;
 	signal read_data_valid_next : std_logic;
 	
-	signal read_tuser_reg : alu_add_out_tuser_t;
-	signal read_tuser_reg_next : alu_add_out_tuser_t;
-	
-	-- write
-	type writer_state_t is (writer_state_address, writer_state_address2, writer_state_data, writer_state_data2, writer_state_resp);
-	signal writer_state : writer_state_t;
-	signal writer_state_next : writer_state_t;
-	
-	signal write_address_reg : std_logic_vector(31 downto 0);
-	signal write_address_reg_next : std_logic_vector(31 downto 0);
-	
-	signal write_add_tuser_reg : alu_add_out_tuser_t;
-	signal write_add_tuser_reg_next : alu_add_out_tuser_t;
+	signal tuser_reg : alu_add_out_tuser_t;
+	signal tuser_reg_next : alu_add_out_tuser_t;
 	
 	function sign_extend(u : std_logic_vector; l : natural) return std_logic_vector is
         alias uu: std_logic_vector(u'LENGTH-1 downto 0) is u;
@@ -92,34 +89,30 @@ architecture mips_readmem_behavioral of mips_readmem is
 		return result;
 	end function;
 	
+	signal ready : std_logic;
 begin
+	stall <= not ready and add_out_tvalid and (add_tuser.load or add_tuser.store);
+	
 	add_tuser <= slv_to_add_out_tuser(add_out_tuser);
 	
 	process(clock)
 	begin
 		if rising_edge(clock) then
-			reader_state <= reader_state_next;
-			read_tuser_reg <= read_tuser_reg_next;
-			read_address_reg <= read_address_reg_next;
+			state <= state_next;
+			address_reg <= address_reg_next;
+			tuser_reg <= tuser_reg_next;
 			read_data <= read_data_next;
 			read_data_valid <= read_data_valid_next;
-			
-			writer_state <= writer_state_next;
-			write_address_reg <= write_address_reg_next;
-			write_add_tuser_reg <= write_add_tuser_reg_next;
 		end if;
 	end process;
 	
 	process (
 		resetn,
 		
-		reader_state,
-		read_address_reg,
-		
 		add_out_tdata,
 		add_out_tvalid,
 		add_tuser,
-		read_tuser_reg,
+		tuser_reg,
 		
 		read_data,
 		read_data_valid,
@@ -129,18 +122,17 @@ begin
 		m_axi_mem_rdata,
 		m_axi_mem_rresp,
 		m_axi_mem_rlast,
-		
-		writer_state,
-		write_address_reg,
-		write_add_tuser_reg,
-	
+			
 		m_axi_mem_awready,
 		m_axi_mem_wready,
 		m_axi_mem_bvalid,
-		m_axi_mem_bresp
+		m_axi_mem_bresp,
+		
+		state,
+		address_reg
 	)
 	begin
-		register_port_in_a.address <= read_tuser_reg.rt;
+		register_port_in_a.address <= tuser_reg.rt;
 		register_port_in_a.write_enable <= read_data_valid;
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= "0000";
@@ -172,107 +164,103 @@ begin
 		m_axi_mem_awsize <= "101";
 		m_axi_mem_wlast <= '0';
 		
-		ready <= '0';
 		error <= '0';
+		ready <= '0';
 		
-		reader_state_next <= reader_state;
-		read_address_reg_next <= read_address_reg;
-		read_tuser_reg_next <= read_tuser_reg;
+		tuser_reg_next <= tuser_reg;
+		read_data_next <= read_data;
 		read_data_valid_next <= '0';
-		
-		writer_state_next <= writer_state;
-		write_address_reg_next <= write_address_reg;
-		write_add_tuser_reg_next <= write_add_tuser_reg;
-		
+						
+		address_reg_next <= address_reg;
+		state_next <= state;
 		
 		if resetn = '0' then
-			reader_state_next <= reader_state_read_address;
-			read_address_reg_next <= (others => '0');
+			state_next <= state_read_address;
+			read_data_next <= (others => '0');
+			read_data_valid_next <= '0';
+			address_reg_next <= (others => '0');
 		else
-			-- handle axi read
-			case reader_state is
-				when reader_state_read_address =>
+			-- we cannot handle read/write independently because it causes race condition
+			-- when a read start before a write is completed (old value will be read)
+			case state is
+				when state_read_address =>
 					ready <= '1';
 					m_axi_mem_araddr <= add_out_tdata(31 downto 0);
 					m_axi_mem_arvalid <= add_tuser.load and add_out_tvalid;
-					read_address_reg_next <= add_out_tdata(31 downto 0);
-					read_tuser_reg_next <= add_tuser;
-					if m_axi_mem_arready = '1' then
-						reader_state_next <= reader_state_read_data;
-					elsif add_tuser.load = '1' and add_out_tvalid = '1' then
-						reader_state_next <= reader_state_read_address2;
-					end if;
-				when reader_state_read_address2 =>
-					m_axi_mem_araddr <= read_address_reg;
-					m_axi_mem_arvalid <= '1';
-					if m_axi_mem_arready = '1' then
-						reader_state_next <= reader_state_read_data;
-					end if;
-				when reader_state_read_data =>
-					m_axi_mem_rready <= '1';
-					if m_axi_mem_rvalid = '1' then
-						error <= m_axi_mem_rresp(1);
-						read_data_valid_next <= '1';
-						reader_state_next <= reader_state_read_address;
-					end if;
-				when others =>
-			end case;
-			
-			-- handle axi write
-			case writer_state is
-				when writer_state_address =>
-					ready <= '1';
+					
 					m_axi_mem_awaddr <= add_out_tdata(31 downto 0);
 					m_axi_mem_awvalid <= add_tuser.store and add_out_tvalid;
 					m_axi_mem_wvalid <= add_tuser.store and add_out_tvalid;
 					m_axi_mem_wdata <= add_tuser.store_data;
 					m_axi_mem_wlast <= '1';
-					write_address_reg_next <= add_out_tdata(31 downto 0);
-					write_add_tuser_reg_next <= add_tuser;
-					if add_tuser.store = '1' and add_out_tvalid = '1' then
-						if m_axi_mem_awready = '1' and m_axi_mem_wready = '1' then
-							writer_state_next <= writer_state_resp;
-						elsif m_axi_mem_awready = '1' then
-							writer_state_next <= writer_state_data;
+					
+					address_reg_next <= add_out_tdata(31 downto 0);
+					tuser_reg_next <= add_tuser;
+					if add_tuser.load = '1' and add_out_tvalid = '1' then
+						if m_axi_mem_arready = '1' then
+							state_next <= state_read_data;
 						else
-							writer_state_next <= writer_state_address2;
+							state_next <= state_read_address2;
+						end if;
+					elsif add_tuser.store = '1' and add_out_tvalid = '1' then
+						if m_axi_mem_awready = '1' and m_axi_mem_wready = '1' then
+							state_next <= state_write_resp;
+						elsif m_axi_mem_awready = '1' then
+							state_next <= state_write_data;
+						else
+							state_next <= state_write_address2;
 						end if;
 					end if;
-				when writer_state_address2 =>
-					m_axi_mem_awaddr <= write_address_reg(31 downto 0);
+				when state_read_address2 =>
+					m_axi_mem_araddr <= address_reg;
+					m_axi_mem_arvalid <= '1';
+					if m_axi_mem_arready = '1' then
+						state_next <= state_read_data;
+					end if;
+				when state_read_data =>
+					m_axi_mem_rready <= '1';
+					read_data_next <= m_axi_mem_rdata;
+					if m_axi_mem_rvalid = '1' then
+						error <= m_axi_mem_rresp(1);
+						read_data_valid_next <= '1';
+						state_next <= state_read_address;
+					end if;
+				
+				when state_write_address2 =>
+					m_axi_mem_awaddr <= address_reg(31 downto 0);
 					m_axi_mem_awvalid <= '1';
 					m_axi_mem_wvalid <= '1';
-					m_axi_mem_wdata <= write_add_tuser_reg.store_data;
+					m_axi_mem_wdata <= tuser_reg.store_data;
 					m_axi_mem_wlast <= '1';
 					if m_axi_mem_awready = '1' and m_axi_mem_wready = '1' then
-						writer_state_next <= writer_state_resp;
+						state_next <= state_write_resp;
 					elsif m_axi_mem_awready = '1' then
-						writer_state_next <= writer_state_data;
+						state_next <= state_write_data;
 					end if;
-				when writer_state_data =>
+				when state_write_data =>
 					m_axi_mem_wvalid <= '1';
-					m_axi_mem_wdata <= write_add_tuser_reg.store_data;
+					m_axi_mem_wdata <= tuser_reg.store_data;
 					m_axi_mem_wlast <= '1';
 					if m_axi_mem_wready = '1' then
-						writer_state_next <= writer_state_resp;
+						state_next <= state_write_resp;
 					end if;
-				when writer_state_resp =>
+				when state_write_resp =>
 					m_axi_mem_bready <= '1';
 					if m_axi_mem_bvalid = '1' then
 						error <= m_axi_mem_bresp(1);
-						writer_state_next <= writer_state_address;
+						state_next <= state_read_address;
 					end if;
 				when others =>
 			end case;
-			
+						
 			-- handle the register port and strobe
 			if read_data_valid = '1' then
 				register_port_in_a.write_enable <= '1';
-				case read_tuser_reg.memop_type is
+				case tuser_reg.memop_type is
 					when memory_op_type_byte =>
 						register_port_in_a.write_strobe <= "1111";
-						if read_tuser_reg.signed = '1' then
-							case read_address_reg(1 downto 0) is
+						if tuser_reg.signed = '1' then
+							case address_reg(1 downto 0) is
 								when "00" =>
 									register_port_in_a.write_data <= sign_extend(read_data(7 downto 0), 32);
 								when "01" =>
@@ -284,7 +272,7 @@ begin
 								when others =>
 							end case;
 						else
-							case read_address_reg(1 downto 0) is
+							case address_reg(1 downto 0) is
 								when "00" =>
 									register_port_in_a.write_data <= x"000000" & read_data(7 downto 0);
 								when "01" =>
@@ -298,14 +286,14 @@ begin
 						end if;
 					when memory_op_type_half =>
 						register_port_in_a.write_strobe <= "1111";
-						if read_tuser_reg.signed = '1' then
-							if read_address_reg(1 downto 0) = "10" then
+						if tuser_reg.signed = '1' then
+							if address_reg(1 downto 0) = "10" then
 								register_port_in_a.write_data <= sign_extend(read_data(31 downto 16), 32);
 							else
 								register_port_in_a.write_data <= sign_extend(read_data(15 downto 0), 32);
 							end if;
 						else
-							if read_address_reg(1 downto 0) = "10" then
+							if address_reg(1 downto 0) = "10" then
 								register_port_in_a.write_data <= x"0000" & read_data(31 downto 16);
 							else
 								register_port_in_a.write_data <= x"0000" & read_data(15 downto 0);
@@ -317,7 +305,7 @@ begin
 					
 					-- NOTE: those two are dependent on endianess
 					when memory_op_type_half_left =>
-						case read_address_reg(1 downto 0) is
+						case address_reg(1 downto 0) is
 							when "00" =>
 								register_port_in_a.write_strobe <= "1000";
 								register_port_in_a.write_data <= read_data(7 downto 0) & x"000000";
@@ -333,7 +321,7 @@ begin
 							when others =>
 						end case;
 					when memory_op_type_half_right =>
-						case read_address_reg(1 downto 0) is
+						case address_reg(1 downto 0) is
 							when "00" =>
 								register_port_in_a.write_strobe <= "1111";
 								register_port_in_a.write_data <= read_data;

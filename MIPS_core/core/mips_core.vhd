@@ -200,7 +200,7 @@ architecture mips_core_behavioral of mips_core is
 		register_port_in_a : out register_port_in_t;
 		register_port_out_a : in register_port_out_t;
 	
-		ready : out std_logic;
+		stall : out std_logic;
 		error : out std_logic
 		);
 	end component;
@@ -254,7 +254,7 @@ architecture mips_core_behavioral of mips_core is
 			resetn : in std_logic;
 	
 			in_ports : in alu_in_ports_t;
-			out_ports : out alu_out_ports_t
+			out_ports : out alu_out_ports_t 
 		);
 	end component;
 	
@@ -377,6 +377,7 @@ architecture mips_core_behavioral of mips_core is
 	end component;
 	component mips_readreg is
 		port (
+		enable : in std_logic;
 		resetn : in std_logic;
 		clock : in std_logic;
 	
@@ -422,7 +423,7 @@ architecture mips_core_behavioral of mips_core is
 	signal alu_in_ports : alu_in_ports_t;
 	signal alu_out_ports : alu_out_ports_t;
 		
-	signal readmem_ready : std_logic;
+	signal readmem_stall : std_logic;
 	signal readmem_error : std_logic;
 	
 	-- registers
@@ -473,6 +474,7 @@ begin
 	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid;-- or writeback_override_address_valid;
 	
 	mips_readreg_i0 : mips_readreg port map(
+		enable => not readmem_stall,
 		resetn => resetn,
 		clock => clock,
 	
@@ -508,7 +510,7 @@ begin
 		);
 	
 	mips_decode_i0 : mips_decode port map(
-		enable => not readreg_stall,
+		enable => not readreg_stall and not readmem_stall,
 		resetn => resetn,
 		clock => clock,
 	
@@ -537,7 +539,7 @@ begin
 		);
 	
 		mips_fetch_i0 : mips_fetch port map(
-			enable => not readreg_stall,
+			enable => not readreg_stall and not readmem_stall,
 			resetn => resetn,
 			clock => clock,
 	
@@ -658,12 +660,12 @@ begin
 		register_port_in_a => register_port_in(0),
 		register_port_out_a => register_port_out(0),
 	
-		ready => readmem_ready,
+		stall => readmem_stall,
 		error => readmem_error
 		);
 	mips_alu_0 : mips_alu
 		port map(
-			enable => '1',
+			enable => not readmem_stall,
 			clock => clock,
 			resetn => resetn,
 		

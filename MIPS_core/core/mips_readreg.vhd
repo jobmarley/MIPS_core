@@ -4,6 +4,7 @@ use work.mips_utils.all;
 
 entity mips_readreg is
 	port (
+	enable : in std_logic;
 	resetn : in std_logic;
 	clock : in std_logic;
 	
@@ -164,6 +165,7 @@ begin
 	end process;
 	
 	process (
+		enable,
 		resetn,
 		register_a,
 		register_b,
@@ -193,7 +195,9 @@ begin
 		
 		register_port_out_a,
 		
-		stall_reg
+		stall_reg,
+		target_register_address,
+		target_register_pending
 	)
         variable instruction_data_r : instruction_r_t;
         variable instruction_data_i : instruction_i_t;
@@ -231,9 +235,9 @@ begin
 		memop_type_reg_next <= memop_type_reg;
 		immediate_reg_next <= immediate_reg;
 		immediate_valid_reg_next <= immediate_valid_reg;
-		
-		target_register_address_next <= (others => '0');
-		target_register_pending_next <= '0';
+				
+		target_register_address_next <= target_register_address;
+		target_register_pending_next <= target_register_pending;
 		
 		stall <= '0';
 				
@@ -249,7 +253,10 @@ begin
 			load_reg_next <= '0';
 			store_reg_next <= '0';
 			memop_type_reg_next <= (others => '0');
-		else
+		elsif enable = '1' then
+			target_register_address_next <= (others => '0');
+			target_register_pending_next <= '0';
+			
 			if operation_valid_reg = '1' and 
 				(register_a_pending_bypass = '1' or
 				(register_b_pending_bypass = '1' and immediate_valid_reg = '0') or
@@ -290,7 +297,7 @@ begin
 					register_port_in_d.write_strobe <= x"F";
 					register_port_in_d.write_pending <= '0';
 				else
-					register_port_in_d.write_pending <= '1';
+					register_port_in_d.write_pending <= not store_reg;
 				end if;
 				target_register_address_next <= register_c_reg;
 				
