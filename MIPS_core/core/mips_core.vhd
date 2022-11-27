@@ -212,10 +212,8 @@ architecture mips_core_behavioral of mips_core is
 			
 			xdma_clock : in std_logic;
 	
-			register_out : in std_logic_vector(31 downto 0);
-			register_in : out std_logic_vector(31 downto 0);
-			register_write : out std_logic;
-			register_address : out std_logic_vector(5 downto 0);
+			register_port_in_a : out register_port_in_t;
+			register_port_out_a : in register_port_out_t;
 			
 			processor_enable : out std_logic;
 	
@@ -357,9 +355,9 @@ architecture mips_core_behavioral of mips_core is
 		instr_data_valid : in std_logic;
 		instr_data_ready : out std_logic;
 	
-		register_a : out std_logic_vector(4 downto 0);
-		register_b : out std_logic_vector(4 downto 0);
-		register_c : out std_logic_vector(4 downto 0);
+		register_a : out std_logic_vector(5 downto 0);
+		register_b : out std_logic_vector(5 downto 0);
+		register_c : out std_logic_vector(5 downto 0);
 		immediate : out std_logic_vector(31 downto 0);
 		immediate_valid : out std_logic;
 		operation : out std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -382,9 +380,9 @@ architecture mips_core_behavioral of mips_core is
 		clock : in std_logic;
 	
 		-- decode
-		register_a : in std_logic_vector(4 downto 0);
-		register_b : in std_logic_vector(4 downto 0);
-		register_c : in std_logic_vector(4 downto 0);
+		register_a : in std_logic_vector(5 downto 0);
+		register_b : in std_logic_vector(5 downto 0);
+		register_c : in std_logic_vector(5 downto 0);
 		immediate : in std_logic_vector(31 downto 0);
 		immediate_valid : in std_logic;
 		operation : in std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -427,7 +425,7 @@ architecture mips_core_behavioral of mips_core is
 	signal readmem_error : std_logic;
 	
 	-- registers
-	constant register_port_count : NATURAL := 7;
+	constant register_port_count : NATURAL := 8;
 	signal register_port_out : register_port_out_array_t(register_port_count-1 downto 0);
 	signal register_port_in : register_port_in_array_t(register_port_count-1 downto 0);
 	
@@ -445,9 +443,9 @@ architecture mips_core_behavioral of mips_core is
 	signal fetch_error : std_logic;
 	
 	-- decode	
-	signal decode_register_a : std_logic_vector(4 downto 0);
-	signal decode_register_b : std_logic_vector(4 downto 0);
-	signal decode_register_c : std_logic_vector(4 downto 0);
+	signal decode_register_a : std_logic_vector(5 downto 0);
+	signal decode_register_b : std_logic_vector(5 downto 0);
+	signal decode_register_c : std_logic_vector(5 downto 0);
 	signal decode_immediate : std_logic_vector(31 downto 0);
 	signal decode_immediate_valid : std_logic;
 	signal decode_operation : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -679,10 +677,8 @@ begin
 			
 		xdma_clock => xdma_clock,
 	
-		register_out => register_out,
-		register_in => register_in,
-		register_write => register_write,
-		register_address => register_address,
+		register_port_in_a => register_port_in(7),
+		register_port_out_a => register_port_out(7),
 			
 		processor_enable => processor_enable,
 	

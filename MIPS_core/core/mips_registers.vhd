@@ -18,10 +18,11 @@ entity mips_registers is
 end mips_registers;
 
 architecture mips_registers_behavioral of mips_registers is
-	signal registers : slv32_array_t(31 downto 0);
-	signal registers_next : slv32_array_t(31 downto 0);
-	signal registers_pending : std_logic_vector(31 downto 0);
-	signal registers_pending_next : std_logic_vector(31 downto 0);
+	constant register_count : NATURAL := 64;
+	signal registers : slv32_array_t(register_count-1 downto 0);
+	signal registers_next : slv32_array_t(register_count-1 downto 0);
+	signal registers_pending : std_logic_vector(register_count-1 downto 0);
+	signal registers_pending_next : std_logic_vector(register_count-1 downto 0);
 	
 	signal port_out_data_reg : slv32_array_t(port_type1_count-1 downto 0);
 	signal port_out_data_reg_next : slv32_array_t(port_type1_count-1 downto 0);

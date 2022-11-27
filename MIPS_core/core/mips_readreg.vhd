@@ -9,9 +9,9 @@ entity mips_readreg is
 	clock : in std_logic;
 	
 	-- decode
-	register_a : in std_logic_vector(4 downto 0);
-	register_b : in std_logic_vector(4 downto 0);
-	register_c : in std_logic_vector(4 downto 0);
+	register_a : in std_logic_vector(5 downto 0);
+	register_b : in std_logic_vector(5 downto 0);
+	register_c : in std_logic_vector(5 downto 0);
 	immediate : in std_logic_vector(31 downto 0);
 	immediate_valid : in std_logic;
 	operation : in std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -41,12 +41,12 @@ entity mips_readreg is
 end mips_readreg;
 
 architecture mips_readreg_behavioral of mips_readreg is
-	signal register_a_reg : std_logic_vector(4 downto 0);
-	signal register_a_reg_next : std_logic_vector(4 downto 0);
-	signal register_b_reg : std_logic_vector(4 downto 0);
-	signal register_b_reg_next : std_logic_vector(4 downto 0);
-	signal register_c_reg : std_logic_vector(4 downto 0);
-	signal register_c_reg_next : std_logic_vector(4 downto 0);
+	signal register_a_reg : std_logic_vector(5 downto 0);
+	signal register_a_reg_next : std_logic_vector(5 downto 0);
+	signal register_b_reg : std_logic_vector(5 downto 0);
+	signal register_b_reg_next : std_logic_vector(5 downto 0);
+	signal register_c_reg : std_logic_vector(5 downto 0);
+	signal register_c_reg_next : std_logic_vector(5 downto 0);
 	signal immediate_reg : std_logic_vector(31 downto 0);
 	signal immediate_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_valid_reg : std_logic;
@@ -68,8 +68,8 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal register_b_pending_bypass : std_logic;
 	signal register_c_pending_bypass : std_logic;
 	
-	signal target_register_address : std_logic_vector(4 downto 0);
-	signal target_register_address_next : std_logic_vector(4 downto 0);
+	signal target_register_address : std_logic_vector(5 downto 0);
+	signal target_register_address_next : std_logic_vector(5 downto 0);
 	signal target_register_pending : std_logic;
 	signal target_register_pending_next : std_logic;
 	
@@ -109,23 +109,23 @@ begin
 	
 	alu_in_ports.and_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
 	alu_in_ports.and_in_tvalid <= operation_reg(OPERATION_INDEX_AND) and not stall_reg;
-	alu_in_ports.and_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.and_in_tuser <= register_c_reg;
 	
 	alu_in_ports.or_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
 	alu_in_ports.or_in_tvalid <= operation_reg(OPERATION_INDEX_OR) and not stall_reg;
-	alu_in_ports.or_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.or_in_tuser <= register_c_reg;
 	
 	alu_in_ports.xor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
 	alu_in_ports.xor_in_tvalid <= operation_reg(OPERATION_INDEX_XOR) and not stall_reg;
-	alu_in_ports.xor_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.xor_in_tuser <= register_c_reg;
 	
 	alu_in_ports.nor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
 	alu_in_ports.nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_reg;
-	alu_in_ports.nor_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.nor_in_tuser <= register_c_reg;
 	
 	alu_in_ports.shl_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
 	alu_in_ports.shl_in_tvalid <= operation_reg(OPERATION_INDEX_SLL) and not stall_reg;
-	alu_in_ports.shl_in_tuser <= '0' & register_c_reg;
+	alu_in_ports.shl_in_tuser <= register_c_reg;
 	
 	alu_in_ports.shr_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
 	alu_in_ports.shr_in_tvalid <= operation_reg(OPERATION_INDEX_SRL) and not stall_reg;
@@ -302,7 +302,7 @@ begin
 				target_register_address_next <= register_c_reg;
 				
 				-- register pending bypass, only when reg != $0
-				if register_c_reg /= "00000" then
+				if register_c_reg /= "000000" then
 					target_register_pending_next <= operation_valid_reg;
 				end if;
 			end if;

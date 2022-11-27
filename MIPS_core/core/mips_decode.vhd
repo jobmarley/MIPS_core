@@ -16,9 +16,9 @@ entity mips_decode is
 	instr_data_valid : in std_logic;
 	instr_data_ready : out std_logic;
 	
-	register_a : out std_logic_vector(4 downto 0);
-	register_b : out std_logic_vector(4 downto 0);
-	register_c : out std_logic_vector(4 downto 0);
+	register_a : out std_logic_vector(5 downto 0);
+	register_b : out std_logic_vector(5 downto 0);
+	register_c : out std_logic_vector(5 downto 0);
 	immediate : out std_logic_vector(31 downto 0);
 	immediate_valid : out std_logic;
 	operation : out std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -37,12 +37,12 @@ end mips_decode;
 
 architecture mips_decode_behavioral of mips_decode is
 	
-	signal register_a_reg : std_logic_vector(4 downto 0);
-	signal register_a_reg_next : std_logic_vector(4 downto 0);
-	signal register_b_reg : std_logic_vector(4 downto 0);
-	signal register_b_reg_next : std_logic_vector(4 downto 0);
-	signal register_c_reg : std_logic_vector(4 downto 0);
-	signal register_c_reg_next : std_logic_vector(4 downto 0);
+	signal register_a_reg : std_logic_vector(register_a'LENGTH-1 downto 0);
+	signal register_a_reg_next : std_logic_vector(register_a'LENGTH-1 downto 0);
+	signal register_b_reg : std_logic_vector(register_a'LENGTH-1 downto 0);
+	signal register_b_reg_next : std_logic_vector(register_a'LENGTH-1 downto 0);
+	signal register_c_reg : std_logic_vector(register_a'LENGTH-1 downto 0);
+	signal register_c_reg_next : std_logic_vector(register_a'LENGTH-1 downto 0);
 	signal immediate_reg : std_logic_vector(31 downto 0);
 	signal immediate_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_valid_reg : std_logic;
@@ -160,29 +160,29 @@ begin
 							when instr_add_opc.funct | instr_addu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_and_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_AND => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_div_opc.funct =>
 							when instr_divu_opc.funct =>
 							when instr_mult_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_MUL => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_multu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_MUL => '1', OPERATION_INDEX_UNSIGNED => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							-- -- noop is sll 0, 0, 0
 							--when instr_noop_opc.funct =>
 							--	operation_valid_reg_next <= '0';
@@ -193,84 +193,84 @@ begin
 								else
 									operation_reg_next <= (OPERATION_INDEX_OR => '1', others => '0');
 								end if;
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sll_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SLL => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 								immediate_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								immediate_valid_reg_next <= '1';
 							when instr_sllv_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SLL => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rt;
-								register_b_reg_next <= instruction_data_r.rs;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_b_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sra_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SRA => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 								immediate_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								immediate_valid_reg_next <= '1';
 							when instr_srl_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SRL => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 								immediate_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								immediate_valid_reg_next <= '1';
 							when instr_srlv_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SRL => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rt;
-								register_b_reg_next <= instruction_data_r.rs;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_b_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sub_opc.funct | instr_subu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_SUB => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_xor_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_XOR => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_nor_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_NOR => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_slt_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sltu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', OPERATION_INDEX_UNSIGNED => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_jalr_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_JUMP => '1', OPERATION_INDEX_MOV => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 								immediate_reg_next <= instr_address_plus_8;
 								immediate_valid_reg_next <= '1';
 								delay_slot <= '1';
 							when instr_jr_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_JUMP => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
 								delay_slot <= '1';
 							
 							when instr_mfhi_opc.funct =>
@@ -292,15 +292,15 @@ begin
 					when instr_addi_opc.opcode | instr_addiu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_andi_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_AND => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_mul_opc.opcode =>
@@ -308,9 +308,9 @@ begin
 							when instr_mul_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next <= (OPERATION_INDEX_MUL => '1', others => '0');
-								register_a_reg_next <= instruction_data_r.rs;
-								register_b_reg_next <= instruction_data_r.rt;
-								register_c_reg_next <= instruction_data_r.rd;
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_madd_opc.funct =>
 							when instr_maddu_opc.funct =>
 							when instr_msub_opc.funct =>
@@ -324,29 +324,29 @@ begin
 					when instr_ori_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_OR => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_xori_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_XOR => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_slti_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_sltiu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_GE => '1', OPERATION_INDEX_CMP_INVERT => '1', OPERATION_INDEX_UNSIGNED => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_beq_opc.opcode =>
@@ -380,8 +380,8 @@ begin
 						override_address_reg_next <= instr_address(31 downto 28) & instruction_data_j.address & "00";
 						override_address_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
-						register_a_reg_next <= "00000";
-						register_c_reg_next <= "11111";
+						register_a_reg_next <= '0' & "00000";
+						register_c_reg_next <= '0' & "11111";
 						immediate_reg_next <= instr_address_plus_8;
 						immediate_valid_reg_next <= '1';
 						delay_slot <= '1';
@@ -389,8 +389,8 @@ begin
 					when instr_lb_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -398,8 +398,8 @@ begin
 					when instr_lbu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= x"0000" & instruction_data_i.immediate;
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -407,8 +407,8 @@ begin
 					when instr_lh_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -416,8 +416,8 @@ begin
 					when instr_lhu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= x"0000" & instruction_data_i.immediate;
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -425,15 +425,15 @@ begin
 					when instr_lui_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
-						register_a_reg_next <= "00000";
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & "00000";
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= instruction_data_i.immediate & x"0000";
 						immediate_valid_reg_next <= '1';
 					when instr_lw_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -441,8 +441,8 @@ begin
 					when instr_lwl_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -450,8 +450,8 @@ begin
 					when instr_lwr_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						load_reg_next <= '1';
@@ -460,8 +460,8 @@ begin
 					when instr_sb_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						store_reg_next <= '1';
@@ -469,8 +469,8 @@ begin
 					when instr_sh_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						store_reg_next <= '1';
@@ -478,8 +478,8 @@ begin
 					when instr_sw_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						store_reg_next <= '1';
@@ -487,8 +487,8 @@ begin
 					when instr_swl_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						store_reg_next <= '1';
@@ -496,8 +496,8 @@ begin
 					when instr_swr_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next <= (OPERATION_INDEX_ADD => '1', others => '0');
-						register_a_reg_next <= instruction_data_i.rs;
-						register_c_reg_next <= instruction_data_i.rt;
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 						store_reg_next <= '1';

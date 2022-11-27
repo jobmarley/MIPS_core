@@ -127,7 +127,7 @@ package mips_utils is
 	type cop0_register_t is array(31 downto 0) of slv32_array_t(7 downto 0);
 	
 	type register_port_in_t is record
-		address : std_logic_vector(4 DOWNTO 0);
+		address : std_logic_vector(5 DOWNTO 0);
 		write_enable : std_logic;
 		write_data : std_logic_vector(31 downto 0);
 		write_strobe : std_logic_vector(3 downto 0);
@@ -308,9 +308,9 @@ package mips_utils is
 		store : std_logic;
 		store_data : std_logic_vector(31 downto 0);
 		load : std_logic;
-		rt : std_logic_vector(4 downto 0);
+		rt : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_add_out_tuser_length : NATURAL := 45;
+	constant alu_add_out_tuser_length : NATURAL := 46;
 	
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
@@ -321,9 +321,9 @@ package mips_utils is
 		ge : std_logic;
 		le : std_logic;
 		invert : std_logic;
-		rd : std_logic_vector(4 downto 0);
+		rd : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_cmp_tuser_length : NATURAL := 10;
+	constant alu_cmp_tuser_length : NATURAL := 11;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
@@ -335,7 +335,7 @@ package mips_utils is
 		
 	    sub_in_tvalid : std_logic;
 	    sub_in_tdata : std_logic_vector(63 downto 0);
-	    sub_in_tuser : std_logic_vector(4 downto 0);
+	    sub_in_tuser : std_logic_vector(5 downto 0);
 	
 	    mul_in_tvalid : std_logic;
 	    mul_in_tdata : std_logic_vector(63 downto 0);
@@ -383,7 +383,7 @@ package mips_utils is
 	
 	    shr_in_tvalid : std_logic;
 	    shr_in_tdata : std_logic_vector(36 downto 0);
-	    shr_in_tuser : std_logic_vector(5 downto 0);
+	    shr_in_tuser : std_logic_vector(6 downto 0);
 	
 	    cmp_in_tvalid : std_logic;
 	    cmp_in_tdata : std_logic_vector(63 downto 0);
@@ -397,7 +397,7 @@ package mips_utils is
 		
 	    sub_out_tvalid : std_logic;
 	    sub_out_tdata : std_logic_vector(32 downto 0);
-	    sub_out_tuser : std_logic_vector(4 downto 0);
+	    sub_out_tuser : std_logic_vector(5 downto 0);
 	
 	    mul_out_tvalid : std_logic;
 	    mul_out_tdata : std_logic_vector(63 downto 0);
@@ -445,7 +445,7 @@ package mips_utils is
 	
 		shr_out_tvalid : std_logic;
 	    shr_out_tdata : std_logic_vector(31 downto 0);
-	    shr_out_tuser : std_logic_vector(5 downto 0);
+	    shr_out_tuser : std_logic_vector(6 downto 0);
 	
 	    cmp_out_tvalid : std_logic;
 	    cmp_out_tdata : std_logic_vector(0 downto 0);
@@ -519,51 +519,51 @@ package body mips_utils is
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t is
 		variable vresult : alu_add_out_tuser_t;
 	begin
-		vresult.rt := data(4 downto 0);
-		vresult.load := data(5);
-		vresult.store := data(6);
-		vresult.store_data := data(38 downto 7);
-		vresult.memop_type := data(41 downto 39);
-		vresult.signed := data(42);
-		vresult.exclusive := data(43);
-		vresult.jump := data(44);
+		vresult.rt := data(5 downto 0);
+		vresult.load := data(6);
+		vresult.store := data(7);
+		vresult.store_data := data(39 downto 8);
+		vresult.memop_type := data(42 downto 40);
+		vresult.signed := data(43);
+		vresult.exclusive := data(44);
+		vresult.jump := data(45);
 		return vresult;
 	end function;
 	
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector is
-		variable vresult : std_logic_vector(44 downto 0);
+		variable vresult : std_logic_vector(alu_add_out_tuser_length-1 downto 0);
 	begin
-		vresult(4 downto 0) := tuser.rt;
-		vresult(5) := tuser.load;
-		vresult(6) := tuser.store;
-		vresult(38 downto 7) := tuser.store_data;
-		vresult(41 downto 39) := tuser.memop_type;
-		vresult(42) := tuser.signed;
-		vresult(43) := tuser.exclusive;
-		vresult(44) := tuser.jump;
+		vresult(5 downto 0) := tuser.rt;
+		vresult(6) := tuser.load;
+		vresult(7) := tuser.store;
+		vresult(39 downto 8) := tuser.store_data;
+		vresult(42 downto 40) := tuser.memop_type;
+		vresult(43) := tuser.signed;
+		vresult(44) := tuser.exclusive;
+		vresult(45) := tuser.jump;
 		return vresult;
 	end function;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t is
 		variable vresult : alu_cmp_tuser_t;
 	begin
-		vresult.unsigned := data(9);
-		vresult.eq := data(8);
-		vresult.ge := data(7);
-		vresult.le := data(6);
-		vresult.invert := data(5);
-		vresult.rd := data(4 downto 0);
+		vresult.unsigned := data(10);
+		vresult.eq := data(9);
+		vresult.ge := data(8);
+		vresult.le := data(7);
+		vresult.invert := data(6);
+		vresult.rd := data(5 downto 0);
 		return vresult;
 	end function;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
 		variable vresult : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	begin
-		vresult(9) := tuser.unsigned;
-		vresult(8) := tuser.eq;
-		vresult(7) := tuser.ge;
-		vresult(6) := tuser.le;
-		vresult(5) := tuser.invert;
-		vresult(4 downto 0) := tuser.rd;
+		vresult(10) := tuser.unsigned;
+		vresult(9) := tuser.eq;
+		vresult(8) := tuser.ge;
+		vresult(7) := tuser.le;
+		vresult(6) := tuser.invert;
+		vresult(5 downto 0) := tuser.rd;
 		return vresult;
 	end function;
 end mips_utils;

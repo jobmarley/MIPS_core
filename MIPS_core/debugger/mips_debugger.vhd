@@ -13,6 +13,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
+use work.mips_utils.all;
 
 entity mips_debugger is
 	port (
@@ -21,10 +22,8 @@ entity mips_debugger is
 			
 		xdma_clock : in std_logic;
 	
-		register_out : in std_logic_vector(31 downto 0);
-		register_in : out std_logic_vector(31 downto 0);
-		register_write : out std_logic;
-		register_address : out std_logic_vector(5 downto 0);
+		register_port_in_a : out register_port_in_t;
+		register_port_out_a : in register_port_out_t;
 			
 		processor_enable : out std_logic;
 	
@@ -157,7 +156,7 @@ begin
 		s_axi_arprot,
 		s_axi_arvalid,
 		s_axi_rready,
-		register_out,
+		register_port_out_a,
 		s_axi_rresp_reg,
 		s_axi_rdata_reg,
 		s_axi_bresp_reg,
@@ -172,9 +171,11 @@ begin
 		s_axi_arready <= '0';
 		s_axi_rvalid <= '0';
 		
-		register_write <= '0';
-		register_in <= (others => '0');
-		register_address <= (others => '0');
+		register_port_in_a.address <= (others => '0');
+		register_port_in_a.write_enable <= '0';
+		register_port_in_a.write_data <= (others => '0');
+		register_port_in_a.write_strobe <= x"F";
+		register_port_in_a.write_pending <= '0';
 		
 		
 		if resetn = '0' then
@@ -211,11 +212,11 @@ begin
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_resp;
 						elsif s_axi_araddr(11 downto 7) = "00001" then -- REGISTERS
-							register_address <= '0' & s_axi_araddr(6 downto 2);
+							register_port_in_a.address <= '0' & s_axi_araddr(6 downto 2);
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_reg;
 						elsif s_axi_araddr(11 downto 7) = "00010" then -- COP0
-							register_address <= '1' & s_axi_araddr(6 downto 2);
+							register_port_in_a.address <= '1' & s_axi_araddr(6 downto 2);
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_reg;
 						else
@@ -231,20 +232,20 @@ begin
 						elsif s_axi_awaddr(11 downto 0) = x"004" then
 							leds_reg_next <= slv_select(leds_reg, s_axi_wdata, s_axi_wstrb(0 downto 0));
 						elsif s_axi_awaddr(11 downto 7) = "00001" then
-							register_address <= '0' & s_axi_awaddr(6 downto 2);	-- REGISTERS
-							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
-							register_write <= '1';
+							register_port_in_a.address <= '0' & s_axi_awaddr(6 downto 2);	-- REGISTERS
+							register_port_in_a.write_data <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
+							register_port_in_a.write_enable <= '1';
 						elsif s_axi_awaddr(11 downto 7) = "00010" then
-							register_address <= '1' & s_axi_awaddr(6 downto 2); -- COP0
-							register_in <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
-							register_write <= '1';
+							register_port_in_a.address <= '1' & s_axi_awaddr(6 downto 2); -- COP0
+							register_port_in_a.write_data <= s_axi_wdata;--slv_select(register_out, s_axi_wdata, s_axi_wstrb); -- doesnt work 1 cycle latency on read
+							register_port_in_a.write_enable <= '1';
 						else
 						end if ;
 						s_axi_bresp_reg_next <= AXI_RESP_OKAY;
 						debugger_state_next <= debugger_state_write_resp;
 					end if;
 				when debugger_state_read_reg =>
-					s_axi_rdata_reg_next <= register_out;
+					s_axi_rdata_reg_next <= register_port_out_a.data;
 					s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 					debugger_state_next <= debugger_state_read_resp;
 				when debugger_state_read_resp =>
