@@ -80,7 +80,7 @@ architecture mips_readreg_behavioral of mips_readreg is
 		ALIAS data2 : std_logic_vector(data'length-1 DOWNTO 0) is data;
 	begin
 		if invert = '1' then
-			return data2(31 downto 0) & data2(63 downto 31);
+			return data2(31 downto 0) & data2(63 downto 32);
 		else
 			return data2(63 downto 0);
 		end if;
