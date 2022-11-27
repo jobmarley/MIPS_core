@@ -5,6 +5,7 @@ use IEEE.numeric_std.all;
 
 entity mips_fetch is
 	port(
+		enable : in std_logic;
 		resetn : in std_logic;
 		clock : in std_logic;
 	
@@ -102,6 +103,7 @@ begin
 	end process;
 
 	process(
+		enable,
 		resetn,
 		
 		current_address,
@@ -160,16 +162,10 @@ begin
 		
 		error <= '0';
 		
-		instruction_data_valid_reg_next <= instruction_data_valid_reg and not instruction_data_ready;
-		
 		override_address_valid_reg_next <= override_address_valid_reg;
 		override_address_reg_next <= override_address_reg;
-		
-		delay_slot_reg_next <= delay_slot_reg or delay_slot;
-		if override_address_valid = '1' then
-			override_address_valid_reg_next <= '1';
-			override_address_reg_next <= override_address;
-		end if;
+		instruction_data_valid_reg_next <= instruction_data_valid_reg;
+		delay_slot_reg_next <= delay_slot_reg;
 		
 		if resetn = '0' then
 			current_address_next <= (others => '0');
@@ -178,7 +174,16 @@ begin
 			delay_slot_reg_next <= '0';
 			override_address_reg_next <= (others => '0');
 			override_address_valid_reg_next <= '0';
-		else
+		elsif enable = '1' then
+			
+			instruction_data_valid_reg_next <= instruction_data_valid_reg and not instruction_data_ready;
+			
+			delay_slot_reg_next <= delay_slot_reg or delay_slot;
+			if override_address_valid = '1' then
+				override_address_valid_reg_next <= '1';
+				override_address_reg_next <= override_address;
+			end if;
+			
 			case state is
 				when state_read_address =>
 					m_axi_mem_araddr <= current_address;

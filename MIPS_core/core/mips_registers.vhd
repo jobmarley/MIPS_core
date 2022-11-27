@@ -35,6 +35,11 @@ begin
 		if rising_edge(clock) then
 			registers <= registers_next;
 			registers_pending <= registers_pending_next;
+			
+			-- register $0 is hardcoded 0
+			registers(0) <= (others => '0');
+			registers_pending(0) <= '0';
+			
 			port_out_data_reg <= port_out_data_reg_next;
 			port_out_pending_reg <= port_out_pending_reg_next;
 		end if;

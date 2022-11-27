@@ -76,11 +76,12 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal alu_cmp_tuser : alu_cmp_tuser_t;
 	
 	function reorder(data : std_logic_vector; invert : std_logic) return std_logic_vector is
+		ALIAS data2 : std_logic_vector(data'length-1 DOWNTO 0) is data;
 	begin
 		if invert = '1' then
-			return data(31 downto 0) & data(63 downto 31);
+			return data2(31 downto 0) & data2(63 downto 31);
 		else
-			return data(63 downto 0);
+			return data2(63 downto 0);
 		end if;
 	end function;
 begin
@@ -141,7 +142,7 @@ begin
 	override_address_valid <= operation_reg(OPERATION_INDEX_JUMP);
 	override_address <= register_port_out_a.data;
 		
-	stall <= stall_reg;
+	--stall <= stall_reg;
 	
 	process(clock)
 	begin
@@ -190,6 +191,8 @@ begin
 		register_b_pending_bypass,
 		register_c_pending_bypass,
 		
+		register_port_out_a,
+		
 		stall_reg
 	)
         variable instruction_data_r : instruction_r_t;
@@ -233,10 +236,7 @@ begin
 		target_register_pending_next <= '0';
 		
 		stall <= '0';
-		
-		override_address <= (others => '0');
-		override_address_valid <= '0';
-		
+				
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
 			register_b_reg_next <= (others => '0');
@@ -282,7 +282,11 @@ begin
 				
 				-- OPERATION_INDEX_MOV is used to simply write a register
 				if operation_reg(OPERATION_INDEX_MOV) = '1' then
-					register_port_in_d.write_data <= immediate_reg;
+					if immediate_valid_reg = '1' then
+						register_port_in_d.write_data <= immediate_reg;
+					else
+						register_port_in_d.write_data <= register_port_out_a.data;
+					end if;
 					register_port_in_d.write_strobe <= x"F";
 					register_port_in_d.write_pending <= '0';
 				else

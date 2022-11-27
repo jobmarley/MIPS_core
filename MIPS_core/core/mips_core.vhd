@@ -249,6 +249,7 @@ architecture mips_core_behavioral of mips_core is
 	
 	component mips_alu is
 		port (
+			enable : in std_logic;
 			clock : in std_logic;
 			resetn : in std_logic;
 	
@@ -293,6 +294,7 @@ architecture mips_core_behavioral of mips_core is
 	
 	component mips_fetch is
 		port(
+			enable : in std_logic;
 			resetn : in std_logic;
 			clock : in std_logic;
 	
@@ -345,6 +347,7 @@ architecture mips_core_behavioral of mips_core is
 	
 	component mips_decode is
 		port (
+		enable : in std_logic;
 		resetn : in std_logic;
 		clock : in std_logic;
 	
@@ -505,6 +508,7 @@ begin
 		);
 	
 	mips_decode_i0 : mips_decode port map(
+		enable => not readreg_stall,
 		resetn => resetn,
 		clock => clock,
 	
@@ -533,6 +537,7 @@ begin
 		);
 	
 		mips_fetch_i0 : mips_fetch port map(
+			enable => not readreg_stall,
 			resetn => resetn,
 			clock => clock,
 	
@@ -658,6 +663,7 @@ begin
 		);
 	mips_alu_0 : mips_alu
 		port map(
+			enable => '1',
 			clock => clock,
 			resetn => resetn,
 		

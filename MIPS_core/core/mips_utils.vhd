@@ -387,7 +387,7 @@ package mips_utils is
 	
 	    cmp_in_tvalid : std_logic;
 	    cmp_in_tdata : std_logic_vector(63 downto 0);
-	    cmp_in_tuser : std_logic_vector(17 downto 0);
+	    cmp_in_tuser : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	end record;
 	
 	type alu_out_ports_t is record
@@ -449,7 +449,7 @@ package mips_utils is
 	
 	    cmp_out_tvalid : std_logic;
 	    cmp_out_tdata : std_logic_vector(0 downto 0);
-	    cmp_out_tuser : std_logic_vector(17 downto 0);
+	    cmp_out_tuser : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	end record;
 	
 end package;
@@ -552,7 +552,7 @@ package body mips_utils is
 		vresult.ge := data(7);
 		vresult.le := data(6);
 		vresult.invert := data(5);
-		vresult.rd <= data(4 downto 0);
+		vresult.rd := data(4 downto 0);
 		return vresult;
 	end function;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
@@ -563,7 +563,7 @@ package body mips_utils is
 		vresult(7) := tuser.ge;
 		vresult(6) := tuser.le;
 		vresult(5) := tuser.invert;
-		vresult(4 downto 0) <= tuser.rd;
+		vresult(4 downto 0) := tuser.rd;
 		return vresult;
 	end function;
 end mips_utils;

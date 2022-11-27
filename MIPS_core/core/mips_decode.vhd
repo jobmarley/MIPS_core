@@ -6,6 +6,7 @@ use work.mips_utils.all;
 
 entity mips_decode is
 	port (
+	enable : in std_logic;
 	resetn : in std_logic;
 	clock : in std_logic;
 	
@@ -103,19 +104,9 @@ begin
 	end process;
 	
 	process (
+		enable,
 		resetn,
-		
-		register_a_reg,
-		register_b_reg,
-		register_c_reg,
-		immediate_reg,
-		immediate_valid_reg,
-		operation_reg,
-		operation_valid_reg,
-		load_reg,
-		store_reg,
-		memop_type_reg,
-		
+				
 		instr_address_plus_8,
 		instr_data,
 		instr_data_valid
@@ -154,7 +145,7 @@ begin
 			load_reg_next <= '0';
 			store_reg_next <= '0';
 			memop_type_reg_next <= (others => '0');
-		else
+		elsif enable = '1' then
 			instr_data_ready <= '1';
 			if instr_data_valid = '1' then
 				
@@ -197,7 +188,11 @@ begin
 							--	operation_valid_reg_next <= '0';
 							when instr_or_opc.funct =>
 								operation_valid_reg_next <= '1';
-								operation_reg_next <= (OPERATION_INDEX_OR => '1', others => '0');
+								if instruction_data_r.shamt = "00000" then
+									operation_reg_next <= (OPERATION_INDEX_MOV => '1', others => '0');
+								else
+									operation_reg_next <= (OPERATION_INDEX_OR => '1', others => '0');
+								end if;
 								register_a_reg_next <= instruction_data_r.rs;
 								register_b_reg_next <= instruction_data_r.rt;
 								register_c_reg_next <= instruction_data_r.rd;
