@@ -42,6 +42,7 @@ entity mips_fetch is
 		m_axi_mem_wvalid : out STD_LOGIC;
 	
 		instruction_address_plus_8 : out std_logic_vector(31 downto 0);
+		instruction_address_plus_4 : out std_logic_vector(31 downto 0);
 		instruction_address : out std_logic_vector(31 downto 0);
 		instruction_data : out std_logic_vector(31 downto 0);
 		instruction_data_valid : out std_logic;
@@ -49,7 +50,8 @@ entity mips_fetch is
 		
 		override_address : in std_logic_vector(31 downto 0);
 		override_address_valid : in std_logic;
-		
+		skip_jump : in std_logic;	
+	
 		delay_slot : in std_logic;
 	
 		error : out std_logic
@@ -61,6 +63,8 @@ architecture mips_fetch_behavioral of mips_fetch is
 	signal current_address_next : std_logic_vector(31 downto 0);
 	signal instruction_address_plus_8_reg : std_logic_vector(31 downto 0);
 	signal instruction_address_plus_8_reg_next : std_logic_vector(31 downto 0);
+	signal instruction_address_plus_4_reg : std_logic_vector(31 downto 0);
+	signal instruction_address_plus_4_reg_next : std_logic_vector(31 downto 0);
 	signal instruction_address_reg : std_logic_vector(31 downto 0);
 	signal instruction_address_reg_next : std_logic_vector(31 downto 0);
 	signal instruction_data_reg : std_logic_vector(31 downto 0);
@@ -82,6 +86,7 @@ architecture mips_fetch_behavioral of mips_fetch is
 		
 begin
 	instruction_address_plus_8 <= instruction_address_plus_8_reg;
+	instruction_address_plus_4 <= instruction_address_plus_4_reg;
 	instruction_address <= instruction_address_reg;
 	instruction_data <= instruction_data_reg;
 	instruction_data_valid <= instruction_data_valid_reg;
@@ -91,6 +96,7 @@ begin
 		if rising_edge(clock) then
 			current_address <= current_address_next;
 			instruction_address_plus_8_reg <= instruction_address_plus_8_reg_next;
+			instruction_address_plus_4_reg <= instruction_address_plus_4_reg_next;
 			instruction_address_reg <= instruction_address_reg_next;
 			instruction_data_reg <= instruction_data_reg_next;
 			instruction_data_valid_reg <= instruction_data_valid_reg_next;
@@ -110,6 +116,7 @@ begin
 		state,
 		
 		instruction_address_plus_8_reg,
+		instruction_address_plus_4_reg,
 		instruction_address_reg,
 		instruction_data_reg,
 		instruction_data_valid_reg,
@@ -155,6 +162,7 @@ begin
 		m_axi_mem_wlast <= '0';
 		
 		instruction_address_plus_8_reg_next <= instruction_address_plus_8_reg;
+		instruction_address_plus_4_reg_next <= instruction_address_plus_4_reg;
 		instruction_address_reg_next <= instruction_address_reg;
 		instruction_data_reg_next <= instruction_data_reg;
 		current_address_next <= current_address;
@@ -174,6 +182,9 @@ begin
 			delay_slot_reg_next <= '0';
 			override_address_reg_next <= (others => '0');
 			override_address_valid_reg_next <= '0';
+			instruction_address_reg_next <= (others => '0');
+			instruction_address_plus_8_reg_next <= (others => '0');
+			instruction_address_plus_4_reg_next <= (others => '0');
 		elsif enable = '1' then
 			
 			instruction_data_valid_reg_next <= instruction_data_valid_reg and not instruction_data_ready;
@@ -189,6 +200,7 @@ begin
 					m_axi_mem_araddr <= current_address;
 					instruction_address_reg_next <= current_address;
 					instruction_address_plus_8_reg_next <= std_logic_vector(UNSIGNED(current_address) + 8);
+					instruction_address_plus_4_reg_next <= std_logic_vector(UNSIGNED(current_address) + 4);
 					
 					m_axi_mem_arvalid <= '1';
 					if m_axi_mem_arready = '1' then

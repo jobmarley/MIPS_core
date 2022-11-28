@@ -283,17 +283,19 @@ package mips_utils is
 	constant OPERATION_INDEX_MOV : NATURAL := 8;
 	-- jump rega
 	constant OPERATION_INDEX_JUMP : NATURAL := 9;
-	constant OPERATION_INDEX_SLL : NATURAL := 10;
-	constant OPERATION_INDEX_SRL : NATURAL := 11;
-	constant OPERATION_INDEX_SRA : NATURAL := 12;
-	constant OPERATION_INDEX_CMP : NATURAL := 13;
-	constant OPERATION_INDEX_EQ : NATURAL := 14;
-	constant OPERATION_INDEX_GE : NATURAL := 15;
-	constant OPERATION_INDEX_LE : NATURAL := 16;
-	constant OPERATION_INDEX_CMP_INVERT : NATURAL := 17;
-	constant OPERATION_INDEX_REORDER : NATURAL := 18;
-	constant OPERATION_INDEX_UNSIGNED : NATURAL := 19;
-	constant OPERATION_INDEX_END : NATURAL := 20;
+	-- branch if cmp result = 1
+	constant OPERATION_INDEX_B : NATURAL := 10;
+	constant OPERATION_INDEX_SLL : NATURAL := 11;
+	constant OPERATION_INDEX_SRL : NATURAL := 12;
+	constant OPERATION_INDEX_SRA : NATURAL := 13;
+	constant OPERATION_INDEX_CMP : NATURAL := 14;
+	constant OPERATION_INDEX_EQ : NATURAL := 15;
+	constant OPERATION_INDEX_GE : NATURAL := 16;
+	constant OPERATION_INDEX_LE : NATURAL := 17;
+	constant OPERATION_INDEX_CMP_INVERT : NATURAL := 18;
+	constant OPERATION_INDEX_REORDER : NATURAL := 19;
+	constant OPERATION_INDEX_UNSIGNED : NATURAL := 20;
+	constant OPERATION_INDEX_END : NATURAL := 21;
 		
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
 	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";
@@ -301,7 +303,7 @@ package mips_utils is
 	constant memory_op_type_half_left : std_logic_vector(2 downto 0) := "100";
 	constant memory_op_type_half_right : std_logic_vector(2 downto 0) := "101";
 	type alu_add_out_tuser_t is record
-		jump : std_logic;
+		branch : std_logic;
 		exclusive : std_logic;
 		signed : std_logic;
 		memop_type : std_logic_vector(2 downto 0);
@@ -316,6 +318,7 @@ package mips_utils is
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
 	
 	type alu_cmp_tuser_t is record
+		branch : std_logic;
 		unsigned : std_logic;
 		eq : std_logic;
 		ge : std_logic;
@@ -323,7 +326,7 @@ package mips_utils is
 		invert : std_logic;
 		rd : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_cmp_tuser_length : NATURAL := 11;
+	constant alu_cmp_tuser_length : NATURAL := 12;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
@@ -526,8 +529,8 @@ package body mips_utils is
 		vresult.memop_type := data(42 downto 40);
 		vresult.signed := data(43);
 		vresult.exclusive := data(44);
-		vresult.jump := data(45);
-		return vresult;
+		vresult.branch := data(45);
+		return vresult; 
 	end function;
 	
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector is
@@ -540,13 +543,14 @@ package body mips_utils is
 		vresult(42 downto 40) := tuser.memop_type;
 		vresult(43) := tuser.signed;
 		vresult(44) := tuser.exclusive;
-		vresult(45) := tuser.jump;
+		vresult(45) := tuser.branch;
 		return vresult;
 	end function;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t is
 		variable vresult : alu_cmp_tuser_t;
 	begin
+		vresult.branch := data(11);
 		vresult.unsigned := data(10);
 		vresult.eq := data(9);
 		vresult.ge := data(8);
@@ -558,6 +562,7 @@ package body mips_utils is
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
 		variable vresult : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	begin
+		vresult(11) := tuser.branch;
 		vresult(10) := tuser.unsigned;
 		vresult(9) := tuser.eq;
 		vresult(8) := tuser.ge;

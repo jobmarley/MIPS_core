@@ -239,8 +239,76 @@ begin
 					end if;
 				when state_write_data =>
 					m_axi_mem_wvalid <= '1';
-					m_axi_mem_wdata <= tuser_reg.store_data;
 					m_axi_mem_wlast <= '1';
+					case tuser_reg.memop_type is
+						when memory_op_type_byte =>
+							case address_reg(1 downto 0) is
+								when "00" =>
+									m_axi_mem_wdata <= x"000000" & tuser_reg.store_data(7 downto 0);
+									m_axi_mem_wstrb <= "0001";
+								when "01" =>
+									m_axi_mem_wdata <= x"0000" & tuser_reg.store_data(7 downto 0) & x"00";
+									m_axi_mem_wstrb <= "0010";
+								when "10" =>
+									m_axi_mem_wdata <= x"00" & tuser_reg.store_data(7 downto 0) & x"0000";
+									m_axi_mem_wstrb <= "0100";
+								when "11" =>
+									m_axi_mem_wdata <= tuser_reg.store_data(7 downto 0) & x"000000";
+									m_axi_mem_wstrb <= "1000";
+								when others =>
+									error <= '1';
+							end case;
+						when memory_op_type_half =>
+							case address_reg(1 downto 0) is
+								when "00" =>
+									m_axi_mem_wdata <= x"0000" & tuser_reg.store_data(15 downto 0);
+									m_axi_mem_wstrb <= "0011";
+								when "10" =>
+									m_axi_mem_wdata <= tuser_reg.store_data(15 downto 0) & x"0000";
+									m_axi_mem_wstrb <= "1100";
+								when others =>
+									error <= '1';
+							end case;
+						when memory_op_type_half_left =>
+							case address_reg(1 downto 0) is
+								when "00" =>
+									m_axi_mem_wdata <= x"000000" & tuser_reg.store_data(31 downto 24);
+									m_axi_mem_wstrb <= "0001";
+								when "01" =>
+									m_axi_mem_wdata <= x"0000" & tuser_reg.store_data(31 downto 16);
+									m_axi_mem_wstrb <= "0011";
+								when "10" =>
+									m_axi_mem_wdata <= x"00" & tuser_reg.store_data(31 downto 8);
+									m_axi_mem_wstrb <= "0111";
+								when "11" =>
+									m_axi_mem_wdata <= tuser_reg.store_data;
+									m_axi_mem_wstrb <= "1111";
+								when others =>
+									error <= '1';
+							end case;
+						when memory_op_type_half_right =>
+							case address_reg(1 downto 0) is
+								when "00" =>
+									m_axi_mem_wdata <= tuser_reg.store_data;
+									m_axi_mem_wstrb <= "1111";
+								when "01" =>
+									m_axi_mem_wdata <= tuser_reg.store_data(23 downto 0) & x"00";
+									m_axi_mem_wstrb <= "1110";
+								when "10" =>
+									m_axi_mem_wdata <= tuser_reg.store_data(15 downto 0) & x"0000";
+									m_axi_mem_wstrb <= "1100";
+								when "11" =>
+									m_axi_mem_wdata <= tuser_reg.store_data(7 downto 0) & x"000000";
+									m_axi_mem_wstrb <= "1000";
+								when others =>
+									error <= '1';
+							end case;
+						when memory_op_type_word =>
+							m_axi_mem_wdata <= tuser_reg.store_data;
+							m_axi_mem_wstrb <= "1111";
+						when others =>
+							error <= '1';
+					end case;
 					if m_axi_mem_wready = '1' then
 						state_next <= state_write_resp;
 					end if;

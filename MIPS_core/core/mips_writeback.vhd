@@ -14,29 +14,33 @@ entity mips_writeback is
 	register_port_in_a : out register_port_in_t;
 	register_port_out_a : in register_port_out_t;
 	register_port_in_b : out register_port_in_t;
-	register_port_out_b : in register_port_out_t
+	register_port_out_b : in register_port_out_t;
 	
 	-- fetch
-	--fetch_override_address : out std_logic_vector(31 downto 0);
-	--fetch_override_address_valid : out std_logic
+	fetch_override_address : out std_logic_vector(31 downto 0);
+	fetch_override_address_valid : out std_logic;
+	fetch_skip_jump : out std_logic
 	
 	);
 end mips_writeback;
 
 architecture mips_writeback_behavioral of mips_writeback is
 	signal add_tuser : alu_add_out_tuser_t;
+	signal cmp_tuser : alu_cmp_tuser_t;
 begin
 	add_tuser <= slv_to_add_out_tuser(alu_out_ports.add_out_tuser);
+	cmp_tuser <= slv_to_cmp_tuser(alu_out_ports.cmp_out_tuser);
 	
 	register_port_in_a.address <= '0' & alu_out_ports.add_out_tuser(4 downto 0);
-	register_port_in_a.write_enable <= alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store;
+	register_port_in_a.write_enable <= alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store and not add_tuser.branch;
 	register_port_in_a.write_data <= alu_out_ports.add_out_tdata(31 downto 0);
 	register_port_in_a.write_strobe <= x"F";
 	register_port_in_a.write_pending <= '0';
 	
-	--fetch_override_address <= alu_out_ports.add_out_tdata(31 downto 0);
-	--fetch_override_address_valid <= add_tuser.jump and alu_out_ports.add_out_tvalid;
-	
+	fetch_override_address <= alu_out_ports.add_out_tdata(31 downto 0);
+	fetch_override_address_valid <= alu_out_ports.cmp_out_tdata(0) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch and add_tuser.branch and alu_out_ports.add_out_tvalid;
+	fetch_skip_jump <= not alu_out_ports.cmp_out_tdata(0) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
+		
 	process(clock)
 	begin
 		if rising_edge(clock) then
@@ -46,7 +50,10 @@ begin
 	process (
 		resetn,
 		
-		alu_out_ports
+		alu_out_ports,
+		
+		add_tuser,
+		cmp_tuser
 		
 	)
 		variable andorxornor : std_logic_vector(6 downto 0);
@@ -68,6 +75,7 @@ begin
 		
 		if resetn = '0' then
 		else
+			
 			case (andorxornor) is
 				when "1000000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.and_out_tuser(4 downto 0);

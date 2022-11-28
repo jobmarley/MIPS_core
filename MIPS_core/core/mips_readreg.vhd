@@ -36,6 +36,8 @@ entity mips_readreg is
 	override_address : out std_logic_vector(31 downto 0);
 	override_address_valid : out std_logic;
 	
+	immediate2 : in std_logic_vector(31 downto 0);
+	
 	stall : out std_logic
 	);
 end mips_readreg;
@@ -49,6 +51,8 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal register_c_reg_next : std_logic_vector(5 downto 0);
 	signal immediate_reg : std_logic_vector(31 downto 0);
 	signal immediate_reg_next : std_logic_vector(31 downto 0);
+	signal immediate2_reg : std_logic_vector(31 downto 0);
+	signal immediate2_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_valid_reg : std_logic;
 	signal immediate_valid_reg_next : std_logic;
 	signal operation_reg : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -61,8 +65,6 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal store_reg_next : std_logic;
 	signal memop_type_reg : std_logic_vector(2 downto 0);
 	signal memop_type_reg_next : std_logic_vector(2 downto 0);
-	signal stall_reg : std_logic;
-	signal stall_reg_next : std_logic;
 	
 	signal register_a_pending_bypass : std_logic;
 	signal register_b_pending_bypass : std_logic;
@@ -85,14 +87,20 @@ architecture mips_readreg_behavioral of mips_readreg is
 			return data2(63 downto 0);
 		end if;
 	end function;
+	
+	signal stall_internal : std_logic;
 begin
-
+	stall <= stall_internal;
+	
 	register_a_pending_bypass <= target_register_pending when target_register_address = register_a_reg else register_port_out_a.pending;
 	register_b_pending_bypass <= target_register_pending when target_register_address = register_b_reg else register_port_out_b.pending;
 	register_c_pending_bypass <= target_register_pending when target_register_address = register_c_reg else register_port_out_c.pending;
 	
-	alu_in_ports.add_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_in_ports.add_in_tvalid <= operation_reg(OPERATION_INDEX_ADD) and not stall_reg;
+	-- when OPERATION_INDEX_B, (immediate2_reg = current + immediate = immediate_reg) is the target address
+	alu_in_ports.add_in_tdata <= (immediate2_reg & immediate_reg) when operation_reg(OPERATION_INDEX_B) = '1'
+		else (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1'
+		else (register_port_out_a.data & register_port_out_b.data);
+	alu_in_ports.add_in_tvalid <= (operation_reg(OPERATION_INDEX_ADD) or operation_reg(OPERATION_INDEX_B)) and operation_valid_reg and not stall_internal;
 	alu_in_ports.add_in_tuser <= add_out_tuser_to_slv(alu_add_tuser);
 	alu_add_tuser.exclusive <= '0';
 	alu_add_tuser.signed <= '0';
@@ -101,44 +109,46 @@ begin
 	alu_add_tuser.store_data <= register_port_out_c.data;
 	alu_add_tuser.load <= load_reg;
 	alu_add_tuser.rt <= register_c_reg;
-	alu_add_tuser.jump <= '0';
+	alu_add_tuser.branch <= operation_reg(OPERATION_INDEX_B);
 	
 	alu_in_ports.sub_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_in_ports.sub_in_tvalid <= operation_reg(OPERATION_INDEX_SUB) and not stall_reg;
+	alu_in_ports.sub_in_tvalid <= operation_reg(OPERATION_INDEX_SUB) and not stall_internal;
 	alu_in_ports.sub_in_tuser <= register_c_reg;
 	
 	alu_in_ports.and_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_in_ports.and_in_tvalid <= operation_reg(OPERATION_INDEX_AND) and not stall_reg;
+	alu_in_ports.and_in_tvalid <= operation_reg(OPERATION_INDEX_AND) and not stall_internal;
 	alu_in_ports.and_in_tuser <= register_c_reg;
 	
 	alu_in_ports.or_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_in_ports.or_in_tvalid <= operation_reg(OPERATION_INDEX_OR) and not stall_reg;
+	alu_in_ports.or_in_tvalid <= operation_reg(OPERATION_INDEX_OR) and not stall_internal;
 	alu_in_ports.or_in_tuser <= register_c_reg;
 	
 	alu_in_ports.xor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_in_ports.xor_in_tvalid <= operation_reg(OPERATION_INDEX_XOR) and not stall_reg;
+	alu_in_ports.xor_in_tvalid <= operation_reg(OPERATION_INDEX_XOR) and not stall_internal;
 	alu_in_ports.xor_in_tuser <= register_c_reg;
 	
 	alu_in_ports.nor_in_tdata <= (register_port_out_a.data & immediate_reg) when immediate_valid_reg = '1' else (register_port_out_a.data & register_port_out_b.data);
-	alu_in_ports.nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_reg;
+	alu_in_ports.nor_in_tvalid <= operation_reg(OPERATION_INDEX_NOR) and not stall_internal;
 	alu_in_ports.nor_in_tuser <= register_c_reg;
 	
 	alu_in_ports.shl_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
-	alu_in_ports.shl_in_tvalid <= operation_reg(OPERATION_INDEX_SLL) and not stall_reg;
+	alu_in_ports.shl_in_tvalid <= operation_reg(OPERATION_INDEX_SLL) and not stall_internal;
 	alu_in_ports.shl_in_tuser <= register_c_reg;
 	
 	alu_in_ports.shr_in_tdata <= (immediate_reg(4 downto 0) & register_port_out_a.data) when immediate_valid_reg = '1' else (register_port_out_b.data(4 downto 0) & register_port_out_a.data);
-	alu_in_ports.shr_in_tvalid <= operation_reg(OPERATION_INDEX_SRL) and not stall_reg;
+	alu_in_ports.shr_in_tvalid <= operation_reg(OPERATION_INDEX_SRL) and not stall_internal;
 	alu_in_ports.shr_in_tuser <= operation_reg(OPERATION_INDEX_SRA) & register_c_reg;
 	
 	alu_in_ports.cmp_in_tdata <= reorder(immediate_reg & register_port_out_a.data, operation_reg(OPERATION_INDEX_CMP_INVERT)) when immediate_valid_reg = '1' else reorder(register_port_out_b.data & register_port_out_a.data, operation_reg(OPERATION_INDEX_CMP_INVERT));
-	alu_in_ports.cmp_in_tvalid <= operation_reg(OPERATION_INDEX_CMP) and not stall_reg;
+	alu_in_ports.cmp_in_tvalid <= operation_reg(OPERATION_INDEX_CMP) and not stall_internal;
 	alu_in_ports.cmp_in_tuser <= cmp_tuser_to_slv(alu_cmp_tuser);
 	alu_cmp_tuser.eq <= operation_reg(OPERATION_INDEX_EQ);
 	alu_cmp_tuser.ge <= operation_reg(OPERATION_INDEX_GE);
 	alu_cmp_tuser.le <= operation_reg(OPERATION_INDEX_LE);
 	alu_cmp_tuser.rd <= register_c_reg;
+	alu_cmp_tuser.invert <= '0';
 	alu_cmp_tuser.unsigned <= operation_reg(OPERATION_INDEX_UNSIGNED);
+	alu_cmp_tuser.branch <= operation_reg(OPERATION_INDEX_B);
 	
 	override_address_valid <= operation_reg(OPERATION_INDEX_JUMP);
 	override_address <= register_port_out_a.data;
@@ -153,9 +163,9 @@ begin
 			register_c_reg <= register_c_reg_next;
 			immediate_reg <= immediate_reg_next;
 			immediate_valid_reg <= immediate_valid_reg_next;
+			immediate2_reg <= immediate2_reg_next;
 			operation_reg <= operation_reg_next;
 			operation_valid_reg <= operation_valid_reg_next;
-			stall_reg <= stall_reg_next;
 			load_reg <= load_reg_next;
 			store_reg <= store_reg_next;
 			memop_type_reg <= memop_type_reg_next;
@@ -188,6 +198,7 @@ begin
 		immediate_reg,
 		immediate_valid,
 		immediate_valid_reg,
+		immediate2_reg,
 	
 		register_a_pending_bypass,
 		register_b_pending_bypass,
@@ -195,7 +206,6 @@ begin
 		
 		register_port_out_a,
 		
-		stall_reg,
 		target_register_address,
 		target_register_pending
 	)
@@ -223,7 +233,6 @@ begin
 		register_port_in_d.write_data <= (others => '0');
 		register_port_in_d.write_strobe <= (others => '0');
 		register_port_in_d.write_pending <= '1';
-		stall_reg_next <= stall_reg;
 		
 		register_a_reg_next <= register_a_reg;
 		register_b_reg_next <= register_b_reg;
@@ -235,11 +244,12 @@ begin
 		memop_type_reg_next <= memop_type_reg;
 		immediate_reg_next <= immediate_reg;
 		immediate_valid_reg_next <= immediate_valid_reg;
+		immediate2_reg_next <= immediate2_reg;
 				
 		target_register_address_next <= target_register_address;
 		target_register_pending_next <= target_register_pending;
 		
-		stall <= '0';
+		stall_internal <= '0';
 				
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
@@ -249,10 +259,10 @@ begin
 			immediate_valid_reg_next <= '0';
 			operation_reg_next <= (others => '0');
 			operation_valid_reg_next <= '0';
-			stall_reg_next <= '0';
 			load_reg_next <= '0';
 			store_reg_next <= '0';
 			memop_type_reg_next <= (others => '0');
+			immediate2_reg_next <= (others => '0');
 		elsif enable = '1' then
 			target_register_address_next <= (others => '0');
 			target_register_pending_next <= '0';
@@ -262,12 +272,12 @@ begin
 				(register_b_pending_bypass = '1' and immediate_valid_reg = '0') or
 				register_c_pending_bypass = '1') then
 				
-				stall <= '1';
+				stall_internal <= '1';
 				register_port_in_a.address <= register_a_reg;
 				register_port_in_b.address <= register_b_reg;
 				register_port_in_c.address <= register_c_reg;
 			else
-				stall <= '0';
+				stall_internal <= '0';
 				register_a_reg_next <= register_a;
 				if immediate_valid_reg = '0' then
 					register_b_reg_next <= register_b;
@@ -282,6 +292,7 @@ begin
 				memop_type_reg_next <= memop_type;
 				immediate_reg_next <= immediate;
 				immediate_valid_reg_next <= immediate_valid;
+				immediate2_reg_next <= immediate2;
 				
 				-- write register pending for target register
 				register_port_in_d.address <= register_c_reg;

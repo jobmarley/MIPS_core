@@ -282,11 +282,12 @@ architecture mips_core_behavioral of mips_core is
 		register_port_in_a : out register_port_in_t;
 		register_port_out_a : in register_port_out_t;
 		register_port_in_b : out register_port_in_t;
-		register_port_out_b : in register_port_out_t
+		register_port_out_b : in register_port_out_t;
 	
 		-- fetch
-		--fetch_override_address : out std_logic_vector(31 downto 0);
-		--fetch_override_address_valid : out std_logic
+		fetch_override_address : out std_logic_vector(31 downto 0);
+		fetch_override_address_valid : out std_logic;
+		fetch_skip_jump : out std_logic
 		);
 	end component;
 	
@@ -329,6 +330,7 @@ architecture mips_core_behavioral of mips_core is
 			m_axi_mem_wvalid : out STD_LOGIC;
 	
 			instruction_address_plus_8 : out std_logic_vector(31 downto 0);
+			instruction_address_plus_4 : out std_logic_vector(31 downto 0);
 			instruction_address : out std_logic_vector(31 downto 0);
 			instruction_data : out std_logic_vector(31 downto 0);
 			instruction_data_valid : out std_logic;
@@ -336,6 +338,7 @@ architecture mips_core_behavioral of mips_core is
 		
 			override_address : in std_logic_vector(31 downto 0);
 			override_address_valid : in std_logic;
+			skip_jump : in std_logic;
 		
 			delay_slot : in std_logic;
 	
@@ -350,6 +353,7 @@ architecture mips_core_behavioral of mips_core is
 		clock : in std_logic;
 	
 		instr_address_plus_8 : in std_logic_vector(31 downto 0);
+		instr_address_plus_4 : in std_logic_vector(31 downto 0);
 		instr_address : in std_logic_vector(31 downto 0);
 		instr_data : in std_logic_vector(31 downto 0);
 		instr_data_valid : in std_logic;
@@ -365,6 +369,7 @@ architecture mips_core_behavioral of mips_core is
 		load : out std_logic;
 		store : out std_logic;
 		memop_type : out std_logic_vector(2 downto 0);
+		immediate2 : out std_logic_vector(31 downto 0);
 	
 		override_address : out std_logic_vector(31 downto 0);
 		override_address_valid : out std_logic;
@@ -373,6 +378,7 @@ architecture mips_core_behavioral of mips_core is
 		panic : out std_logic
 		);
 	end component;
+	
 	component mips_readreg is
 		port (
 		enable : in std_logic;
@@ -390,6 +396,7 @@ architecture mips_core_behavioral of mips_core is
 		load : in std_logic;
 		store : in std_logic;
 		memop_type : in std_logic_vector(2 downto 0);
+		immediate2 : in std_logic_vector(31 downto 0);
 	
 		-- registers
 		register_port_in_a : out register_port_in_t;
@@ -431,6 +438,7 @@ architecture mips_core_behavioral of mips_core is
 	
 	-- fetch
 	signal fetch_instruction_address_plus_8 : std_logic_vector(31 downto 0);
+	signal fetch_instruction_address_plus_4 : std_logic_vector(31 downto 0);
 	signal fetch_instruction_address : std_logic_vector(31 downto 0);
 	signal fetch_instruction_data : std_logic_vector(31 downto 0);
 	signal fetch_instruction_data_valid : std_logic;
@@ -453,6 +461,7 @@ architecture mips_core_behavioral of mips_core is
 	signal decode_load : std_logic;
 	signal decode_store : std_logic;
 	signal decode_memop_type : std_logic_vector(2 downto 0);
+	signal decode_immediate2 : std_logic_vector(31 downto 0);
 	
 	signal decode_override_address : std_logic_vector(31 downto 0);
 	signal decode_override_address_valid : std_logic;
@@ -465,11 +474,14 @@ architecture mips_core_behavioral of mips_core is
 	signal readreg_override_address_valid : std_logic;
 	
 	-- writeback
-	--signal writeback_override_address : std_logic_vector(31 downto 0);
-	--signal writeback_override_address_valid : std_logic;
+	signal writeback_override_address : std_logic_vector(31 downto 0);
+	signal writeback_override_address_valid : std_logic;
+	signal writeback_skip_jump : std_logic;
 begin
-	fetch_override_address <= decode_override_address when decode_override_address_valid = '1' else readreg_override_address;-- when readreg_override_address_valid = '1' else writeback_override_address;
-	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid;-- or writeback_override_address_valid;
+	fetch_override_address <= decode_override_address when decode_override_address_valid = '1'
+		else readreg_override_address when readreg_override_address_valid = '1'
+		else writeback_override_address;
+	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid or writeback_override_address_valid;
 	
 	mips_readreg_i0 : mips_readreg port map(
 		enable => not readmem_stall,
@@ -487,6 +499,7 @@ begin
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
+		immediate2 => decode_immediate2,
 	
 		-- registers
 		register_port_in_a => register_port_in(3),
@@ -513,6 +526,7 @@ begin
 		clock => clock,
 	
 		instr_address_plus_8 => fetch_instruction_address_plus_8,
+		instr_address_plus_4 => fetch_instruction_address_plus_4,
 		instr_address => fetch_instruction_address,
 		instr_data => fetch_instruction_data,
 		instr_data_valid => fetch_instruction_data_valid,
@@ -528,6 +542,7 @@ begin
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
+		immediate2 => decode_immediate2,
 	
 		override_address => decode_override_address,
 		override_address_valid => decode_override_address_valid,
@@ -574,6 +589,7 @@ begin
 			m_axi_mem_wvalid => m_axi_mema_wvalid,
 	
 			instruction_address_plus_8 => fetch_instruction_address_plus_8,
+			instruction_address_plus_4 => fetch_instruction_address_plus_4,
 			instruction_address => fetch_instruction_address,
 			instruction_data => fetch_instruction_data,
 			instruction_data_valid => fetch_instruction_data_valid,
@@ -581,6 +597,8 @@ begin
 		
 			override_address => fetch_override_address,
 			override_address_valid => fetch_override_address_valid,
+			skip_jump => writeback_skip_jump,
+	
 			delay_slot => fetch_delay_slot,
 	
 			error => fetch_error
@@ -597,11 +615,12 @@ begin
 		register_port_in_a => register_port_in(1),
 		register_port_out_a => register_port_out(1),
 		register_port_in_b => register_port_in(2),
-		register_port_out_b => register_port_out(2)
+		register_port_out_b => register_port_out(2),
 	
 		-- fetch
-		--fetch_override_address => fetch_override_address,
-		--fetch_override_address_valid => fetch_override_address_valid
+		fetch_override_address => writeback_override_address,
+		fetch_override_address_valid => writeback_override_address_valid,
+		fetch_skip_jump => writeback_skip_jump
 		);
 	
 	mips_registers_i0 : mips_registers 

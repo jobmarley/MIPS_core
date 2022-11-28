@@ -1,6 +1,7 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 use work.mips_utils.all;
 
 
@@ -11,6 +12,7 @@ entity mips_decode is
 	clock : in std_logic;
 	
 	instr_address_plus_8 : in std_logic_vector(31 downto 0);
+	instr_address_plus_4 : in std_logic_vector(31 downto 0);
 	instr_address : in std_logic_vector(31 downto 0);
 	instr_data : in std_logic_vector(31 downto 0);
 	instr_data_valid : in std_logic;
@@ -26,6 +28,7 @@ entity mips_decode is
 	load : out std_logic;
 	store : out std_logic;
 	memop_type : out std_logic_vector(2 downto 0);
+	immediate2 : out std_logic_vector(31 downto 0);
 	
 	override_address : out std_logic_vector(31 downto 0);
 	override_address_valid : out std_logic;
@@ -45,6 +48,8 @@ architecture mips_decode_behavioral of mips_decode is
 	signal register_c_reg_next : std_logic_vector(register_a'LENGTH-1 downto 0);
 	signal immediate_reg : std_logic_vector(31 downto 0);
 	signal immediate_reg_next : std_logic_vector(31 downto 0);
+	signal immediate2_reg : std_logic_vector(31 downto 0);
+	signal immediate2_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_valid_reg : std_logic;
 	signal immediate_valid_reg_next : std_logic;
 	signal operation_reg : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
@@ -70,7 +75,17 @@ architecture mips_decode_behavioral of mips_decode is
 		result(uu'LENGTH-1 downto 0) := uu;
 		return result;
 	end function;
+	
+	signal instruction_data_r : instruction_r_t;
+	signal instruction_data_i : instruction_i_t;
+	signal instruction_data_j : instruction_j_t;
+	signal instruction_data_cop0 : instruction_cop0_t;
 begin
+	
+	instruction_data_r <= slv_to_instruction_r(instr_data);
+	instruction_data_i <= slv_to_instruction_i(instr_data);
+	instruction_data_j <= slv_to_instruction_j(instr_data);
+	instruction_data_cop0 <= slv_to_instruction_cop0(instr_data);
 	
 	register_a <= register_a_reg;
 	register_b <= register_b_reg;
@@ -84,6 +99,7 @@ begin
 	memop_type <= memop_type_reg;
 	override_address <= override_address_reg;
 	override_address_valid <= override_address_valid_reg;
+	immediate2 <= immediate2_reg;
 	
 	process(clock)
 	begin
@@ -100,6 +116,7 @@ begin
 			memop_type_reg <= memop_type_reg_next;
 			override_address_reg <= override_address_reg_next;
 			override_address_valid_reg <= override_address_valid_reg_next;
+			immediate2_reg <= immediate2_reg_next;
 		end if;
 	end process;
 	
@@ -108,14 +125,15 @@ begin
 		resetn,
 				
 		instr_address_plus_8,
+		instr_address_plus_4,
+		instr_address,
 		instr_data,
-		instr_data_valid
-		
+		instr_data_valid,
+		instruction_data_r,
+		instruction_data_i,
+		instruction_data_j,
+		instruction_data_cop0
 	)
-        variable instruction_data_r : instruction_r_t;
-        variable instruction_data_i : instruction_i_t;
-        variable instruction_data_j : instruction_j_t;
-        variable instruction_data_cop0 : instruction_cop0_t;
 	begin
 		register_a_reg_next <= (others => '0');
 		register_b_reg_next <= (others => '0');
@@ -129,6 +147,7 @@ begin
 		memop_type_reg_next <= (others => '0');
 		override_address_reg_next <= (others => '0');
 		override_address_valid_reg_next <= '0';
+		immediate2_reg_next <= (others => '0');
 		
 		instr_data_ready <= '0';
 		panic <= '0';
@@ -145,15 +164,11 @@ begin
 			load_reg_next <= '0';
 			store_reg_next <= '0';
 			memop_type_reg_next <= (others => '0');
+			immediate2_reg_next <= (others => '0');
 		elsif enable = '1' then
 			instr_data_ready <= '1';
 			if instr_data_valid = '1' then
-				
-				instruction_data_r := slv_to_instruction_r(instr_data);
-				instruction_data_i := slv_to_instruction_i(instr_data);
-				instruction_data_j := slv_to_instruction_j(instr_data);
-				instruction_data_cop0 := slv_to_instruction_cop0(instr_data);
-				
+								
 				case (instruction_data_r.opcode) is
 					when instr_add_opc.opcode => -- add/u, sub/u, div/u, mult/u, noop, and, or, sll, sra, srl xor, nor, slt/u, jr/alr, mfc0, movn
 						case (instruction_data_r.funct) is
@@ -350,6 +365,13 @@ begin
 						immediate_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						immediate_valid_reg_next <= '1';
 					when instr_beq_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next <= (OPERATION_INDEX_CMP => '1', OPERATION_INDEX_EQ => '1', OPERATION_INDEX_B => '1', others => '0');
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= '0' & instruction_data_i.rt;
+						immediate_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate2_reg_next <= instr_address_plus_4;
+						delay_slot <= '1';
 					when instr_beql_opc.opcode =>
 					when instr_bltz_opc.opcode =>
 						case (instruction_data_i.rt) is
