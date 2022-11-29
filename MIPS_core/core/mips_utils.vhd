@@ -271,38 +271,42 @@ package mips_utils is
 	constant instr_deret_opc : instruction_r_t := ( opcode => "010000", funct => "011111", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
 	constant instr_eret_opc : instruction_r_t := ( opcode => "010000", funct => "011000", shamt => (others => '0'), rs => "10000", rt => (others => '0'), rd => (others => '0') );
 	
-	constant OPERATION_INDEX_ADD : NATURAL := 0;
-	constant OPERATION_INDEX_SUB : NATURAL := 1;
-	constant OPERATION_INDEX_MUL : NATURAL := 2;
-	constant OPERATION_INDEX_DIV : NATURAL := 3;
-	constant OPERATION_INDEX_AND : NATURAL := 4;
-	constant OPERATION_INDEX_OR : NATURAL := 5;
-	constant OPERATION_INDEX_XOR : NATURAL := 6;
-	constant OPERATION_INDEX_NOR : NATURAL := 7;
-	-- regc <= immediate | regb
-	constant OPERATION_INDEX_MOV : NATURAL := 8;
-	-- jump rega
-	constant OPERATION_INDEX_JUMP : NATURAL := 9;
-	-- branch if cmp result = 1
-	constant OPERATION_INDEX_B : NATURAL := 10;
-	constant OPERATION_INDEX_SLL : NATURAL := 11;
-	constant OPERATION_INDEX_SRL : NATURAL := 12;
-	constant OPERATION_INDEX_SRA : NATURAL := 13;
-	constant OPERATION_INDEX_CMP : NATURAL := 14;
-	constant OPERATION_INDEX_EQ : NATURAL := 15;
-	constant OPERATION_INDEX_GE : NATURAL := 16;
-	constant OPERATION_INDEX_LE : NATURAL := 17;
-	constant OPERATION_INDEX_CMP_INVERT : NATURAL := 18;
-	constant OPERATION_INDEX_REORDER : NATURAL := 19;
-	constant OPERATION_INDEX_UNSIGNED : NATURAL := 20;
-	constant OPERATION_INDEX_END : NATURAL := 21;
-		
+	type decode_operation_t is record
+		op_add : std_logic;
+		op_sub : std_logic;
+		op_mul : std_logic;
+		op_div : std_logic;
+		op_and : std_logic;
+		op_or : std_logic;
+		op_xor : std_logic;
+		op_nor : std_logic;
+		op_mov : std_logic;				-- something is copied to register c early
+		op_jump : std_logic;			-- jump at resulting add address
+		op_branch : std_logic;			-- jump at resulting add address when cmp result is 1
+		op_branch_likely : std_logic;	-- delay slot is executed only when branch is taken
+		op_sll : std_logic;
+		op_srl : std_logic;
+		op_sra : std_logic;
+		op_cmp : std_logic;
+		op_cmp_eq : std_logic;
+		op_cmp_le : std_logic;
+		op_cmp_ge : std_logic;
+		op_cmp_gez : std_logic;			-- fast cmp, result is known in readreg
+		op_cmp_invert : std_logic;		-- invert result of cmp
+		op_reorder : std_logic;			-- swap alu operands
+		op_unsigned : std_logic;
+		op_link : std_logic;			-- link_address is used for the mov
+		op_immediate_a : std_logic;		-- use immediate a instead of register
+		op_immediate_b : std_logic;		-- use immediate b instead of register
+	end record;
+	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
 	constant memory_op_type_byte : std_logic_vector(2 downto 0) := "001";
 	constant memory_op_type_half : std_logic_vector(2 downto 0) := "010";
 	constant memory_op_type_half_left : std_logic_vector(2 downto 0) := "100";
 	constant memory_op_type_half_right : std_logic_vector(2 downto 0) := "101";
 	type alu_add_out_tuser_t is record
+		jump : std_logic;
 		branch : std_logic;
 		exclusive : std_logic;
 		signed : std_logic;
@@ -312,12 +316,13 @@ package mips_utils is
 		load : std_logic;
 		rt : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_add_out_tuser_length : NATURAL := 46;
+	constant alu_add_out_tuser_length : NATURAL := 47;
 	
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
 	
 	type alu_cmp_tuser_t is record
+		likely : std_logic;
 		branch : std_logic;
 		unsigned : std_logic;
 		eq : std_logic;
@@ -326,7 +331,7 @@ package mips_utils is
 		invert : std_logic;
 		rd : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_cmp_tuser_length : NATURAL := 12;
+	constant alu_cmp_tuser_length : NATURAL := 13;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
@@ -459,7 +464,7 @@ end package;
 
 
 package body mips_utils is
-	
+		
 	function slv_to_instruction_r(v : std_logic_vector(31 downto 0)) return instruction_r_t is
 		variable r : instruction_r_t;
 	begin
@@ -530,6 +535,7 @@ package body mips_utils is
 		vresult.signed := data(43);
 		vresult.exclusive := data(44);
 		vresult.branch := data(45);
+		vresult.jump := data(46);
 		return vresult; 
 	end function;
 	
@@ -544,12 +550,14 @@ package body mips_utils is
 		vresult(43) := tuser.signed;
 		vresult(44) := tuser.exclusive;
 		vresult(45) := tuser.branch;
+		vresult(46) := tuser.jump;
 		return vresult;
 	end function;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t is
 		variable vresult : alu_cmp_tuser_t;
 	begin
+		vresult.likely := data(12);
 		vresult.branch := data(11);
 		vresult.unsigned := data(10);
 		vresult.eq := data(9);
@@ -562,6 +570,7 @@ package body mips_utils is
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
 		variable vresult : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	begin
+		vresult(12) := tuser.likely;
 		vresult(11) := tuser.branch;
 		vresult(10) := tuser.unsigned;
 		vresult(9) := tuser.eq;

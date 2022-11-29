@@ -287,7 +287,8 @@ architecture mips_core_behavioral of mips_core is
 		-- fetch
 		fetch_override_address : out std_logic_vector(31 downto 0);
 		fetch_override_address_valid : out std_logic;
-		fetch_skip_jump : out std_logic
+		fetch_skip_jump : out std_logic;
+		fetch_execute_delay_slot : out std_logic
 		);
 	end component;
 	
@@ -339,9 +340,9 @@ architecture mips_core_behavioral of mips_core is
 			override_address : in std_logic_vector(31 downto 0);
 			override_address_valid : in std_logic;
 			skip_jump : in std_logic;
-		
-			delay_slot : in std_logic;
-	
+			wait_jump : in std_logic;
+			execute_delay_slot : in std_logic;
+			
 			error : out std_logic
 		);
 	end component;
@@ -362,18 +363,21 @@ architecture mips_core_behavioral of mips_core is
 		register_a : out std_logic_vector(5 downto 0);
 		register_b : out std_logic_vector(5 downto 0);
 		register_c : out std_logic_vector(5 downto 0);
-		immediate : out std_logic_vector(31 downto 0);
-		immediate_valid : out std_logic;
-		operation : out std_logic_vector(OPERATION_INDEX_END-1 downto 0);
+		operation : out decode_operation_t;
 		operation_valid : out std_logic;
 		load : out std_logic;
 		store : out std_logic;
 		memop_type : out std_logic_vector(2 downto 0);
-		immediate2 : out std_logic_vector(31 downto 0);
+	
+		immediate_a : out std_logic_vector(31 downto 0);
+		immediate_b : out std_logic_vector(31 downto 0);
+		link_address : out std_logic_vector(31 downto 0);
 	
 		override_address : out std_logic_vector(31 downto 0);
 		override_address_valid : out std_logic;
-		delay_slot : out std_logic;
+	
+		wait_jump : out std_logic;
+		execute_delay_slot : out std_logic;
 	
 		panic : out std_logic
 		);
@@ -389,14 +393,15 @@ architecture mips_core_behavioral of mips_core is
 		register_a : in std_logic_vector(5 downto 0);
 		register_b : in std_logic_vector(5 downto 0);
 		register_c : in std_logic_vector(5 downto 0);
-		immediate : in std_logic_vector(31 downto 0);
-		immediate_valid : in std_logic;
-		operation : in std_logic_vector(OPERATION_INDEX_END-1 downto 0);
+		operation : in decode_operation_t;
 		operation_valid : in std_logic;
 		load : in std_logic;
 		store : in std_logic;
 		memop_type : in std_logic_vector(2 downto 0);
-		immediate2 : in std_logic_vector(31 downto 0);
+	
+		immediate_a : in std_logic_vector(31 downto 0);
+		immediate_b : in std_logic_vector(31 downto 0);
+		link_address : in std_logic_vector(31 downto 0);
 	
 		-- registers
 		register_port_in_a : out register_port_in_t;
@@ -413,6 +418,7 @@ architecture mips_core_behavioral of mips_core is
 	
 		override_address : out std_logic_vector(31 downto 0);
 		override_address_valid : out std_logic;
+		execute_delay_slot : out std_logic;
 	
 		stall : out std_logic
 		);
@@ -446,7 +452,7 @@ architecture mips_core_behavioral of mips_core is
 	
 	signal fetch_override_address : std_logic_vector(31 downto 0);
 	signal fetch_override_address_valid : std_logic;
-	signal fetch_delay_slot : std_logic;
+	signal fetch_execute_delay_slot : std_logic;
 			
 	signal fetch_error : std_logic;
 	
@@ -456,15 +462,19 @@ architecture mips_core_behavioral of mips_core is
 	signal decode_register_c : std_logic_vector(5 downto 0);
 	signal decode_immediate : std_logic_vector(31 downto 0);
 	signal decode_immediate_valid : std_logic;
-	signal decode_operation : std_logic_vector(OPERATION_INDEX_END-1 downto 0);
+	signal decode_operation : decode_operation_t;
 	signal decode_operation_valid : std_logic;
 	signal decode_load : std_logic;
 	signal decode_store : std_logic;
 	signal decode_memop_type : std_logic_vector(2 downto 0);
-	signal decode_immediate2 : std_logic_vector(31 downto 0);
+	signal decode_immediate_a : std_logic_vector(31 downto 0);
+	signal decode_immediate_b : std_logic_vector(31 downto 0);
+	signal decode_link_address : std_logic_vector(31 downto 0);
 	
 	signal decode_override_address : std_logic_vector(31 downto 0);
 	signal decode_override_address_valid : std_logic;
+	signal decode_wait_jump : std_logic;
+	signal decode_execute_delay_slot : std_logic;
 	
 	signal decode_panic : std_logic;
 	
@@ -477,11 +487,13 @@ architecture mips_core_behavioral of mips_core is
 	signal writeback_override_address : std_logic_vector(31 downto 0);
 	signal writeback_override_address_valid : std_logic;
 	signal writeback_skip_jump : std_logic;
+	signal writeback_execute_delay_slot : std_logic;
 begin
 	fetch_override_address <= decode_override_address when decode_override_address_valid = '1'
 		else readreg_override_address when readreg_override_address_valid = '1'
 		else writeback_override_address;
 	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid or writeback_override_address_valid;
+	fetch_execute_delay_slot <= decode_execute_delay_slot or writeback_execute_delay_slot;
 	
 	mips_readreg_i0 : mips_readreg port map(
 		enable => not readmem_stall,
@@ -492,14 +504,11 @@ begin
 		register_a => decode_register_a,
 		register_b => decode_register_b,
 		register_c => decode_register_c,
-		immediate => decode_immediate,
-		immediate_valid => decode_immediate_valid,
 		operation => decode_operation,
 		operation_valid => decode_operation_valid,
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
-		immediate2 => decode_immediate2,
 	
 		-- registers
 		register_port_in_a => register_port_in(3),
@@ -516,6 +525,10 @@ begin
 	
 		override_address => readreg_override_address,
 		override_address_valid => readreg_override_address_valid,
+	
+		immediate_a => decode_immediate_a,
+		immediate_b => decode_immediate_b,
+		link_address => decode_link_address,
 	
 		stall => readreg_stall
 		);
@@ -535,18 +548,20 @@ begin
 		register_a => decode_register_a,
 		register_b => decode_register_b,
 		register_c => decode_register_c,
-		immediate => decode_immediate,
-		immediate_valid => decode_immediate_valid,
 		operation => decode_operation,
 		operation_valid => decode_operation_valid,
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
-		immediate2 => decode_immediate2,
+	
+		immediate_a => decode_immediate_a,
+		immediate_b => decode_immediate_b,
+		link_address => decode_link_address,
 	
 		override_address => decode_override_address,
 		override_address_valid => decode_override_address_valid,
-		delay_slot => fetch_delay_slot,
+		wait_jump => decode_wait_jump,
+		execute_delay_slot => decode_execute_delay_slot,
 	
 		panic => decode_panic
 		);
@@ -597,10 +612,11 @@ begin
 		
 			override_address => fetch_override_address,
 			override_address_valid => fetch_override_address_valid,
+	
 			skip_jump => writeback_skip_jump,
-	
-			delay_slot => fetch_delay_slot,
-	
+			wait_jump => decode_wait_jump,
+			execute_delay_slot => fetch_execute_delay_slot,
+		
 			error => fetch_error
 		);
 	
@@ -620,7 +636,8 @@ begin
 		-- fetch
 		fetch_override_address => writeback_override_address,
 		fetch_override_address_valid => writeback_override_address_valid,
-		fetch_skip_jump => writeback_skip_jump
+		fetch_skip_jump => writeback_skip_jump,
+		fetch_execute_delay_slot => writeback_execute_delay_slot
 		);
 	
 	mips_registers_i0 : mips_registers 
