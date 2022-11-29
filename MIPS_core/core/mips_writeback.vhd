@@ -42,7 +42,7 @@ begin
 	register_port_in_a.write_pending <= '0';
 	
 	fetch_override_address <= alu_out_ports.add_out_tdata(31 downto 0);
-	fetch_override_address_valid <= cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch and add_tuser.branch and alu_out_ports.add_out_tvalid;
+	fetch_override_address_valid <= ((cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch and add_tuser.branch) or add_tuser.jump) and alu_out_ports.add_out_tvalid;
 	fetch_skip_jump <= not cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
 	fetch_execute_delay_slot <= (not cmp_tuser.likely or cmp_result) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
 	

@@ -419,6 +419,7 @@ architecture mips_core_behavioral of mips_core is
 		override_address : out std_logic_vector(31 downto 0);
 		override_address_valid : out std_logic;
 		execute_delay_slot : out std_logic;
+		skip_jump : out std_logic;
 	
 		stall : out std_logic
 		);
@@ -453,6 +454,7 @@ architecture mips_core_behavioral of mips_core is
 	signal fetch_override_address : std_logic_vector(31 downto 0);
 	signal fetch_override_address_valid : std_logic;
 	signal fetch_execute_delay_slot : std_logic;
+	signal fetch_skip_jump : std_logic;
 			
 	signal fetch_error : std_logic;
 	
@@ -482,6 +484,8 @@ architecture mips_core_behavioral of mips_core is
 	signal readreg_stall : std_logic;
 	signal readreg_override_address : std_logic_vector(31 downto 0);
 	signal readreg_override_address_valid : std_logic;
+	signal readreg_execute_delay_slot : std_logic;
+	signal readreg_skip_jump : std_logic;
 	
 	-- writeback
 	signal writeback_override_address : std_logic_vector(31 downto 0);
@@ -493,7 +497,8 @@ begin
 		else readreg_override_address when readreg_override_address_valid = '1'
 		else writeback_override_address;
 	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid or writeback_override_address_valid;
-	fetch_execute_delay_slot <= decode_execute_delay_slot or writeback_execute_delay_slot;
+	fetch_execute_delay_slot <= decode_execute_delay_slot or readreg_execute_delay_slot or writeback_execute_delay_slot;
+	fetch_skip_jump <= readreg_skip_jump or writeback_skip_jump;
 	
 	mips_readreg_i0 : mips_readreg port map(
 		enable => not readmem_stall,
@@ -525,6 +530,8 @@ begin
 	
 		override_address => readreg_override_address,
 		override_address_valid => readreg_override_address_valid,
+		execute_delay_slot => readreg_execute_delay_slot,
+		skip_jump => readreg_skip_jump,
 	
 		immediate_a => decode_immediate_a,
 		immediate_b => decode_immediate_b,
@@ -613,7 +620,7 @@ begin
 			override_address => fetch_override_address,
 			override_address_valid => fetch_override_address_valid,
 	
-			skip_jump => writeback_skip_jump,
+			skip_jump => fetch_skip_jump,
 			wait_jump => decode_wait_jump,
 			execute_delay_slot => fetch_execute_delay_slot,
 		

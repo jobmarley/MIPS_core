@@ -283,6 +283,7 @@ package mips_utils is
 		op_mov : std_logic;				-- something is copied to register c early
 		op_jump : std_logic;			-- jump at resulting add address
 		op_branch : std_logic;			-- jump at resulting add address when cmp result is 1
+										-- /!\ when branch, add will always use immediate, cmd will use registers
 		op_branch_likely : std_logic;	-- delay slot is executed only when branch is taken
 		op_sll : std_logic;
 		op_srl : std_logic;

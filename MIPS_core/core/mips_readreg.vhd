@@ -34,6 +34,7 @@ entity mips_readreg is
 	override_address : out std_logic_vector(31 downto 0);
 	override_address_valid : out std_logic;
 	execute_delay_slot : out std_logic;
+	skip_jump : out std_logic;
 	
 	immediate_a : in std_logic_vector(31 downto 0);
 	immediate_b : in std_logic_vector(31 downto 0);
@@ -80,13 +81,14 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal alu_add_tuser : alu_add_out_tuser_t;
 	signal alu_cmp_tuser : alu_cmp_tuser_t;
 	
-	function reorder(data : std_logic_vector; r : std_logic) return std_logic_vector is
-		ALIAS data2 : std_logic_vector(data'length-1 DOWNTO 0) is data;
+	function reorder(b : std_logic_vector; a : std_logic_vector; r : std_logic) return std_logic_vector is
+		ALIAS d1 : std_logic_vector(a'length-1 DOWNTO 0) is a;
+		ALIAS d2 : std_logic_vector(b'length-1 DOWNTO 0) is b;
 	begin
 		if r = '1' then
-			return data2(31 downto 0) & data2(63 downto 32);
+			return d1 & d2;
 		else
-			return data2(63 downto 0);
+			return d2 & d1;
 		end if;
 	end function;
 	
@@ -102,8 +104,9 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal stall_internal : std_logic;
 	signal fast_cmp_result : std_logic;
 begin
-	fast_cmp_result <= operation_reg.op_cmp_gez and (register_port_out_a.data(31) xor operation_reg.op_cmp_invert);
-	execute_delay_slot <= operation_valid_reg and fast_cmp_result;
+	fast_cmp_result <= (register_port_out_a.data(31) xor operation_reg.op_cmp_invert);
+	execute_delay_slot <= operation_valid_reg and operation_reg.op_cmp_gez and fast_cmp_result and operation_reg.op_branch_likely;
+	skip_jump <= operation_valid_reg and operation_reg.op_cmp_gez and not fast_cmp_result;
 	
 	stall <= stall_internal;
 	
@@ -111,11 +114,13 @@ begin
 	register_b_pending_bypass <= target_register_pending when target_register_address = register_b_reg else register_port_out_b.pending;
 	register_c_pending_bypass <= target_register_pending when target_register_address = register_c_reg else register_port_out_c.pending;
 	
-	-- when OPERATION_INDEX_B, (immediate2_reg = current + immediate = immediate_reg) is the target address
-	alu_in_ports.add_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
-		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	-- /!\ when branch, add operands are always immediates, because registers are used by cmp
+	alu_in_ports.add_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b or operation_reg.op_branch) &
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a or operation_reg.op_branch);
 	
-	alu_in_ports.add_in_tvalid <= operation_reg.op_add and operation_valid_reg and not stall_internal;
+	alu_in_ports.add_in_tvalid <= operation_reg.op_add and operation_valid_reg and not stall_internal when operation_reg.op_cmp_gez = '0'
+		else operation_reg.op_add and operation_valid_reg and not stall_internal and fast_cmp_result;
+	
 	alu_in_ports.add_in_tuser <= add_out_tuser_to_slv(alu_add_tuser);
 	alu_add_tuser.exclusive <= '0';
 	alu_add_tuser.signed <= '0';
@@ -124,8 +129,9 @@ begin
 	alu_add_tuser.store_data <= register_port_out_c.data;
 	alu_add_tuser.load <= load_reg;
 	alu_add_tuser.rt <= register_c_reg;
-	alu_add_tuser.branch <= operation_reg.op_branch;
-	alu_add_tuser.jump <= operation_reg.op_jump;
+	 -- when op_cmp_gez is used, we transform the branch in jump when cmp is successfull
+	alu_add_tuser.branch <= operation_reg.op_branch when operation_reg.op_cmp_gez = '0' else not fast_cmp_result;
+	alu_add_tuser.jump <= operation_reg.op_jump when operation_reg.op_cmp_gez = '0' else fast_cmp_result;
 	
 	alu_in_ports.sub_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
@@ -162,8 +168,9 @@ begin
 	alu_in_ports.shr_in_tvalid <= operation_reg.op_srl and not stall_internal;
 	alu_in_ports.shr_in_tuser <= operation_reg.op_sra & register_c_reg;
 	
-	alu_in_ports.cmp_in_tdata <= reorder(select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b),
-		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a), operation_reg.op_reorder);
+	-- when branch, cmp always use registers
+	alu_in_ports.cmp_in_tdata <= reorder(select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b and not operation_reg.op_branch),
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a and not operation_reg.op_branch), operation_reg.op_reorder);
 	alu_in_ports.cmp_in_tvalid <= operation_reg.op_cmp and not stall_internal;
 	alu_in_ports.cmp_in_tuser <= cmp_tuser_to_slv(alu_cmp_tuser);
 	alu_cmp_tuser.eq <= operation_reg.op_cmp_eq;
@@ -295,9 +302,10 @@ begin
 			target_register_address_next <= (others => '0');
 			target_register_pending_next <= '0';
 			
+			-- if registers are unused, they must be set to $0 (never pending)
 			if operation_valid_reg = '1' and 
-				((register_a_pending_bypass = '1' and operation_reg.op_immediate_a = '0') or
-				(register_b_pending_bypass = '1' and operation_reg.op_immediate_b = '0') or
+				(register_a_pending_bypass = '1' or
+				register_b_pending_bypass = '1' or
 				register_c_pending_bypass = '1') then
 				
 				stall_internal <= '1';
