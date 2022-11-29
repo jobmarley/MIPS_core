@@ -66,6 +66,13 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal register_b_pending_bypass : std_logic;
 	signal register_c_pending_bypass : std_logic;
 	
+	signal register_a_written : std_logic;
+	signal register_a_written_next : std_logic;
+	signal register_b_written : std_logic;
+	signal register_b_written_next : std_logic;
+	signal register_c_written : std_logic;
+	signal register_c_written_next : std_logic;
+	
 	signal target_register_address : std_logic_vector(5 downto 0);
 	signal target_register_address_next : std_logic_vector(5 downto 0);
 	signal target_register_pending : std_logic;
@@ -110,9 +117,9 @@ begin
 	
 	stall <= stall_internal;
 	
-	register_a_pending_bypass <= target_register_pending when target_register_address = register_a_reg else register_port_out_a.pending;
-	register_b_pending_bypass <= target_register_pending when target_register_address = register_b_reg else register_port_out_b.pending;
-	register_c_pending_bypass <= target_register_pending when target_register_address = register_c_reg else register_port_out_c.pending;
+	register_a_pending_bypass <= register_a_written or register_port_out_a.pending;
+	register_b_pending_bypass <= register_b_written or register_port_out_b.pending;
+	register_c_pending_bypass <= register_c_written or register_port_out_c.pending;
 	
 	-- /!\ when branch, add operands are always immediates, because registers are used by cmp
 	alu_in_ports.add_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b or operation_reg.op_branch) &
@@ -203,6 +210,10 @@ begin
 			target_register_address <= target_register_address_next;
 			target_register_pending <= target_register_pending_next;
 			link_address_reg <= link_address_reg_next;
+			
+			register_a_written <= register_a_written_next;
+			register_b_written <= register_b_written_next;
+			register_c_written <= register_c_written_next;
 		end if;
 	end process;
 	
@@ -284,6 +295,10 @@ begin
 		target_register_pending_next <= target_register_pending;
 		link_address_reg_next <= link_address_reg;
 		
+		register_a_written_next <= '0';
+		register_b_written_next <= '0';
+		register_c_written_next <= '0';
+		
 		stall_internal <= '0';
 				
 		if resetn = '0' then
@@ -348,6 +363,15 @@ begin
 				
 				-- register pending bypass, only when reg != $0
 				if register_c_reg /= "000000" then
+					if register_a = register_c_reg then
+						register_a_written_next <= operation_valid_reg;
+					end if;
+					if register_b = register_c_reg then
+						register_b_written_next <= operation_valid_reg;
+					end if;
+					if register_c = register_c_reg then
+						register_c_written_next <= operation_valid_reg;
+					end if;
 					target_register_pending_next <= operation_valid_reg;
 				end if;
 			end if;
