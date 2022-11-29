@@ -536,11 +536,87 @@ begin
 								panic <= '1';
 						end case;
 					when instr_bgtz_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_cmp <= '1';
+						operation_reg_next.op_cmp_le <= '1';
+						operation_reg_next.op_cmp_invert <= '1';
+						operation_reg_next.op_branch <= '1';
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= "000000";
+						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate_b_reg_next <= instr_address_plus_4;
+						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						execute_delay_slot <= '1';
+						wait_jump <= '1';
 					when instr_bgtzl_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_cmp <= '1';
+						operation_reg_next.op_cmp_le <= '1';
+						operation_reg_next.op_cmp_invert <= '1';
+						operation_reg_next.op_branch <= '1';
+						operation_reg_next.op_branch_likely <= '1';
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= "000000";
+						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate_b_reg_next <= instr_address_plus_4;
+						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						wait_jump <= '1';
 					when instr_blez_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_cmp <= '1';
+						operation_reg_next.op_cmp_eq <= '1';
+						operation_reg_next.op_branch <= '1';
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= "000000";
+						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate_b_reg_next <= instr_address_plus_4;
+						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						execute_delay_slot <= '1';
+						wait_jump <= '1';
 					when instr_blezl_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_cmp <= '1';
+						operation_reg_next.op_cmp_eq <= '1';
+						operation_reg_next.op_branch <= '1';
+						operation_reg_next.op_branch_likely <= '1';
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= "000000";
+						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate_b_reg_next <= instr_address_plus_4;
+						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						wait_jump <= '1';
 					when instr_bne_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_cmp <= '1';
+						operation_reg_next.op_cmp_eq <= '1';
+						operation_reg_next.op_cmp_invert <= '1';
+						operation_reg_next.op_branch <= '1';
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= '0' & instruction_data_i.rt;
+						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate_b_reg_next <= instr_address_plus_4;
+						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						execute_delay_slot <= '1';
+						wait_jump <= '1';
 					when instr_bnel_opc.opcode =>
+						operation_valid_reg_next <= '1';
+						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_cmp <= '1';
+						operation_reg_next.op_cmp_eq <= '1';
+						operation_reg_next.op_cmp_invert <= '1';
+						operation_reg_next.op_branch <= '1';
+						operation_reg_next.op_branch_likely <= '1';
+						register_a_reg_next <= '0' & instruction_data_i.rs;
+						register_b_reg_next <= '0' & instruction_data_i.rt;
+						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
+						immediate_b_reg_next <= instr_address_plus_4;
+						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						wait_jump <= '1';
 					when instr_j_opc.opcode =>
 						override_address_reg_next <= instr_address(31 downto 28) & instruction_data_j.address & "00";
 						override_address_valid_reg_next <= '1';
