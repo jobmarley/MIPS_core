@@ -35,9 +35,9 @@ begin
 	add_tuser <= slv_to_add_out_tuser(alu_out_ports.add_out_tuser);
 	cmp_tuser <= slv_to_cmp_tuser(alu_out_ports.cmp_out_tuser);
 	
-	register_port_in_a.address <= '0' & alu_out_ports.add_out_tuser(4 downto 0);
-	register_port_in_a.write_enable <= alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store and not add_tuser.branch;
-	register_port_in_a.write_data <= alu_out_ports.add_out_tdata(31 downto 0);
+	register_port_in_a.address <= '0' & alu_out_ports.add_out_tuser(4 downto 0) when alu_out_ports.add_out_tvalid = '1' else '0' & alu_out_ports.sub_out_tuser(4 downto 0);
+	register_port_in_a.write_enable <= (alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store and not add_tuser.branch) or alu_out_ports.sub_out_tvalid;
+	register_port_in_a.write_data <= alu_out_ports.add_out_tdata(31 downto 0) when alu_out_ports.add_out_tvalid = '1' else alu_out_ports.sub_out_tdata(31 downto 0);
 	register_port_in_a.write_strobe <= x"F";
 	register_port_in_a.write_pending <= '0';
 	
