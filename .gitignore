@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+MIPS_core/core/test/vivado.jou
+MIPS_core/core/test/vivado_*.jou
+MIPS_core/core/test/.Xil/
+MIPS_core/core/test/project/
