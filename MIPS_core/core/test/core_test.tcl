@@ -17,11 +17,12 @@ read_vhdl ../mips_readmem.vhd
 read_vhdl ../mips_readreg.vhd
 read_vhdl ../mips_registers.vhd
 read_vhdl ../mips_writeback.vhd
+read_vhdl ../../alu/mips_alu.vhd
 read_vhdl ../mips_core_internal.vhd
 read_vhdl ./core_test.vhd
 	
 # this makes the block design generation fail. I think because you cannot use VHDL2008 modules directly from a block design
-#set_property file_type {VHDL 2008} [get_files *.vhd]
+set_property file_type {VHDL 2008} [get_files mips_alu.vhd]
 
 source core_test_design.tcl
 read_bd ./project/core_test_proj.srcs/sources_1/bd/core_test_design/core_test_design.bd

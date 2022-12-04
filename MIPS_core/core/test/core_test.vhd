@@ -214,6 +214,26 @@ architecture core_test_behavioral of core_test is
 		end loop;
 		return result;
 	end function;
+	
+	function hexchar(n : NATURAL) return CHARACTER is
+	begin
+		if n < 10 then
+			return CHARACTER'VAL(CHARACTER'POS('0') + n);
+		else
+			return CHARACTER'VAL(CHARACTER'POS('A') + (n mod 10));
+		end if;
+	end function;
+	
+	function hex(n : INTEGER) return STRING is
+		variable s : STRING(1 to 8);
+		variable j : INTEGER := n;
+	begin
+		for i in 8 downto 1 loop
+			s(i) := hexchar(j mod 16);
+			j := j / 16;
+		end loop;
+		return s;
+	end function;
 		
 	signal processor_enable : std_logic;
 	signal breakpoint : std_logic;
@@ -274,7 +294,7 @@ architecture core_test_behavioral of core_test is
 		fdo.fetch_instruction_data_valid <= '0';
 	end procedure;
 	
-	procedure check_register_value(r : std_logic_vector; data : std_logic_vector; signal pin : out register_port_in_t; signal pout : in register_port_out_t; variable result : out BOOLEAN) is
+	procedure check_register_value(r : std_logic_vector; data : std_logic_vector; signal pin : out register_port_in_t; signal pout : in register_port_out_t; variable success : out BOOLEAN) is
 	begin
 		pin.address <= r;
 		pin.write_enable <= '0';
@@ -285,12 +305,17 @@ architecture core_test_behavioral of core_test is
 		-- if pending is still '1' after 10 clocks, its an error
 		if pout.pending /= '0' then
 			report "check_register_value pending timed out" severity ERROR;
-			result := FALSE;
+			success := FALSE;
 			return;
 		end if;
 		
 		wait for clock_period;
-		result := pout.data = data;
+		if pout.data = data then
+			success := TRUE;
+		else
+			success := FALSE;
+			report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(TO_INTEGER(unsigned(data))) & ", got " & hex(TO_INTEGER(unsigned(pout.data)));
+		end if;
 	end procedure;
 	
 	procedure write_register(r : std_logic_vector; data : std_logic_vector; signal p : out register_port_in_t) is
@@ -326,9 +351,9 @@ begin
 	
 	process
 		-- filepaths are relative to the core_test_proj.sim\sim_1\behav\xsim folder
-		file f : text open read_mode is "../../../../../instruction_test_commands.txt";
+		file f : text open read_mode is "../../../../instruction_test_commands.txt";
 		variable l : line;
-		file f2 : text open read_mode is "../../../../../instruction_test_asm.asm";
+		file f2 : text open read_mode is "../../../../instruction_test_asm.asm";
 		variable l2 : line;
 		
 		variable parts : line_array_ptr_t;
@@ -379,7 +404,7 @@ begin
 				
 			iline := iline + 1;
 		end loop;
-		wait;
+		assert FALSE report "ALL TESTS PASSED!!!" severity FAILURE;
 	end process;
 	
 	mips_core_internal_i0 : mips_core_internal port map ( 
