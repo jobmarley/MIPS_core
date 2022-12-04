@@ -7,9 +7,6 @@ instr_cmd_filename = 'instruction_test_commands.txt'
 clang_path = r'C:\Program Files\LLVM\bin\clang++'
 lld_path = r'C:\Program Files\LLVM\bin\ld.lld'
 
-def get_local_filepath(fn):
-	return os.path.join(os.path.dirname(__file__), fn)
-
 def random_register(count = 1):
 	return [random.randint(0, 31) for x in range(0, count)]
 
@@ -84,7 +81,7 @@ def generate_register_values():
 
 def generate_commands():
 	
-	builder = instruction_builder(get_local_filepath(instr_asm_filename), get_local_filepath(instr_cmd_filename))
+	builder = instruction_builder(instr_asm_filename, instr_cmd_filename)
 	
 	# initialize registers with random values
 	register_init_values = generate_register_values()
@@ -98,21 +95,21 @@ def generate_commands():
 
 	regs = random_register_non_zero() + random_register(2)
 	builder.add_instruction('add ${}, ${}, ${}\n'.format(*regs))
-	builder.add_check_reg(regs[0], (register_init_values[regs[1]] + register_init_values[regs[2]]) % 0xFFFFFFFF)
+	builder.add_check_reg(regs[0], (register_init_values[regs[1]] + register_init_values[regs[2]]) % 0x100000000)
 	
 	regs = random_register_non_zero() + random_register(1)
 	v = random_int16()
 	builder.add_instruction('addi ${}, ${}, {}\n'.format(*regs + [v]))
-	builder.add_check_reg(regs[0], (register_init_values[regs[1]] + v) % 0xFFFFFFFF)
+	builder.add_check_reg(regs[0], (register_init_values[regs[1]] + v) % 0x100000000)
 	
 	regs = random_register_non_zero() + random_register(2)
 	builder.add_instruction('sub ${}, ${}, ${}\n'.format(*regs))
-	builder.add_check_reg(regs[0], (register_init_values[regs[1]] - register_init_values[regs[2]]) % 0xFFFFFFFF)
+	builder.add_check_reg(regs[0], (register_init_values[regs[1]] - register_init_values[regs[2]]) % 0x100000000)
 	
 	regs = random_register_non_zero() + random_register(1)
 	v = random_int16()
 	builder.add_instruction('sub ${}, ${}, {}\n'.format(*regs + [v]))
-	builder.add_check_reg(regs[0], (register_init_values[regs[1]] - v) % 0xFFFFFFFF)
+	builder.add_check_reg(regs[0], (register_init_values[regs[1]] - v) % 0x100000000)
 
 
 	builder.generate_cmd_file()
