@@ -37,6 +37,7 @@ entity mips_decode is
 	wait_jump : out std_logic;
 	execute_delay_slot : out std_logic;
 	
+	breakpoint : out std_logic;
 	panic : out std_logic
 	);
 end mips_decode;

@@ -1,68 +1,15 @@
--- 
---  Copyright (C) 2022 jobmarley
--- 
---  This file is part of MIPS_core.
--- 
---  This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
--- 
---  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
--- 
---  You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
---  
-
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use std.textio.all;
+use IEEE.numeric_std.all;
 use work.mips_utils.all;
 
-
-entity mips_core is
+entity core_test is
   Port ( 
 	resetn : in std_logic;
 	clock : in std_ulogic;
-	
-	xdma_clock : in std_logic;
-	
-	-- AXI4 memory
-	--m_axi_awready : in STD_LOGIC;
- --   m_axi_wready : in STD_LOGIC;
- --   m_axi_bid : in STD_LOGIC_VECTOR ( 3 downto 0 );
- --   m_axi_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
- --   m_axi_bvalid : in STD_LOGIC;
- --   m_axi_arready : in STD_LOGIC;
- --   m_axi_rid : in STD_LOGIC_VECTOR ( 3 downto 0 );
- --   m_axi_rdata : in STD_LOGIC_VECTOR ( 63 downto 0 );
- --   m_axi_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
- --   m_axi_rlast : in STD_LOGIC;
- --   m_axi_rvalid : in STD_LOGIC;
- --   m_axi_awid : out STD_LOGIC_VECTOR ( 3 downto 0 );
- --   m_axi_awaddr : out STD_LOGIC_VECTOR ( 63 downto 0 );
- --   m_axi_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
- --   m_axi_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
- --   m_axi_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
- --   m_axi_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
- --   m_axi_awvalid : out STD_LOGIC;
- --   m_axi_awlock : out STD_LOGIC;
- --   m_axi_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
- --   m_axi_wdata : out STD_LOGIC_VECTOR ( 63 downto 0 );
- --   m_axi_wstrb : out STD_LOGIC_VECTOR ( 7 downto 0 );
- --   m_axi_wlast : out STD_LOGIC;
- --   m_axi_wvalid : out STD_LOGIC;
- --   m_axi_bready : out STD_LOGIC;
- --   m_axi_arid : out STD_LOGIC_VECTOR ( 3 downto 0 );
- --   m_axi_araddr : out STD_LOGIC_VECTOR ( 63 downto 0 );
- --   m_axi_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
- --   m_axi_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
- --   m_axi_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
- --   m_axi_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
- --   m_axi_arvalid : out STD_LOGIC;
- --   m_axi_arlock : out STD_LOGIC;
- --   m_axi_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
- --   m_axi_rready : out STD_LOGIC;
-	
-	interrupt : out std_logic;
-	interrupt_ack : in std_logic;
-	
+					
 	-- memory port a
 	m_axi_mema_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
 	m_axi_mema_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -127,74 +74,12 @@ entity mips_core is
 	m_axi_memb_wlast : out STD_LOGIC;
 	m_axi_memb_wready : in STD_LOGIC;
 	m_axi_memb_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	m_axi_memb_wvalid : out STD_LOGIC;
-	
-	-- AXI lite debug
-	s_axil_debug_awready : out STD_LOGIC;
-	s_axil_debug_wready : out STD_LOGIC;
-	s_axil_debug_bresp : out STD_LOGIC_VECTOR ( 1 downto 0 );
-	s_axil_debug_bvalid : out STD_LOGIC;
-	s_axil_debug_arready : out STD_LOGIC;
-	s_axil_debug_rdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	s_axil_debug_rresp : out STD_LOGIC_VECTOR ( 1 downto 0 );
-	s_axil_debug_rvalid : out STD_LOGIC;
-	s_axil_debug_awaddr : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	s_axil_debug_awprot : in STD_LOGIC_VECTOR ( 2 downto 0 );
-	s_axil_debug_awvalid : in STD_LOGIC;
-	s_axil_debug_wdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	s_axil_debug_wstrb : in STD_LOGIC_VECTOR ( 3 downto 0 );
-	s_axil_debug_wvalid : in STD_LOGIC;
-	s_axil_debug_bready : in STD_LOGIC;
-	s_axil_debug_araddr : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	s_axil_debug_arprot : in STD_LOGIC_VECTOR ( 2 downto 0 );
-	s_axil_debug_arvalid : in STD_LOGIC;
-	s_axil_debug_rready : in STD_LOGIC;
-	
-	LEDS : out std_logic_vector(7 downto 0)
+	m_axi_memb_wvalid : out STD_LOGIC
 	);
-end mips_core;
+end core_test;
 
-architecture mips_core_behavioral of mips_core is	
-	component mips_debugger is
-		port (
-			resetn : in std_logic;
-			clock : in std_logic;
-			
-			xdma_clock : in std_logic;
-	
-			register_port_in_a : out register_port_in_t;
-			register_port_out_a : in register_port_out_t;
-			
-			processor_enable : out std_logic;
-	
-			breakpoint : in std_logic;
-			interrupt : out std_logic;
-			interrupt_ack : in std_logic;
-	
-			s_axi_awready : out STD_LOGIC;
-			s_axi_wready : out STD_LOGIC;
-			s_axi_bresp : out STD_LOGIC_VECTOR ( 1 downto 0 );
-			s_axi_bvalid : out STD_LOGIC;
-			s_axi_arready : out STD_LOGIC;
-			s_axi_rdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-			s_axi_rresp : out STD_LOGIC_VECTOR ( 1 downto 0 );
-			s_axi_rvalid : out STD_LOGIC;
-			s_axi_awaddr : in STD_LOGIC_VECTOR ( 31 downto 0 );
-			s_axi_awprot : in STD_LOGIC_VECTOR ( 2 downto 0 );
-			s_axi_awvalid : in STD_LOGIC;
-			s_axi_wdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-			s_axi_wstrb : in STD_LOGIC_VECTOR ( 3 downto 0 );
-			s_axi_wvalid : in STD_LOGIC;
-			s_axi_bready : in STD_LOGIC;
-			s_axi_araddr : in STD_LOGIC_VECTOR ( 31 downto 0 );
-			s_axi_arprot : in STD_LOGIC_VECTOR ( 2 downto 0 );
-			s_axi_arvalid : in STD_LOGIC;
-			s_axi_rready : in STD_LOGIC;
-	
-			debug : out std_logic_vector(7 downto 0)
-		);
-	end component;
-	
+architecture core_test_behavioral of core_test is
+
 	component mips_core_internal is
 	  Port ( 
 		resetn : in std_logic;
@@ -274,62 +159,161 @@ architecture mips_core_behavioral of mips_core is
 		m_axi_memb_wvalid : out STD_LOGIC
 		);
 	end component;
+
+	function char_count(s : STRING; c : CHARACTER) return NATURAL is
+		variable count : NATURAL := 0;
+	begin
+		for i in 1 to s'LENGTH loop
+			if s(i) = c then
+				count := count + 1;
+			end if;
+		end loop;
+		return count;
+	end function;
+	type string_ptr_t is access STRING;
+	type string_ptr_array_t is array(NATURAL range <>) of string_ptr_t; 
+	type string_ptr_array_ptr_t is access string_ptr_array_t;
+	
+	procedure index_of(s : STRING; c : CHARACTER; start : INTEGER; index : out INTEGER) is
+	begin
+		index := -1;
+		for i in start to s'LENGTH-1 loop
+			if s(i) = c then
+				index := i;
+			end if;
+		end loop;
+	end procedure;
+		
+	type line_array_t is array(NATURAL RANGE <>) of LINE;
+	type line_array_ptr_t is access line_array_t;
+	procedure string_split(s : STRING; del : CHARACTER; parts : out line_array_ptr_t) is
+		variable count : NATURAL := char_count(s, del);
+		variable index : INTEGER := 1;
+		variable j : INTEGER := 1;
+		variable zzz : LINE;
+	begin
+		parts := new line_array_t(0 to count);
+			
+		for i in 0 to count-1 loop
+			index_of(s, ',', index, j);
+			zzz := new STRING'(s(index to j-1));
+			parts(i) := zzz;
+			index := j+1;
+		end loop;
+		if index > s'HIGH then
+			parts(parts'LENGTH-1) := new STRING'("");
+		else
+			parts(parts'LENGTH-1) := new STRING'(s(index to s'HIGH));
+		end if;
+	end procedure;
+	
+	function string_to_integer(l : STRING) return INTEGER is
+		variable index : INTEGER := 1;
+		variable result : INTEGER := 0;
+		variable digit : INTEGER := 0;
+	begin
+		while index <= l'LENGTH and l(index) = ' ' loop
+			index := index + 1;
+		end loop;
+		assert index < l'LENGTH report "integer expected" severity ERROR;
+		while index <= l'LENGTH loop
+			if CHARACTER'POS(l(index)) >= CHARACTER'POS('a') and CHARACTER'POS(l(index)) <= CHARACTER'POS('f') then
+				digit := CHARACTER'POS(l(index)) - CHARACTER'POS('a');
+			elsif CHARACTER'POS(l(index)) >= CHARACTER'POS('A') and CHARACTER'POS(l(index)) <= CHARACTER'POS('F') then
+				digit := CHARACTER'POS(l(index)) - CHARACTER'POS('A');
+			elsif l(index) = ' ' then
+				exit;
+			else
+				report "invalid character: " & CHARACTER'image(l(index)) severity ERROR;
+			end if;
+			result := result * 16 + digit;
+			index := index + 1;
+		end loop;
+		return result;
+	end function;
+	
+	procedure send_instruction(instr : std_logic_vector) is
+	begin
+		
+	end procedure;
+	
+	procedure check_register_value(r : std_logic_vector; data : std_logic_vector; success : BOOLEAN) is
+	begin
+	end procedure;
+	
+	
+	type expected_data_t is record
+		reg : std_logic_vector(5 downto 0);
+		data : std_logic_vector(31 downto 0);
+	end record;
+	
+	procedure read_expected_data(variable l : LINE; data : out expected_data_t) is
+		variable parts : line_array_ptr_t;
+	begin
+		string_split(l(l'range), ',', parts);
+		data.reg := std_logic_vector(TO_UNSIGNED(string_to_integer(parts(0)(parts(0)'range)), 6));
+		data.data := std_logic_vector(TO_UNSIGNED(string_to_integer(parts(1)(parts(1)'range)), 32));
+	end procedure;
 	
 	signal processor_enable : std_logic;
 	signal breakpoint : std_logic;
+	
 	signal register_port_in_a : register_port_in_t;
 	signal register_port_out_a : register_port_out_t;
-	
 begin
-	
-	mips_debugger_i : mips_debugger port map(
-		resetn => resetn,
-		clock => clock,
-			
-		xdma_clock => xdma_clock,
-	
-		register_port_in_a => register_port_in_a,
-		register_port_out_a => register_port_out_a,
-			
-		processor_enable => processor_enable,
-	
-		breakpoint => breakpoint,
-		interrupt => interrupt,
-		interrupt_ack => interrupt_ack,
-	
-		s_axi_awready => s_axil_debug_awready,
-		s_axi_wready => s_axil_debug_wready,
-		s_axi_bresp => s_axil_debug_bresp,
-		s_axi_bvalid => s_axil_debug_bvalid,
-		s_axi_arready => s_axil_debug_arready,
-		s_axi_rdata => s_axil_debug_rdata,
-		s_axi_rresp => s_axil_debug_rresp,
-		s_axi_rvalid => s_axil_debug_rvalid,
-		s_axi_awaddr => s_axil_debug_awaddr,
-		s_axi_awprot => s_axil_debug_awprot,
-		s_axi_awvalid => s_axil_debug_awvalid,
-		s_axi_wdata => s_axil_debug_wdata,
-		s_axi_wstrb => s_axil_debug_wstrb,
-		s_axi_wvalid => s_axil_debug_wvalid,
-		s_axi_bready => s_axil_debug_bready,
-		s_axi_araddr => s_axil_debug_araddr,
-		s_axi_arprot => s_axil_debug_arprot,
-		s_axi_arvalid => s_axil_debug_arvalid,
-		s_axi_rready => s_axil_debug_rready,
+
+	process
+		file f : text open read_mode is "instruction_test_commands.txt";
+		variable l : line;
 		
-		debug => LEDS
-	);
-	mips_core_internal_i : mips_core_internal port map(
+		variable parts : line_array_ptr_t;
+		variable itmp : INTEGER;
+		variable instr_data : std_logic_vector(31 downto 0);
+		variable expected_reg : std_logic_vector(5 downto 0);
+		variable expected_data : std_logic_vector(31 downto 0);
+		variable iline : NATURAL := 0;
+		variable success : BOOLEAN;
+	begin
+		while not endfile(f) and not endfile(f) loop
+			READLINE(f,l);
+		
+			string_split(l(l'range), ' ', parts);
+		
+			if parts(0)(parts(0)'range) = "EXEC" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				instr_data := std_logic_vector(TO_UNSIGNED(itmp, 32));
+				send_instruction(instr_data);
+			elsif parts(0)(parts(0)'range) = "CHECK_REG" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				expected_reg := std_logic_vector(TO_UNSIGNED(itmp, 6));
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				expected_data := std_logic_vector(TO_UNSIGNED(itmp, 32));
+				check_register_value(expected_reg, expected_data, success);
+			elsif  parts(0)(parts(0)'range) = "WRITE_REG" then
+			
+			end if;
+		
+			if not success then
+				report "instruction test failed on line " & INTEGER'image(iline) severity ERROR;
+				report "instruction " & l(l'range) severity ERROR;
+			end if;
+		
+			iline := iline + 1;
+		end loop;
+		wait;
+	end process;
+	
+	mips_core_internal_i0 : mips_core_internal port map ( 
 		resetn => resetn,
 		clock => clock,
 		
 		enable => processor_enable,
+	
 		breakpoint => breakpoint,
-		
+	
 		register_port_in_a => register_port_in_a,
 		register_port_out_a => register_port_out_a,
 	
-		-- memory port a
 		m_axi_mema_araddr => m_axi_mema_araddr,
 		m_axi_mema_arburst => m_axi_mema_arburst,
 		m_axi_mema_arcache => m_axi_mema_arcache,
@@ -362,7 +346,6 @@ begin
 		m_axi_mema_wstrb => m_axi_mema_wstrb,
 		m_axi_mema_wvalid => m_axi_mema_wvalid,
 	
-		-- memory => memory,
 		m_axi_memb_araddr => m_axi_memb_araddr,
 		m_axi_memb_arburst => m_axi_memb_arburst,
 		m_axi_memb_arcache => m_axi_memb_arcache,
@@ -394,6 +377,5 @@ begin
 		m_axi_memb_wready => m_axi_memb_wready,
 		m_axi_memb_wstrb => m_axi_memb_wstrb,
 		m_axi_memb_wvalid => m_axi_memb_wvalid
-	);
-
-end mips_core_behavioral;
+		);
+end core_test_behavioral;
