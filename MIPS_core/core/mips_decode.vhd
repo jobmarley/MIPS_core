@@ -213,12 +213,9 @@ begin
 							--when instr_noop_opc.funct =>
 							--	operation_valid_reg_next <= '0';
 							when instr_or_opc.funct =>
+								-- can be optimized. If one register is $0, then this is a mov
 								operation_valid_reg_next <= '1';
-								if instruction_data_r.shamt = "00000" then
-									operation_reg_next.op_mov <= '1';
-								else
-									operation_reg_next.op_or <= '1';
-								end if;
+								operation_reg_next.op_or <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -242,6 +239,12 @@ begin
 								register_c_reg_next <= '0' & instruction_data_r.rd;
 								immediate_b_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								operation_reg_next.op_immediate_b <= '1';
+							when instr_srav_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_sra <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_b_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_srl_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_srl <= '1';

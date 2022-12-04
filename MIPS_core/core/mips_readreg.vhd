@@ -172,7 +172,7 @@ begin
 	
 	alu_in_ports.shr_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b)(4 downto 0) &
 		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
-	alu_in_ports.shr_in_tvalid <= operation_reg.op_srl and not stall_internal;
+	alu_in_ports.shr_in_tvalid <= (operation_reg.op_srl or operation_reg.op_sra) and not stall_internal;
 	alu_in_ports.shr_in_tuser <= operation_reg.op_sra & register_c_reg;
 	
 	-- when branch, cmp always use registers
