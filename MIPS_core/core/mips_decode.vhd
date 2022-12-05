@@ -278,6 +278,7 @@ begin
 								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_slt_opc.funct =>
 								operation_valid_reg_next <= '1';
+								operation_reg_next.op_cmp <= '1';
 								operation_reg_next.op_cmp_ge <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
@@ -285,6 +286,7 @@ begin
 								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sltu_opc.funct =>
 								operation_valid_reg_next <= '1';
+								operation_reg_next.op_cmp <= '1';
 								operation_reg_next.op_cmp_ge <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_unsigned <= '1';
@@ -376,6 +378,7 @@ begin
 						operation_reg_next.op_immediate_b <= '1';
 					when instr_slti_opc.opcode =>
 						operation_valid_reg_next <= '1';
+						operation_reg_next.op_cmp <= '1';
 						operation_reg_next.op_cmp_ge <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
@@ -384,6 +387,7 @@ begin
 						operation_reg_next.op_immediate_b <= '1';
 					when instr_sltiu_opc.opcode =>
 						operation_valid_reg_next <= '1';
+						operation_reg_next.op_cmp <= '1';
 						operation_reg_next.op_cmp_ge <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_unsigned <= '1';

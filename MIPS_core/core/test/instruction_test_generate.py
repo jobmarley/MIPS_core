@@ -29,6 +29,17 @@ def sign_extend(s, src_size, dst_size):
 		s = s | (((1 << dst_size) - 1) << src_size)
 	return s
 
+# works on signed and unsigned
+def unsigned_to_signed(u, size):
+	if u & (1 << size - 1):
+		return u - (1 << size)
+	else:
+		return u
+
+# works on signed and unsigned
+def to_unsigned(s, size):
+	return s % (1 << size)
+
 class instruction_builder:
 	def __init__(self, asm_filepath, cmd_filepath):
 		self.test_commands = []
@@ -97,7 +108,9 @@ def generate_register_values():
 def check_op_3reg(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(2)
 	builder.add_instruction('{} ${}, ${}, ${}\n'.format(instr, *r))
-	e = f(registers[r[1]], registers[r[2]]) % 0x100000000
+	e = f(registers[r[1]], registers[r[2]])
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
@@ -106,7 +119,9 @@ def check_op_2reg_i16(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(1)
 	v = random_int16()
 	builder.add_instruction('{} ${}, ${}, {}\n'.format(instr, *r, v))
-	e = f(registers[r[1]], v) % 0x100000000
+	e = f(registers[r[1]], v)
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
@@ -114,7 +129,9 @@ def check_op_2reg_i16(instr, builder, registers, f):
 def check_op_2reg_imm(instr, builder, registers, imm, f):
 	r = random_register_non_zero() + random_register(1)
 	builder.add_instruction('{} ${}, ${}, {}\n'.format(instr, *r, imm))
-	e = f(registers[r[1]], imm) % 0x100000000
+	e = f(registers[r[1]], imm)
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 
@@ -135,7 +152,7 @@ def generate_commands():
 	builder.add_check_reg(0, 0)
 
 	check_op_3reg('add', builder, registers, lambda x, y: x + y)
-	check_op_3reg('sub', builder, registers, lambda x, y: x - y)
+	check_op_3reg('sub', builder, registers, lambda x, y: unsigned_to_signed(x, 32) - unsigned_to_signed(y, 32))
 	check_op_3reg('and', builder, registers, lambda x, y: x & y)
 	check_op_3reg('or', builder, registers, lambda x, y: x | y)
 	check_op_3reg('xor', builder, registers, lambda x, y: x ^ y)
@@ -143,6 +160,8 @@ def generate_commands():
 	check_op_3reg('sll', builder, registers, lambda x, y: (x << (y & 0x1F)) & 0xFFFFFFFF)
 	check_op_3reg('srl', builder, registers, lambda x, y: (x >> (y & 0x1F)) & 0xFFFFFFFF)
 	check_op_3reg('sra', builder, registers, lambda x, y: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
+	check_op_3reg('slt', builder, registers, lambda x, y: 1 if unsigned_to_signed(x, 32) < unsigned_to_signed(y, 32) else 0)
+	check_op_3reg('sltu', builder, registers, lambda x, y: 1 if x < y else 0)
 	check_op_2reg_i16('addi', builder, registers, lambda x, y: x + y)
 	check_op_2reg_i16('sub', builder, registers, lambda x, y: x - y)
 	check_op_2reg_imm('andi', builder, registers, random_uint(16), lambda x, y: x & sign_extend(y, 16, 32))
@@ -151,7 +170,9 @@ def generate_commands():
 	check_op_2reg_imm('sll', builder, registers, random_uint(5), lambda x, y: (x << (y & 0x1F)) & 0xFFFFFFFF)
 	check_op_2reg_imm('srl', builder, registers, random_uint(5), lambda x, y: (x >> (y & 0x1F)) & 0xFFFFFFFF)
 	check_op_2reg_imm('sra', builder, registers, random_uint(5), lambda x, y: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
-	
+	check_op_2reg_imm('slt', builder, registers, random_int(16), lambda x, y: 1 if unsigned_to_signed(x, 32) < y else 0)
+	check_op_2reg_imm('sltu', builder, registers, random_uint(16), lambda x, y: 1 if x < y else 0)
+
 	builder.generate_cmd_file()
 		
 def clang_compile(filepath, outpath):

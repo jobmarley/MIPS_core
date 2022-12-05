@@ -30,7 +30,7 @@ architecture mips_writeback_behavioral of mips_writeback is
 	signal cmp_tuser : alu_cmp_tuser_t;
 	signal cmp_result : std_logic;
 begin
-	cmp_result <= alu_out_ports.cmp_out_tdata(0) xor cmp_tuser.invert;
+	cmp_result <= alu_out_ports.cmp_out_tdata(0);
 	
 	add_tuser <= slv_to_add_out_tuser(alu_out_ports.add_out_tuser);
 	cmp_tuser <= slv_to_cmp_tuser(alu_out_ports.cmp_out_tuser);
