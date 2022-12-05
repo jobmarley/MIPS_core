@@ -59,6 +59,7 @@
     <VHDLSource Include="core\mips_writeback.vhd" />
     <VHDLSource Include="core\skid_buffer.vhd" />
     <VHDLSource Include="core\test\core_test.vhd" />
+    <VHDLSource Include="core\test\test_utils.vhd" />
     <VHDLSource Include="core\xdma_test.vhd" />
     <VHDLSource Include="debugger\mips_debugger.vhd" />
     <VHDLSource Include="debugger\mips_debugger_test.vhd" />

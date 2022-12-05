@@ -338,6 +338,15 @@ package mips_utils is
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
 	
+	type alu_shr_tuser_t is record
+		arithmetic : std_logic;
+		rd : std_logic_vector(5 downto 0);
+	end record;
+	constant alu_shr_tuser_length : NATURAL := 7;
+	
+	function slv_to_shr_tuser(data : std_logic_vector) return alu_shr_tuser_t;
+	function shr_tuser_to_slv(tuser : alu_shr_tuser_t) return std_logic_vector;
+	
 	type alu_in_ports_t is record
 		add_in_tvalid : std_logic;
 	    add_in_tdata : std_logic_vector(63 downto 0);
@@ -582,4 +591,20 @@ package body mips_utils is
 		vresult(5 downto 0) := tuser.rd;
 		return vresult;
 	end function;
+	
+	function slv_to_shr_tuser(data : std_logic_vector) return alu_shr_tuser_t is
+		variable vresult : alu_shr_tuser_t;
+	begin
+		vresult.arithmetic := data(6);
+		vresult.rd := data(5 downto 0);
+		return vresult;
+	end function;
+	function shr_tuser_to_slv(tuser : alu_shr_tuser_t) return std_logic_vector is
+		variable vresult : std_logic_vector(alu_shr_tuser_length-1 downto 0);
+	begin
+		vresult(6) := tuser.arithmetic;
+		vresult(5 downto 0) := tuser.rd;
+		return vresult;
+	end function;
+	
 end mips_utils;

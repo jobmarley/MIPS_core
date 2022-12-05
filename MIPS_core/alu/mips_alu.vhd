@@ -204,21 +204,20 @@ architecture mips_alu_behavioral of mips_alu is
 	signal shr_out_tvalid_reg_next : std_logic;
 		
 	function shift_right_arith(data : std_logic_vector; n : NATURAL) return std_logic_vector is
-		variable result : std_logic_vector(data'range);
+		variable result : std_logic_vector(data'range) := data;
+		variable sign : std_logic := data(data'HIGH);
 	begin
-		for i in 0 to data'LENGTH-1 loop
-			if i + n < data'LENGTH then
-				result(i) := data(i + n);
-			else
-				result(i) := data(data'LENGTH-1);
-			end if;
+		for i in 0 to n-1 loop
+			result := sign & result(result'HIGH downto result'LOW+1);
 		end loop;
 		return result;
 	end function;
 	
 	signal cmp_tuser : alu_cmp_tuser_t;
+	signal shr_tuser : alu_shr_tuser_t;
 begin
 	cmp_tuser <= slv_to_cmp_tuser(in_ports.cmp_in_tuser);
+	shr_tuser <= slv_to_shr_tuser(in_ports.shr_in_tuser);
 	
 	out_ports.and_out_tvalid <= and_out_tvalid_reg;
 	out_ports.and_out_tdata <= and_out_tdata_reg;
@@ -610,7 +609,8 @@ begin
 		
 		shr_out_tdata_reg,
 		shr_out_tuser_reg,
-		shr_out_tvalid_reg
+		shr_out_tvalid_reg,
+		shr_tuser
 		)
 	begin
 		and_out_tdata_reg_next <= and_out_tdata_reg;
@@ -683,7 +683,7 @@ begin
 			shl_out_tuser_reg_next <= in_ports.shl_in_tuser;
 			
 			shr_out_tvalid_reg_next <= in_ports.shr_in_tvalid;
-			if in_ports.shr_in_tuser(5) = '1' then
+			if shr_tuser.arithmetic = '1' then
 				shr_out_tdata_reg_next <= shift_right_arith(in_ports.shr_in_tdata(31 downto 0), TO_INTEGER(UNSIGNED(in_ports.shr_in_tdata(36 downto 32))));
 			else
 				shr_out_tdata_reg_next <= in_ports.shr_in_tdata(31 downto 0) srl TO_INTEGER(UNSIGNED(in_ports.shr_in_tdata(36 downto 32)));
