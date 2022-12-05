@@ -112,7 +112,7 @@ def generate_memory_values(count):
 def check_op_3reg(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(2)
 	builder.add_instruction('{} ${}, ${}, ${}'.format(instr, *r))
-	e = f(registers[r[1]], registers[r[2]])
+	e = f(registers[r[1]], registers[r[2]], registers[r[0]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
@@ -123,7 +123,7 @@ def check_op_2reg_i16(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(1)
 	v = random_int16()
 	builder.add_instruction('{} ${}, ${}, {}'.format(instr, *r, v))
-	e = f(registers[r[1]], v)
+	e = f(registers[r[1]], v, registers[r[0]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
@@ -133,7 +133,7 @@ def check_op_2reg_i16(instr, builder, registers, f):
 def check_op_2reg_imm(instr, builder, registers, imm, f):
 	r = random_register_non_zero() + random_register(1)
 	builder.add_instruction('{} ${}, ${}, {}'.format(instr, *r, imm))
-	e = f(registers[r[1]], imm)
+	e = f(registers[r[1]], imm, registers[r[0]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
@@ -144,7 +144,7 @@ def check_op_2reg_imm(instr, builder, registers, imm, f):
 def check_op_1reg_i16(instr, builder, registers, r2, v, f, syntax = '{} ${}, ${}, {}'):
 	r = random_register_non_zero()
 	builder.add_instruction(syntax.format(instr, *r, r2, v))
-	e = f(registers[r2], v)
+	e = f(registers[r2], v, registers[r[0]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
@@ -156,15 +156,12 @@ def check_op_1reg_i16(instr, builder, registers, r2, v, f, syntax = '{} ${}, ${}
 def check_op_ram(instr, alignment, builder, ram, registers, f):
 	r = random_register_non_zero()
 	base = random.randint(0, len(ram)*4-1);
-	print('base ' + str(base))
 	offset = random.randint(-base, len(ram)*4-1 - base)
-	print('offset ' + str(offset))
 	offset = offset - ((base + offset) % alignment)
-	print('offset ' + str(offset))
 	offset = clamp(offset, -0x8000, 0x7FFF)
-	print('offset ' + str(offset))
 	builder.add_write_reg(*r, base)
-	check_op_1reg_i16(instr, builder, registers, *r, offset, lambda x, y: f(base, y), '{0} ${1}, {3}(${2})')
+	check_op_1reg_i16(instr, builder, registers, *r, offset, lambda x, y, z: f(base, y, z), '{0} ${1}, {3}(${2})')
+	builder.add_write_reg(*r, registers[r[0]])
 
 def write_memory_file(filepath, content):
 	print('write ram file {}'.format(filepath))
@@ -178,7 +175,6 @@ def clamp(x, a, b):
 	return max(min(x, b), a)
 
 def get_ram(ram, address, size):
-	print('get_ram address: ' + hex(address) + ' size: ' + str(size))
 	return (ram[address // 4] >> ((address % 4) * 8)) & ((1 << size) - 1)
 
 def generate_commands():
@@ -198,35 +194,40 @@ def generate_commands():
 	builder.add_instruction('add $0, ${}, ${}'.format(*regs))
 	builder.add_check_reg(0, 0)
 
-	check_op_3reg('add', builder, registers, lambda x, y: x + y)
-	check_op_3reg('sub', builder, registers, lambda x, y: unsigned_to_signed(x, 32) - unsigned_to_signed(y, 32))
-	check_op_3reg('subu', builder, registers, lambda x, y: x - y)
-	check_op_3reg('and', builder, registers, lambda x, y: x & y)
-	check_op_3reg('or', builder, registers, lambda x, y: x | y)
-	check_op_3reg('xor', builder, registers, lambda x, y: x ^ y)
-	check_op_3reg('nor', builder, registers, lambda x, y: (x | y) ^ 0xFFFFFFFF)
-	check_op_3reg('sll', builder, registers, lambda x, y: (x << (y & 0x1F)) & 0xFFFFFFFF)
-	check_op_3reg('srl', builder, registers, lambda x, y: (x >> (y & 0x1F)) & 0xFFFFFFFF)
-	check_op_3reg('sra', builder, registers, lambda x, y: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
-	check_op_3reg('slt', builder, registers, lambda x, y: 1 if unsigned_to_signed(x, 32) < unsigned_to_signed(y, 32) else 0)
-	check_op_3reg('sltu', builder, registers, lambda x, y: 1 if x < y else 0)
-	check_op_2reg_i16('addi', builder, registers, lambda x, y: x + y)
-	check_op_2reg_i16('sub', builder, registers, lambda x, y: x - y)
-	check_op_2reg_i16('subu', builder, registers, lambda x, y: x - sign_extend(y, 16, 32))
-	check_op_2reg_imm('andi', builder, registers, random_uint(16), lambda x, y: x & sign_extend(y, 16, 32))
-	check_op_2reg_imm('ori', builder, registers, random_uint(16), lambda x, y: x | sign_extend(y, 16, 32))
-	check_op_2reg_imm('xori', builder, registers, random_uint(16), lambda x, y: x ^ sign_extend(y, 16, 32))
-	check_op_2reg_imm('sll', builder, registers, random_uint(5), lambda x, y: (x << (y & 0x1F)) & 0xFFFFFFFF)
-	check_op_2reg_imm('srl', builder, registers, random_uint(5), lambda x, y: (x >> (y & 0x1F)) & 0xFFFFFFFF)
-	check_op_2reg_imm('sra', builder, registers, random_uint(5), lambda x, y: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
-	check_op_2reg_imm('slt', builder, registers, random_int(16), lambda x, y: 1 if unsigned_to_signed(x, 32) < y else 0)
-	check_op_2reg_imm('sltu', builder, registers, random_uint(16), lambda x, y: 1 if x < y else 0)
+	# lambda parameters are (op1, op2, dest_register_previous_value)
+	check_op_3reg('add', builder, registers, lambda x, y, z: x + y)
+	check_op_3reg('sub', builder, registers, lambda x, y, z: unsigned_to_signed(x, 32) - unsigned_to_signed(y, 32))
+	check_op_3reg('subu', builder, registers, lambda x, y, z: x - y)
+	check_op_3reg('and', builder, registers, lambda x, y, z: x & y)
+	check_op_3reg('or', builder, registers, lambda x, y, z: x | y)
+	check_op_3reg('xor', builder, registers, lambda x, y, z: x ^ y)
+	check_op_3reg('nor', builder, registers, lambda x, y, z: (x | y) ^ 0xFFFFFFFF)
+	check_op_3reg('sll', builder, registers, lambda x, y, z: (x << (y & 0x1F)) & 0xFFFFFFFF)
+	check_op_3reg('srl', builder, registers, lambda x, y, z: (x >> (y & 0x1F)) & 0xFFFFFFFF)
+	check_op_3reg('sra', builder, registers, lambda x, y, z: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
+	check_op_3reg('slt', builder, registers, lambda x, y, z: 1 if unsigned_to_signed(x, 32) < unsigned_to_signed(y, 32) else 0)
+	check_op_3reg('sltu', builder, registers, lambda x, y, z: 1 if x < y else 0)
+	check_op_2reg_i16('addi', builder, registers, lambda x, y, z: x + y)
+	check_op_2reg_i16('sub', builder, registers, lambda x, y, z: x - y)
+	check_op_2reg_i16('subu', builder, registers, lambda x, y, z: x - sign_extend(y, 16, 32))
+	check_op_2reg_imm('andi', builder, registers, random_uint(16), lambda x, y, z: x & sign_extend(y, 16, 32))
+	check_op_2reg_imm('ori', builder, registers, random_uint(16), lambda x, y, z: x | sign_extend(y, 16, 32))
+	check_op_2reg_imm('xori', builder, registers, random_uint(16), lambda x, y, z: x ^ sign_extend(y, 16, 32))
+	check_op_2reg_imm('sll', builder, registers, random_uint(5), lambda x, y, z: (x << (y & 0x1F)) & 0xFFFFFFFF)
+	check_op_2reg_imm('srl', builder, registers, random_uint(5), lambda x, y, z: (x >> (y & 0x1F)) & 0xFFFFFFFF)
+	check_op_2reg_imm('sra', builder, registers, random_uint(5), lambda x, y, z: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
+	check_op_2reg_imm('slti', builder, registers, random_int(16), lambda x, y, z: 1 if unsigned_to_signed(x, 32) < y else 0)
+	# this is weird, operand is a signed 16bits, signed extended to 32 and compared to the other operand
+	check_op_2reg_imm('sltiu', builder, registers, random_int(16), lambda x, y, z: 1 if x < sign_extend(y, 16, 32) else 0)
 	#check_op_2reg_imm('lui', builder, registers, random_uint(16), lambda x, y: (x & 0xFFFF) | (y << 16))
 	
-	check_op_ram('lb', 1, builder, ram, registers, lambda x, y: sign_extend(get_ram(ram, x + y, 8), 8, 32))
-	check_op_ram('lbu', 1, builder, ram, registers, lambda x, y: get_ram(ram, x + y, 8))
-	check_op_ram('lh', 2, builder, ram, registers, lambda x, y: get_ram(ram, x + y, 16))
-	check_op_ram('lhu', 2, builder, ram, registers, lambda x, y: sign_extend(get_ram(ram, x + y, 16), 16, 32))
+	check_op_ram('lb', 1, builder, ram, registers, lambda x, y, z: sign_extend(get_ram(ram, x + y, 8), 8, 32))
+	check_op_ram('lbu', 1, builder, ram, registers, lambda x, y, z: get_ram(ram, x + y, 8))
+	check_op_ram('lh', 2, builder, ram, registers, lambda x, y, z: sign_extend(get_ram(ram, x + y, 16), 16, 32))
+	check_op_ram('lhu', 2, builder, ram, registers, lambda x, y, z: get_ram(ram, x + y, 16))
+	check_op_ram('lw', 4, builder, ram, registers, lambda x, y, z: get_ram(ram, x + y, 32))
+	check_op_ram('lwl', 1, builder, ram, registers, lambda x, y, z: (z & (0xFFFFFFFF >> ((x + y) % 4 + 1) * 8)) | (get_ram(ram, (x + y) // 4 * 4, 32) << (3 - (x + y) % 4) * 8))
+	check_op_ram('lwr', 1, builder, ram, registers, lambda x, y, z: (z & (0xFFFFFFFF << (4 - (x + y) % 4) * 8)) | (get_ram(ram, (x + y) // 4 * 4, 32) >> ((x + y) % 4) * 8))
 
 	builder.generate_cmd_file()
 	write_memory_file(instr_ram_filename, ram)
