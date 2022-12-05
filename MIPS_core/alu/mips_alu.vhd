@@ -204,12 +204,12 @@ architecture mips_alu_behavioral of mips_alu is
 	signal shr_out_tvalid_reg_next : std_logic;
 		
 	function shift_right_arith(data : std_logic_vector; n : NATURAL) return std_logic_vector is
-		variable result : std_logic_vector(data'range) := data;
+		alias d : std_logic_vector(data'LENGTH-1 downto 0) is data;
+		variable result : std_logic_vector(data'LENGTH-1 downto 0) := data;
 		variable sign : std_logic := data(data'HIGH);
 	begin
-		for i in 0 to n-1 loop
-			result := sign & result(result'HIGH downto result'LOW+1);
-		end loop;
+		result := (others => sign);
+		result(d'LENGTH-1-n downto 0) := d(d'LENGTH-1 downto n);
 		return result;
 	end function;
 	
