@@ -153,6 +153,7 @@ def generate_commands():
 
 	check_op_3reg('add', builder, registers, lambda x, y: x + y)
 	check_op_3reg('sub', builder, registers, lambda x, y: unsigned_to_signed(x, 32) - unsigned_to_signed(y, 32))
+	check_op_3reg('subu', builder, registers, lambda x, y: x - y)
 	check_op_3reg('and', builder, registers, lambda x, y: x & y)
 	check_op_3reg('or', builder, registers, lambda x, y: x | y)
 	check_op_3reg('xor', builder, registers, lambda x, y: x ^ y)
@@ -164,6 +165,7 @@ def generate_commands():
 	check_op_3reg('sltu', builder, registers, lambda x, y: 1 if x < y else 0)
 	check_op_2reg_i16('addi', builder, registers, lambda x, y: x + y)
 	check_op_2reg_i16('sub', builder, registers, lambda x, y: x - y)
+	check_op_2reg_i16('subu', builder, registers, lambda x, y: x - sign_extend(y, 16, 32))
 	check_op_2reg_imm('andi', builder, registers, random_uint(16), lambda x, y: x & sign_extend(y, 16, 32))
 	check_op_2reg_imm('ori', builder, registers, random_uint(16), lambda x, y: x | sign_extend(y, 16, 32))
 	check_op_2reg_imm('xori', builder, registers, random_uint(16), lambda x, y: x ^ sign_extend(y, 16, 32))
