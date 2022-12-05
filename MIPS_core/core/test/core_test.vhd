@@ -361,9 +361,9 @@ begin
 	
 	process
 		-- filepaths are relative to the core_test_proj.sim\sim_1\behav\xsim folder
-		file f : text open read_mode is "../../../../instruction_test_commands.txt";
+		file f : text open read_mode is "../../../../../instruction_test_commands.txt";
 		variable l : line;
-		file f2 : text open read_mode is "../../../../instruction_test_asm.asm";
+		file f2 : text open read_mode is "../../../../../instruction_test_asm.asm";
 		variable l2 : line;
 		
 		variable parts : line_array_ptr_t;

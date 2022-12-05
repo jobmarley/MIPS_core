@@ -25,6 +25,9 @@
     <None Include="..\vivado\constraints\KC705_test.xdc">
       <Link>constraints\KC705_test.xdc</Link>
     </None>
+    <None Include="alu\c_addsub_0.xci" />
+    <None Include="alu\div_gen_0.xci" />
+    <None Include="alu\mult_gen_0.xci" />
     <None Include="cache\cache_memory_coe_generator.py" />
     <None Include="core\axi_lite_adapter\axi_lite_adapter_test_data.coe" />
     <None Include="core\test\core_test.tcl" />

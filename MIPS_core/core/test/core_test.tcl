@@ -20,8 +20,12 @@ read_vhdl ../mips_writeback.vhd
 read_vhdl ../../alu/mips_alu.vhd
 read_vhdl ../mips_core_internal.vhd
 read_vhdl ./core_test.vhd
+
+import_ip ../../alu/c_addsub_0.xci
+import_ip ../../alu/div_gen_0.xci
+import_ip ../../alu/mult_gen_0.xci
 	
-# this makes the block design generation fail. I think because you cannot use VHDL2008 modules directly from a block design
+# if we set all files as 2008, the block design generation fail. I think because you cannot use VHDL2008 modules directly from a block design
 set_property file_type {VHDL 2008} [get_files mips_alu.vhd]
 
 source core_test_design.tcl
