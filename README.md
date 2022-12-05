@@ -21,8 +21,8 @@ This will automatically generate the project files.
 Note that this reference project is configured for a KC705 board, so modifications might be necessary to make it run on other hardware. But that's a good starting point.
 
 ## Features
-- Mips I instructions
-- 50Mhz processor clock (100Mhz under good conditions)
+- Mips32 instruction set
+- 200Mhz (XC7K325T)
 - Breakpoint with instruction SDBBP<sup>**[1](#SDBBP)**</sup> (pause the processor and triggers interrupt to notify the driver)
 - SC and LL instruction<sup>**[2](#SC&#32;&&#32;LL)**</sup>
 
