@@ -287,7 +287,9 @@ architecture core_test_behavioral of core_test is
 		fdo.fetch_error <= '0';
 		fdo.fetch_instruction_data_valid <= '1';
 		fdo.fetch_instruction_data <= instr;
-		wait until fdi.fetch_instruction_data_ready = '1' for 10*clock_period;
+		if fdi.fetch_instruction_data_ready = '0' then
+			wait until fdi.fetch_instruction_data_ready = '1' for 10*clock_period;
+		end if;
 		assert fdi.fetch_instruction_data_ready = '1' report "send_instruction: decode ready timed out" severity FAILURE;
 		wait for clock_period;
 		instr_address := instr_address + 4;
@@ -299,8 +301,12 @@ architecture core_test_behavioral of core_test is
 		pin.address <= r;
 		pin.write_enable <= '0';
 		wait for clock_period;
-		wait until pout.pending = '1' for 10*clock_period;
-		wait until pout.pending = '0' for 10*clock_period;
+		if pout.pending = '0' then
+			wait until pout.pending = '1' for 10*clock_period;
+		end if;
+		if pout.pending = '1' then
+			wait until pout.pending = '0' for 10*clock_period;
+		end if;
 		
 		-- if pending is still '1' after 10 clocks, its an error
 		if pout.pending /= '0' then
@@ -379,8 +385,9 @@ begin
 			READLINE(f,l);
 		
 			string_split(l(l'range), ' ', parts);
-				
-			if parts(0)(parts(0)'range) = "EXEC" then
+			if l(1) = '#' then
+				-- comment
+			elsif parts(0)(parts(0)'range) = "EXEC" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				instr_data := std_logic_vector(TO_UNSIGNED(itmp, 32));
 				send_instruction(instr_data, fetch_data_in, fetch_data_out);

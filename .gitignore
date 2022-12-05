@@ -366,3 +366,8 @@ MIPS_core/core/test/vivado.jou
 MIPS_core/core/test/vivado_*.jou
 MIPS_core/core/test/.Xil/
 MIPS_core/core/test/project/
+/MIPS_core/core/test/instruction_test_commands.txt
+/MIPS_core/core/test/instruction_test_asm.o
+/MIPS_core/core/test/instruction_test_asm.map
+/MIPS_core/core/test/instruction_test_asm.bin
+/MIPS_core/core/test/instruction_test_asm.asm
