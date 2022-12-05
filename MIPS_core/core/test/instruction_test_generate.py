@@ -159,7 +159,7 @@ def check_op_ram(instr, alignment, builder, ram, registers, f):
 	print('base ' + str(base))
 	offset = random.randint(-base, len(ram)*4-1 - base)
 	print('offset ' + str(offset))
-	offset = offset - (offset % alignment)
+	offset = offset - ((base + offset) % alignment)
 	print('offset ' + str(offset))
 	offset = clamp(offset, -0x8000, 0x7FFF)
 	print('offset ' + str(offset))

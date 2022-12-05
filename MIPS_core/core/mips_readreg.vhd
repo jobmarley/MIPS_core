@@ -130,7 +130,7 @@ begin
 	
 	alu_in_ports.add_in_tuser <= add_out_tuser_to_slv(alu_add_tuser);
 	alu_add_tuser.exclusive <= '0';
-	alu_add_tuser.signed <= '0';
+	alu_add_tuser.signed <= not operation_reg.op_unsigned;
 	alu_add_tuser.memop_type <= memop_type_reg;
 	alu_add_tuser.store <= store_reg;
 	alu_add_tuser.store_data <= register_port_out_c.data;

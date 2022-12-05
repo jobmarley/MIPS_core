@@ -654,9 +654,10 @@ begin
 					when instr_lbu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_unsigned <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
+						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						load_reg_next <= '1';
 						memop_type_reg_next <= memory_op_type_byte;
@@ -672,9 +673,10 @@ begin
 					when instr_lhu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
+						operation_reg_next.op_unsigned <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
+						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						load_reg_next <= '1';
 						memop_type_reg_next <= memory_op_type_half;
