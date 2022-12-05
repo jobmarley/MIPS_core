@@ -188,10 +188,13 @@ architecture core_test_behavioral of core_test is
 		end if;
 	end procedure;
 	
-	function string_to_integer(l : STRING) return INTEGER is
+	-- use unsigned because integer is only signed 32bits
+	-- if we have > 0x80000000 that fails
+	function string_to_integer(l : STRING; size : NATURAL := 32) return UNSIGNED is
 		variable index : INTEGER := l'LOW;
-		variable result : INTEGER := 0;
+		variable result : UNSIGNED(size-1 downto 0) := TO_UNSIGNED(0, size);
 		variable digit : INTEGER := 0;
+		variable tmp : UNSIGNED(size*2-1 downto 0);
 	begin
 		while index <= l'HIGH and l(index) = ' ' loop
 			index := index + 1;
@@ -209,7 +212,8 @@ architecture core_test_behavioral of core_test is
 			else
 				report "invalid character: " & CHARACTER'image(l(index)) severity ERROR;
 			end if;
-			result := result * 16 + digit;
+			tmp := result * 16;
+			result := tmp(size-1 downto 0) + TO_UNSIGNED(digit, size);
 			index := index + 1;
 		end loop;
 		return result;
@@ -224,13 +228,13 @@ architecture core_test_behavioral of core_test is
 		end if;
 	end function;
 	
-	function hex(n : INTEGER) return STRING is
-		variable s : STRING(1 to 8);
-		variable j : INTEGER := n;
+	function hex(n : UNSIGNED; size : NATURAL := 32) return STRING is
+		variable s : STRING(1 to size / 4);
+		variable j : UNSIGNED(n'range) := n;
 	begin
-		for i in 8 downto 1 loop
-			s(i) := hexchar(j mod 16);
-			j := j / 16;
+		for i in s'HIGH downto s'LOW loop
+			s(i) := hexchar(TO_INTEGER(j(3 downto 0)));
+			j := "0000" & j(j'HIGH downto j'LOW+4);
 		end loop;
 		return s;
 	end function;
@@ -320,7 +324,7 @@ architecture core_test_behavioral of core_test is
 			success := TRUE;
 		else
 			success := FALSE;
-			report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(TO_INTEGER(unsigned(data))) & ", got " & hex(TO_INTEGER(unsigned(pout.data)));
+			report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(unsigned(data)) & ", got " & hex(unsigned(pout.data));
 		end if;
 	end procedure;
 	
@@ -363,7 +367,7 @@ begin
 		variable l2 : line;
 		
 		variable parts : line_array_ptr_t;
-		variable itmp : INTEGER;
+		variable itmp : UNSIGNED(31 downto 0);
 		variable instr_data : std_logic_vector(31 downto 0);
 		variable expected_reg : std_logic_vector(5 downto 0);
 		variable expected_data : std_logic_vector(31 downto 0);
@@ -389,21 +393,21 @@ begin
 				-- comment
 			elsif parts(0)(parts(0)'range) = "EXEC" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
-				instr_data := std_logic_vector(TO_UNSIGNED(itmp, 32));
+				instr_data := std_logic_vector(itmp);
 				send_instruction(instr_data, fetch_data_in, fetch_data_out);
 				READLINE(f2,l2);
 			elsif parts(0)(parts(0)'range) = "CHECK_REG" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
-				expected_reg := std_logic_vector(TO_UNSIGNED(itmp, 6));
+				expected_reg := std_logic_vector(itmp(5 downto 0));
 				itmp := string_to_integer(parts(2)(parts(2)'range));
-				expected_data := std_logic_vector(TO_UNSIGNED(itmp, 32));
+				expected_data := std_logic_vector(itmp);
 				check_register_value(expected_reg, expected_data, register_port_in_a, register_port_out_a, success);
 				assert success report "CHECK_REG failed for instruction " & l2(l2'range) severity FAILURE;
 			elsif  parts(0)(parts(0)'range) = "WRITE_REG" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
-				expected_reg := std_logic_vector(TO_UNSIGNED(itmp, 6));
+				expected_reg := std_logic_vector(itmp(5 downto 0));
 				itmp := string_to_integer(parts(2)(parts(2)'range));
-				expected_data := std_logic_vector(TO_UNSIGNED(itmp, 32));
+				expected_data := std_logic_vector(itmp);
 				write_register(expected_reg, expected_data, register_port_in_a);
 			else
 				report "core_test invalid command " & parts(0)(parts(0)'range) & " on line " & INTEGER'image(iline) severity FAILURE;
