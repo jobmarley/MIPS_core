@@ -58,3 +58,9 @@ Those registers are accessible through the AXI lite interface on the processor
 | 00000008 - 0000007C |  unused  |
 | 00000080 - 000000FC |  Processor registers, only accessible if enable is 0. PC is mapped on register 0 |
 | 00000100 - 0000017C |  COP0 registers  |
+
+## Tests
+Just run the following command from the MIPS_core/core/test/ directory
+```
+vivado -mode batch -source core_test.tcl
+```
