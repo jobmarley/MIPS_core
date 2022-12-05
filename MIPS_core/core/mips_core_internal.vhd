@@ -253,6 +253,7 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		load : out std_logic;
 		store : out std_logic;
 		memop_type : out std_logic_vector(2 downto 0);
+		mov_strobe : out std_logic_vector(3 downto 0);
 	
 		immediate_a : out std_logic_vector(31 downto 0);
 		immediate_b : out std_logic_vector(31 downto 0);
@@ -288,6 +289,7 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		immediate_a : in std_logic_vector(31 downto 0);
 		immediate_b : in std_logic_vector(31 downto 0);
 		link_address : in std_logic_vector(31 downto 0);
+		mov_strobe : in std_logic_vector(3 downto 0);
 	
 		-- registers
 		register_port_in_a : out register_port_in_t;
@@ -343,6 +345,7 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal decode_immediate_a : std_logic_vector(31 downto 0);
 	signal decode_immediate_b : std_logic_vector(31 downto 0);
 	signal decode_link_address : std_logic_vector(31 downto 0);
+	signal decode_mov_strobe : std_logic_vector(3 downto 0);
 	
 	signal decode_override_address : std_logic_vector(31 downto 0);
 	signal decode_override_address_valid : std_logic;
@@ -392,6 +395,7 @@ begin
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
+		mov_strobe => decode_mov_strobe,
 	
 		-- registers
 		register_port_in_a => register_port_in(3),
@@ -438,6 +442,7 @@ begin
 		load => decode_load,
 		store => decode_store,
 		memop_type => decode_memop_type,
+		mov_strobe => decode_mov_strobe,
 	
 		immediate_a => decode_immediate_a,
 		immediate_b => decode_immediate_b,

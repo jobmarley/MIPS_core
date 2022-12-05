@@ -26,6 +26,7 @@ entity mips_decode is
 	load : out std_logic;
 	store : out std_logic;
 	memop_type : out std_logic_vector(2 downto 0);
+	mov_strobe : out std_logic_vector(3 downto 0);
 	
 	immediate_a : out std_logic_vector(31 downto 0);
 	immediate_b : out std_logic_vector(31 downto 0);
@@ -71,6 +72,8 @@ architecture mips_decode_behavioral of mips_decode is
 	signal immediate_b_reg_next : std_logic_vector(31 downto 0);
 	signal link_address_reg : std_logic_vector(31 downto 0);
 	signal link_address_reg_next : std_logic_vector(31 downto 0);
+	signal mov_strobe_reg : std_logic_vector(3 downto 0);
+	signal mov_strobe_reg_next : std_logic_vector(3 downto 0);
 	
 	function sign_extend(u : std_logic_vector; l : natural) return std_logic_vector is
         alias uu: std_logic_vector(u'LENGTH-1 downto 0) is u;
@@ -106,6 +109,7 @@ begin
 	immediate_a <= immediate_a_reg;
 	immediate_b <= immediate_b_reg;
 	link_address <= link_address_reg;
+	mov_strobe <= mov_strobe_reg;
 	
 	process(clock)
 	begin
@@ -124,6 +128,7 @@ begin
 			immediate_a_reg <= immediate_a_reg_next;
 			immediate_b_reg <= immediate_b_reg_next;
 			link_address_reg <= link_address_reg_next;
+			mov_strobe_reg <= mov_strobe_reg_next;
 		end if;
 	end process;
 	
@@ -156,6 +161,7 @@ begin
 		immediate_a_reg_next <= (others => '0');
 		immediate_b_reg_next <= (others => '0');
 		link_address_reg_next <= (others => '0');
+		mov_strobe_reg_next <= x"F";
 		
 		instr_data_ready <= '0';
 		panic <= '0';
@@ -175,6 +181,7 @@ begin
 			immediate_a_reg_next <= (others => '0');
 			immediate_b_reg_next <= (others => '0');
 			link_address_reg_next <= (others => '0');
+			mov_strobe_reg_next <= (others => '0');
 		elsif enable = '1' then
 			instr_data_ready <= '1';
 			if instr_data_valid = '1' then
@@ -685,8 +692,9 @@ begin
 						operation_reg_next.op_mov <= '1';
 						register_a_reg_next <= '0' & "00000";
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						immediate_b_reg_next <= instruction_data_i.immediate & x"0000";
-						operation_reg_next.op_immediate_b <= '1';
+						immediate_a_reg_next <= instruction_data_i.immediate & x"0000";
+						operation_reg_next.op_immediate_a <= '1';
+						mov_strobe_reg_next <= "1100";
 					when instr_lw_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';

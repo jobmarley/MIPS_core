@@ -17,6 +17,7 @@ entity mips_readreg is
 	load : in std_logic;
 	store : in std_logic;
 	memop_type : in std_logic_vector(2 downto 0);
+	mov_strobe : in std_logic_vector(3 downto 0);
 	
 	-- registers
 	register_port_in_a : out register_port_in_t;
@@ -84,6 +85,8 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal immediate_b_reg_next : std_logic_vector(31 downto 0);
 	signal link_address_reg : std_logic_vector(31 downto 0);
 	signal link_address_reg_next : std_logic_vector(31 downto 0);
+	signal mov_strobe_reg : std_logic_vector(3 downto 0);
+	signal mov_strobe_reg_next : std_logic_vector(3 downto 0);
 	
 	signal alu_add_tuser : alu_add_out_tuser_t;
 	signal alu_cmp_tuser : alu_cmp_tuser_t;
@@ -210,6 +213,7 @@ begin
 			target_register_address <= target_register_address_next;
 			target_register_pending <= target_register_pending_next;
 			link_address_reg <= link_address_reg_next;
+			mov_strobe_reg <= mov_strobe_reg_next;
 			
 			register_a_written <= register_a_written_next;
 			register_b_written <= register_b_written_next;
@@ -253,7 +257,9 @@ begin
 		
 		link_address,
 		link_address_reg,
-		fast_cmp_result
+		fast_cmp_result,
+		mov_strobe,
+		mov_strobe_reg
 	)
         variable instruction_data_r : instruction_r_t;
         variable instruction_data_i : instruction_i_t;
@@ -294,6 +300,7 @@ begin
 		target_register_address_next <= target_register_address;
 		target_register_pending_next <= target_register_pending;
 		link_address_reg_next <= link_address_reg;
+		mov_strobe_reg_next <= mov_strobe_reg;
 		
 		register_a_written_next <= '0';
 		register_b_written_next <= '0';
@@ -313,6 +320,7 @@ begin
 			store_reg_next <= '0';
 			memop_type_reg_next <= (others => '0');
 			link_address_reg_next <= (others => '0');
+			mov_strobe_reg_next <= (others => '0');
 		elsif enable = '1' then
 			target_register_address_next <= (others => '0');
 			target_register_pending_next <= '0';
@@ -340,6 +348,7 @@ begin
 				immediate_a_reg_next <= immediate_a;
 				immediate_b_reg_next <= immediate_b;
 				link_address_reg_next <= link_address;
+				mov_strobe_reg_next <= mov_strobe;
 				
 				-- write register pending for target register
 				register_port_in_d.address <= register_c_reg;
@@ -354,7 +363,7 @@ begin
 					else
 						register_port_in_d.write_data <= register_port_out_a.data;
 					end if;
-					register_port_in_d.write_strobe <= x"F";
+					register_port_in_d.write_strobe <= mov_strobe_reg;
 					register_port_in_d.write_pending <= '0';
 				else
 					register_port_in_d.write_pending <= not store_reg;

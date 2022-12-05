@@ -107,7 +107,7 @@ def generate_register_values():
 def generate_memory_values(count):
 	return [random_uint32() for i in range(0, count)]
 
-# execute instr with 3 random registers, and check result which must be equal to f(r[1], r[2])
+# execute instr with 3 random registers, and check result which must be equal to f([r1], [r2], [rdest])
 # then revert the register
 def check_op_3reg(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(2)
@@ -118,7 +118,7 @@ def check_op_3reg(instr, builder, registers, f):
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
-# same as above but with random i16, f(r[1], i16)
+# same as above but with random i16, f([r1], i16, [rdest])
 def check_op_2reg_i16(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(1)
 	v = random_int16()
@@ -129,7 +129,7 @@ def check_op_2reg_i16(instr, builder, registers, f):
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
-# same as above but with given immediate, f(r[1], imm)
+# same as above but with given immediate, f([r1], imm, [rdest])
 def check_op_2reg_imm(instr, builder, registers, imm, f):
 	r = random_register_non_zero() + random_register(1)
 	builder.add_instruction('{} ${}, ${}, {}'.format(instr, *r, imm))
@@ -140,19 +140,19 @@ def check_op_2reg_imm(instr, builder, registers, imm, f):
 	builder.add_write_reg(r[0], registers[r[0]])
 
 	
-# [random] = f([r], v)
-def check_op_1reg_i16(instr, builder, registers, r2, v, f, syntax = '{} ${}, ${}, {}'):
+# [rdest] = f(v, [rdest])
+def check_op_1reg_imm(instr, builder, registers, v, f, syntax = '{} ${}, {}'):
 	r = random_register_non_zero()
-	builder.add_instruction(syntax.format(instr, *r, r2, v))
-	e = f(registers[r2], v, registers[r[0]])
+	builder.add_instruction(syntax.format(instr, *r, v))
+	e = f(v, registers[r[0]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
-# [random] = f([r], v)
+# [rdest] = f([r1], v, [rdest])
 # write r with a random value before hand
-# r and v are generated such as aligned([r] + v) is a valid address
+# r and v are generated such as aligned([r1] + v) is a valid address
 def check_op_ram(instr, alignment, builder, ram, registers, f):
 	r = random_register_non_zero()
 	base = random.randint(0, len(ram)*4-1);
@@ -160,7 +160,7 @@ def check_op_ram(instr, alignment, builder, ram, registers, f):
 	offset = offset - ((base + offset) % alignment)
 	offset = clamp(offset, -0x8000, 0x7FFF)
 	builder.add_write_reg(*r, base)
-	check_op_1reg_i16(instr, builder, registers, *r, offset, lambda x, y, z: f(base, y, z), '{0} ${1}, {3}(${2})')
+	check_op_1reg_imm(instr, builder, registers, offset, lambda y, z: f(base, y, z), '{{}} ${{}}, {{}}(${})'.format(*r))
 	builder.add_write_reg(*r, registers[r[0]])
 
 def write_memory_file(filepath, content):
@@ -219,7 +219,7 @@ def generate_commands():
 	check_op_2reg_imm('slti', builder, registers, random_int(16), lambda x, y, z: 1 if unsigned_to_signed(x, 32) < y else 0)
 	# this is weird, operand is a signed 16bits, signed extended to 32 and compared to the other operand
 	check_op_2reg_imm('sltiu', builder, registers, random_int(16), lambda x, y, z: 1 if x < sign_extend(y, 16, 32) else 0)
-	#check_op_2reg_imm('lui', builder, registers, random_uint(16), lambda x, y: (x & 0xFFFF) | (y << 16))
+	check_op_1reg_imm('lui', builder, registers, random_uint(16), lambda y, z: (z & 0xFFFF) | (y << 16))
 	
 	check_op_ram('lb', 1, builder, ram, registers, lambda x, y, z: sign_extend(get_ram(ram, x + y, 8), 8, 32))
 	check_op_ram('lbu', 1, builder, ram, registers, lambda x, y, z: get_ram(ram, x + y, 8))
