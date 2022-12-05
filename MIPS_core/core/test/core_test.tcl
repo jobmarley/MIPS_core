@@ -36,5 +36,8 @@ read_vhdl ./project/core_test_proj.gen/sources_1/bd/core_test_design/hdl/core_te
 
 set_property top core_test_design_wrapper [get_fileset sim_1]
 
+set blk_mem_0 [lindex [get_bd_cells blk_mem_gen_0] 0]
+set_property -dict [list CONFIG.Coe_File [file normalize "instruction_ram.coe"] CONFIG.Load_Init_File true] $blk_mem_0
+
 launch_simulation
 run -all

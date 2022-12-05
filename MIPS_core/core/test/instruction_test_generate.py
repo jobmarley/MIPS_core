@@ -1,9 +1,11 @@
 import os
 import random
 import subprocess
+import math
 
 instr_asm_filename = 'instruction_test_asm.asm'
 instr_cmd_filename = 'instruction_test_commands.txt'
+instr_ram_filename = 'instruction_ram.coe'
 clang_path = r'C:\Program Files\LLVM\bin\clang++'
 lld_path = r'C:\Program Files\LLVM\bin\ld.lld'
 
@@ -64,7 +66,7 @@ class instruction_builder:
 		print('write asm file {}'.format(self.asm_filepath))
 		with open(self.asm_filepath, 'w', encoding='ascii') as f:
 			for x in self.instructions:
-				f.write(x)
+				f.write(x + '\n')
 			f.flush()
 
 	def read_instruction_binary(self, filepath):
@@ -82,7 +84,7 @@ class instruction_builder:
 			i = 0
 			for c in self.test_commands:
 				if c == 'EXEC':
-					f.write('# {}'.format(self.instructions[i]))
+					f.write('# {}'.format(self.instructions[i]) + '\n')
 					f.write('EXEC {:08X}'.format(instr_bin[i]) + '\n')
 					i = i + 1
 				else:
@@ -102,12 +104,14 @@ class instruction_builder:
 def generate_register_values():
 	return [random_uint32() for i in range(0, 128)]
 
+def generate_memory_values(count):
+	return [random_uint32() for i in range(0, count)]
 
-# execute instr with 3 random registers, and check result which must be equal to f(r[1], r[2]) % 0x100000000
+# execute instr with 3 random registers, and check result which must be equal to f(r[1], r[2])
 # then revert the register
 def check_op_3reg(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(2)
-	builder.add_instruction('{} ${}, ${}, ${}\n'.format(instr, *r))
+	builder.add_instruction('{} ${}, ${}, ${}'.format(instr, *r))
 	e = f(registers[r[1]], registers[r[2]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
@@ -118,7 +122,7 @@ def check_op_3reg(instr, builder, registers, f):
 def check_op_2reg_i16(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(1)
 	v = random_int16()
-	builder.add_instruction('{} ${}, ${}, {}\n'.format(instr, *r, v))
+	builder.add_instruction('{} ${}, ${}, {}'.format(instr, *r, v))
 	e = f(registers[r[1]], v)
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
@@ -128,13 +132,54 @@ def check_op_2reg_i16(instr, builder, registers, f):
 # same as above but with given immediate, f(r[1], imm)
 def check_op_2reg_imm(instr, builder, registers, imm, f):
 	r = random_register_non_zero() + random_register(1)
-	builder.add_instruction('{} ${}, ${}, {}\n'.format(instr, *r, imm))
+	builder.add_instruction('{} ${}, ${}, {}'.format(instr, *r, imm))
 	e = f(registers[r[1]], imm)
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 
+	
+# [random] = f([r], v)
+def check_op_1reg_i16(instr, builder, registers, r2, v, f, syntax = '{} ${}, ${}, {}'):
+	r = random_register_non_zero()
+	builder.add_instruction(syntax.format(instr, *r, r2, v))
+	e = f(registers[r2], v)
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
+	builder.add_check_reg(r[0], e)
+	builder.add_write_reg(r[0], registers[r[0]])
+	
+# [random] = f([r], v)
+# write r with a random value before hand
+# r and v are generated such as aligned([r] + v) is a valid address
+def check_op_ram(instr, alignment, builder, ram, registers, f):
+	r = random_register_non_zero()
+	base = random.randint(0, len(ram)*4-1);
+	print('base ' + str(base))
+	offset = random.randint(-base, len(ram)*4-1 - base)
+	print('offset ' + str(offset))
+	offset = offset - (offset % alignment)
+	print('offset ' + str(offset))
+	offset = clamp(offset, -0x8000, 0x7FFF)
+	print('offset ' + str(offset))
+	builder.add_write_reg(*r, base)
+	check_op_1reg_i16(instr, builder, registers, *r, offset, lambda x, y: f(base, y), '{0} ${1}, {3}(${2})')
+
+def write_memory_file(filepath, content):
+	print('write ram file {}'.format(filepath))
+	with open(filepath, 'w') as f:
+		f.write('memory_initialization_radix=16;\n')
+		f.write('memory_initialization_vector=\n')
+		f.write(',\n'.join(['{:08X}'.format(x) for x in content]) + ';')
+		f.flush()
+
+def clamp(x, a, b):
+	return max(min(x, b), a)
+
+def get_ram(ram, address, size):
+	print('get_ram address: ' + hex(address) + ' size: ' + str(size))
+	return (ram[address // 4] >> ((address % 4) * 8)) & ((1 << size) - 1)
 
 def generate_commands():
 	
@@ -145,10 +190,12 @@ def generate_commands():
 	registers[0] = 0
 	for i in range(1, 32):
 		builder.add_write_reg(i, registers[i])
+		
+	ram = generate_memory_values(1024)
 
 	# register 0 should be unwritable
 	regs = random_register(2)
-	builder.add_instruction('add $0, ${}, ${}\n'.format(*regs))
+	builder.add_instruction('add $0, ${}, ${}'.format(*regs))
 	builder.add_check_reg(0, 0)
 
 	check_op_3reg('add', builder, registers, lambda x, y: x + y)
@@ -174,8 +221,15 @@ def generate_commands():
 	check_op_2reg_imm('sra', builder, registers, random_uint(5), lambda x, y: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
 	check_op_2reg_imm('slt', builder, registers, random_int(16), lambda x, y: 1 if unsigned_to_signed(x, 32) < y else 0)
 	check_op_2reg_imm('sltu', builder, registers, random_uint(16), lambda x, y: 1 if x < y else 0)
+	#check_op_2reg_imm('lui', builder, registers, random_uint(16), lambda x, y: (x & 0xFFFF) | (y << 16))
+	
+	check_op_ram('lb', 1, builder, ram, registers, lambda x, y: sign_extend(get_ram(ram, x + y, 8), 8, 32))
+	check_op_ram('lbu', 1, builder, ram, registers, lambda x, y: get_ram(ram, x + y, 8))
+	check_op_ram('lh', 2, builder, ram, registers, lambda x, y: get_ram(ram, x + y, 16))
+	check_op_ram('lhu', 2, builder, ram, registers, lambda x, y: sign_extend(get_ram(ram, x + y, 16), 16, 32))
 
 	builder.generate_cmd_file()
+	write_memory_file(instr_ram_filename, ram)
 		
 def clang_compile(filepath, outpath):
 	print('compiling {}...'.format(filepath, outpath))

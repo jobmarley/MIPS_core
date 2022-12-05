@@ -371,3 +371,4 @@ MIPS_core/core/test/project/
 /MIPS_core/core/test/instruction_test_asm.map
 /MIPS_core/core/test/instruction_test_asm.bin
 /MIPS_core/core/test/instruction_test_asm.asm
+/MIPS_core/core/test/instruction_ram.coe

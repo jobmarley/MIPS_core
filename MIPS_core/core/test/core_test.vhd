@@ -11,37 +11,37 @@ entity core_test is
 	clock : in std_ulogic;
 					
 	-- memory port a
-	m_axi_mema_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axi_mema_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axi_mema_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	m_axi_mema_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
-	m_axi_mema_arlock : out STD_LOGIC;
-	m_axi_mema_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axi_mema_arready : in STD_LOGIC;
-	m_axi_mema_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axi_mema_arvalid : out STD_LOGIC;
-	m_axi_mema_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axi_mema_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axi_mema_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	m_axi_mema_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
-	m_axi_mema_awlock : out STD_LOGIC;
-	m_axi_mema_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axi_mema_awready : in STD_LOGIC;
-	m_axi_mema_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	m_axi_mema_awvalid : out STD_LOGIC;
-	m_axi_mema_bready : out STD_LOGIC;
-	m_axi_mema_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axi_mema_bvalid : in STD_LOGIC;
-	m_axi_mema_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axi_mema_rlast : in STD_LOGIC;
-	m_axi_mema_rready : out STD_LOGIC;
-	m_axi_mema_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	m_axi_mema_rvalid : in STD_LOGIC;
-	m_axi_mema_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	m_axi_mema_wlast : out STD_LOGIC;
-	m_axi_mema_wready : in STD_LOGIC;
-	m_axi_mema_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	m_axi_mema_wvalid : out STD_LOGIC;
+	--m_axi_mema_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+	--m_axi_mema_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+	--m_axi_mema_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+	--m_axi_mema_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+	--m_axi_mema_arlock : out STD_LOGIC;
+	--m_axi_mema_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	--m_axi_mema_arready : in STD_LOGIC;
+	--m_axi_mema_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	--m_axi_mema_arvalid : out STD_LOGIC;
+	--m_axi_mema_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+	--m_axi_mema_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+	--m_axi_mema_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+	--m_axi_mema_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+	--m_axi_mema_awlock : out STD_LOGIC;
+	--m_axi_mema_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	--m_axi_mema_awready : in STD_LOGIC;
+	--m_axi_mema_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+	--m_axi_mema_awvalid : out STD_LOGIC;
+	--m_axi_mema_bready : out STD_LOGIC;
+	--m_axi_mema_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+	--m_axi_mema_bvalid : in STD_LOGIC;
+	--m_axi_mema_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
+	--m_axi_mema_rlast : in STD_LOGIC;
+	--m_axi_mema_rready : out STD_LOGIC;
+	--m_axi_mema_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+	--m_axi_mema_rvalid : in STD_LOGIC;
+	--m_axi_mema_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
+	--m_axi_mema_wlast : out STD_LOGIC;
+	--m_axi_mema_wready : in STD_LOGIC;
+	--m_axi_mema_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
+	--m_axi_mema_wvalid : out STD_LOGIC;
 	
 	-- memory port b
 	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -306,10 +306,10 @@ architecture core_test_behavioral of core_test is
 		pin.write_enable <= '0';
 		wait for clock_period;
 		if pout.pending = '0' then
-			wait until pout.pending = '1' for 10*clock_period;
+			wait until pout.pending = '1' for 50*clock_period;
 		end if;
 		if pout.pending = '1' then
-			wait until pout.pending = '0' for 10*clock_period;
+			wait until pout.pending = '0' for 50*clock_period;
 		end if;
 		
 		-- if pending is still '1' after 10 clocks, its an error

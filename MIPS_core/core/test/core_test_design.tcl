@@ -132,7 +132,6 @@ set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:axi_bram_ctrl:4.1\
-xilinx.com:ip:axi_crossbar:2.1\
 xilinx.com:ip:blk_mem_gen:8.4\
 xilinx.com:ip:sim_clk_gen:1.0\
 "
@@ -232,17 +231,11 @@ proc create_root_design { parentCell } {
    CONFIG.SINGLE_PORT_BRAM {1} \
  ] $axi_bram_ctrl_0
 
-  # Create instance: axi_crossbar_0, and set properties
-  set axi_crossbar_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_crossbar:2.1 axi_crossbar_0 ]
-  set_property -dict [ list \
-   CONFIG.NUM_MI {1} \
-   CONFIG.NUM_SI {2} \
- ] $axi_crossbar_0
-
   # Create instance: blk_mem_gen_0, and set properties
   set blk_mem_gen_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:blk_mem_gen:8.4 blk_mem_gen_0 ]
   set_property -dict [ list \
    CONFIG.Byte_Size {8} \
+   CONFIG.Coe_File {no_coe_file_loaded} \
    CONFIG.EN_SAFETY_CKT {false} \
    CONFIG.Enable_32bit_Address {true} \
    CONFIG.Load_Init_File {false} \
@@ -268,16 +261,13 @@ proc create_root_design { parentCell } {
 
   # Create interface connections
   connect_bd_intf_net -intf_net axi_bram_ctrl_0_BRAM_PORTA [get_bd_intf_pins axi_bram_ctrl_0/BRAM_PORTA] [get_bd_intf_pins blk_mem_gen_0/BRAM_PORTA]
-  connect_bd_intf_net -intf_net axi_crossbar_0_M00_AXI [get_bd_intf_pins axi_bram_ctrl_0/S_AXI] [get_bd_intf_pins axi_crossbar_0/M00_AXI]
-  connect_bd_intf_net -intf_net core_test_0_m_axi_mema [get_bd_intf_pins axi_crossbar_0/S00_AXI] [get_bd_intf_pins core_test_0/m_axi_mema]
-  connect_bd_intf_net -intf_net core_test_0_m_axi_memb [get_bd_intf_pins axi_crossbar_0/S01_AXI] [get_bd_intf_pins core_test_0/m_axi_memb]
+  connect_bd_intf_net -intf_net core_test_0_m_axi_memb [get_bd_intf_pins axi_bram_ctrl_0/S_AXI] [get_bd_intf_pins core_test_0/m_axi_memb]
 
   # Create port connections
-  connect_bd_net -net sim_clk_gen_0_clk [get_bd_pins axi_bram_ctrl_0/s_axi_aclk] [get_bd_pins axi_crossbar_0/aclk] [get_bd_pins core_test_0/clock] [get_bd_pins sim_clk_gen_0/clk]
-  connect_bd_net -net sim_clk_gen_0_sync_rst [get_bd_pins axi_bram_ctrl_0/s_axi_aresetn] [get_bd_pins axi_crossbar_0/aresetn] [get_bd_pins core_test_0/resetn] [get_bd_pins sim_clk_gen_0/sync_rst]
+  connect_bd_net -net sim_clk_gen_0_clk [get_bd_pins axi_bram_ctrl_0/s_axi_aclk] [get_bd_pins core_test_0/clock] [get_bd_pins sim_clk_gen_0/clk]
+  connect_bd_net -net sim_clk_gen_0_sync_rst [get_bd_pins axi_bram_ctrl_0/s_axi_aresetn] [get_bd_pins core_test_0/resetn] [get_bd_pins sim_clk_gen_0/sync_rst]
 
   # Create address segments
-  assign_bd_address -offset 0x00000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces core_test_0/m_axi_mema] [get_bd_addr_segs axi_bram_ctrl_0/S_AXI/Mem0] -force
   assign_bd_address -offset 0x00000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces core_test_0/m_axi_memb] [get_bd_addr_segs axi_bram_ctrl_0/S_AXI/Mem0] -force
 
 
