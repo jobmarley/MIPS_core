@@ -60,7 +60,8 @@ Those registers are accessible through the AXI lite interface on the processor
 | 00000100 - 0000017C |  COP0 registers  |
 
 ## Tests
-Just run the following command from the MIPS_core/core/test/ directory
+Just run the following commands from the MIPS_core/core/test/ directory
 ```
+python instruction_test_generate.py
 vivado -mode batch -source core_test.tcl
 ```
