@@ -140,6 +140,20 @@ package mips_utils is
 	type register_port_in_array_t is array(NATURAL RANGE <>) of register_port_in_t;
 	type register_port_out_array_t is array(NATURAL RANGE <>) of register_port_out_t;
 	
+	
+	type hilo_register_port_in_t is record
+		write_enable : std_logic;
+		write_data : std_logic_vector(63 downto 0);
+		write_strobe : std_logic_vector(1 downto 0);
+		write_pending : std_logic;
+	end record;
+	type hilo_register_port_out_t is record
+		data : std_logic_vector(63 downto 0);
+		pending : std_logic;
+	end record;
+	type hilo_register_port_in_array_t is array(NATURAL RANGE <>) of hilo_register_port_in_t;
+	type hilo_register_port_out_array_t is array(NATURAL RANGE <>) of hilo_register_port_out_t;
+	
 	type instruction_r_t is record
 		opcode : std_logic_vector(5 downto 0);
 		rs : std_logic_vector(4 downto 0);
@@ -300,6 +314,10 @@ package mips_utils is
 		op_link : std_logic;			-- link_address is used for the mov
 		op_immediate_a : std_logic;		-- use immediate a instead of register
 		op_immediate_b : std_logic;		-- use immediate b instead of register
+		op_hi : std_logic;				-- use hi register
+		op_lo : std_logic;				-- use lo register
+		op_fromhilo : std_logic;
+		op_tohilo : std_logic;		
 	end record;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
@@ -347,6 +365,15 @@ package mips_utils is
 	function slv_to_shr_tuser(data : std_logic_vector) return alu_shr_tuser_t;
 	function shr_tuser_to_slv(tuser : alu_shr_tuser_t) return std_logic_vector;
 	
+	type alu_mul_tuser_t is record
+		use_hilo : std_logic;
+		rd : std_logic_vector(5 downto 0);
+	end record;
+	constant alu_mul_tuser_length : NATURAL := 7;
+	
+	function slv_to_mul_tuser(data : std_logic_vector) return alu_mul_tuser_t;
+	function mul_tuser_to_slv(tuser : alu_mul_tuser_t) return std_logic_vector;
+	
 	type alu_in_ports_t is record
 		add_in_tvalid : std_logic;
 	    add_in_tdata : std_logic_vector(63 downto 0);
@@ -358,7 +385,7 @@ package mips_utils is
 	
 	    mul_in_tvalid : std_logic;
 	    mul_in_tdata : std_logic_vector(63 downto 0);
-	    mul_in_tuser : std_logic_vector(5 downto 0);
+	    mul_in_tuser : std_logic_vector(alu_mul_tuser_length-1 downto 0);
 	
 	    multu_in_tvalid : std_logic;
 	    multu_in_tdata : std_logic_vector(63 downto 0);
@@ -420,7 +447,7 @@ package mips_utils is
 	
 	    mul_out_tvalid : std_logic;
 	    mul_out_tdata : std_logic_vector(63 downto 0);
-	    mul_out_tuser : std_logic_vector(5 downto 0);
+	    mul_out_tuser : std_logic_vector(alu_mul_tuser_length-1 downto 0);
 	
 	    multu_out_tvalid : std_logic;
 	    multu_out_tdata : std_logic_vector(63 downto 0);
@@ -603,6 +630,21 @@ package body mips_utils is
 		variable vresult : std_logic_vector(alu_shr_tuser_length-1 downto 0);
 	begin
 		vresult(6) := tuser.arithmetic;
+		vresult(5 downto 0) := tuser.rd;
+		return vresult;
+	end function;
+	
+	function slv_to_mul_tuser(data : std_logic_vector) return alu_mul_tuser_t is
+		variable vresult : alu_mul_tuser_t;
+	begin
+		vresult.use_hilo := data(6);
+		vresult.rd := data(5 downto 0);
+		return vresult;
+	end function;
+	function mul_tuser_to_slv(tuser : alu_mul_tuser_t) return std_logic_vector is
+		variable vresult : std_logic_vector(alu_mul_tuser_length-1 downto 0);
+	begin
+		vresult(6) := tuser.use_hilo;
 		vresult(5 downto 0) := tuser.rd;
 		return vresult;
 	end function;

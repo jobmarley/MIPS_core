@@ -15,13 +15,16 @@ entity mips_writeback is
 	register_port_out_a : in register_port_out_t;
 	register_port_in_b : out register_port_in_t;
 	register_port_out_b : in register_port_out_t;
+	register_port_in_c : out register_port_in_t;
+	register_port_out_c : in register_port_out_t;
+	
+	register_hilo_in : out hilo_register_port_in_t;
 	
 	-- fetch
 	fetch_override_address : out std_logic_vector(31 downto 0);
 	fetch_override_address_valid : out std_logic;
 	fetch_skip_jump : out std_logic;
 	fetch_execute_delay_slot : out std_logic
-	
 	);
 end mips_writeback;
 
@@ -29,11 +32,13 @@ architecture mips_writeback_behavioral of mips_writeback is
 	signal add_tuser : alu_add_out_tuser_t;
 	signal cmp_tuser : alu_cmp_tuser_t;
 	signal cmp_result : std_logic;
+	signal mul_tuser : alu_mul_tuser_t;
 begin
 	cmp_result <= alu_out_ports.cmp_out_tdata(0);
 	
 	add_tuser <= slv_to_add_out_tuser(alu_out_ports.add_out_tuser);
 	cmp_tuser <= slv_to_cmp_tuser(alu_out_ports.cmp_out_tuser);
+	mul_tuser <= slv_to_mul_tuser(alu_out_ports.mul_out_tuser);
 	
 	register_port_in_a.address <= '0' & alu_out_ports.add_out_tuser(4 downto 0) when alu_out_ports.add_out_tvalid = '1' else '0' & alu_out_ports.sub_out_tuser(4 downto 0);
 	register_port_in_a.write_enable <= (alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store and not add_tuser.branch) or alu_out_ports.sub_out_tvalid;
@@ -41,10 +46,28 @@ begin
 	register_port_in_a.write_strobe <= x"F";
 	register_port_in_a.write_pending <= '0';
 	
+	register_port_in_c.address <= '0' & alu_out_ports.mul_out_tuser(4 downto 0);
+	register_port_in_c.write_enable <= not mul_tuser.use_hilo and alu_out_ports.mul_out_tvalid;
+	register_port_in_c.write_data <= alu_out_ports.mul_out_tdata(31 downto 0);
+	register_port_in_c.write_strobe <= x"F";
+	register_port_in_c.write_pending <= '0';
+	
 	fetch_override_address <= alu_out_ports.add_out_tdata(31 downto 0);
 	fetch_override_address_valid <= ((cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch and add_tuser.branch) or add_tuser.jump) and alu_out_ports.add_out_tvalid;
 	fetch_skip_jump <= not cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
 	fetch_execute_delay_slot <= (not cmp_tuser.likely or cmp_result) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
+	
+	-- no need to synchronize that, cause readreg will stall if hi/lo is pending
+	register_hilo_in.write_data <= alu_out_ports.div_out_tdata(31 downto 0) & alu_out_ports.div_out_tdata(63 downto 32) when alu_out_ports.div_out_tvalid = '1'
+		else alu_out_ports.divu_out_tdata(31 downto 0) & alu_out_ports.divu_out_tdata(63 downto 32) when alu_out_ports.divu_out_tvalid = '1'
+		else alu_out_ports.mul_out_tdata when alu_out_ports.mul_out_tvalid = '1'
+		else alu_out_ports.multu_out_tdata;
+	register_hilo_in.write_enable <= (alu_out_ports.mul_out_tvalid and mul_tuser.use_hilo)
+		or alu_out_ports.multu_out_tvalid
+		or alu_out_ports.div_out_tvalid
+		or alu_out_ports.divu_out_tvalid;
+	register_hilo_in.write_pending <= '0';
+	register_hilo_in.write_strobe <= "11";
 	
 	process(clock)
 	begin

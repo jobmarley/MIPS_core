@@ -19,6 +19,18 @@ def random_int(bitsize):
 	return random.randint(-(1 << (bitsize - 1)), (1 << (bitsize - 1)) - 1)
 def random_uint(bitsize):
 	return random.randint(0, (1 << bitsize) - 1)
+
+def random_int_nonzero(bitsize):
+	r = 0
+	while r == 0:
+		r = random_int(bitsize)
+	return r
+def random_uint_nonzero(bitsize):
+	r = 0
+	while r == 0:
+		r = random_uint(bitsize)
+	return r
+
 def random_uint32():
 	return random_uint(32)
 def random_int16():
@@ -56,8 +68,14 @@ class instruction_builder:
 	def add_check_reg(self, reg, value):
 		self.add_command('CHECK_REG {:08X} {:08X}'.format(reg, value))
 
+	def add_check_hilo(self, value):
+		self.add_command('CHECK_HILO {:08X} {:08X}'.format((value >> 32) & 0xFFFFFFFF, value & 0xFFFFFFFF))
+		
 	def add_write_reg(self, reg, value):
 		self.add_command('WRITE_REG {:08X} {:08X}'.format(reg, value))
+
+	def add_write_hilo(self, value):
+		self.add_command('WRITE_HILO {:08X} {:08X}'.format((value >> 32) & 0xFFFFFFFF, value & 0xFFFFFFFF))
 
 	def add_command(self, cmd):
 		self.test_commands.append(cmd)
@@ -138,8 +156,41 @@ def check_op_2reg_imm(instr, builder, registers, imm, f):
 	e = e & 0xFFFFFFFF
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
-
 	
+# same as check_op_3reg but target is hilo, [hilo] = f([r1], [r2], [hilo])
+def check_op_2reg_hilo(instr, builder, registers, reghilo, f, syntax = '{} ${}, ${}'):
+	r = random_register(2)
+	builder.add_instruction(syntax.format(instr, *r))
+	e = f(registers[r[0]], registers[r[1]], reghilo)
+	e = to_unsigned(e, 64)
+	e = e & 0xFFFFFFFFFFFFFFFF
+	builder.add_check_hilo(e)
+	builder.add_write_hilo(reghilo)
+
+# same but result is a tuple (hi, lo)
+def check_op_2reg_hilo2(instr, builder, registers, reghilo, f, syntax = '{} ${}, ${}'):
+	r = random_register(2)
+	builder.add_instruction(syntax.format(instr, *r))
+	e = f(registers[r[0]], registers[r[1]], reghilo)
+	e = to_unsigned(e[0], 32) & to_unsigned(e[1], 32)
+	e = e & 0xFFFFFFFFFFFFFFFF
+	builder.add_check_hilo(e)
+	builder.add_write_hilo(reghilo)
+
+# the registers values are given, this is to avoid corner cases with div by zero etc..
+def check_op_2reg_nonrand_hilo2(instr, builder, registers, r1, r2, reghilo, f, syntax = '{} ${}, ${}'):
+	r = random_register(2)
+	builder.add_write_reg(r[0], to_unsigned(r1, 32))
+	builder.add_write_reg(r[1], to_unsigned(r2, 32))
+	builder.add_instruction(syntax.format(instr, *r))
+	e = f(r1, r2, reghilo)
+	e = (to_unsigned(e[0], 32) << 32) | to_unsigned(e[1], 32)
+	e = e & 0xFFFFFFFFFFFFFFFF
+	builder.add_check_hilo(e)
+	builder.add_write_hilo(reghilo)
+	builder.add_write_reg(r[0], registers[r[0]])
+	builder.add_write_reg(r[1], registers[r[1]])
+
 # [rdest] = f(v, [rdest])
 def check_op_1reg_imm(instr, builder, registers, v, f, syntax = '{} ${}, {}'):
 	r = random_register_non_zero()
@@ -184,8 +235,10 @@ def generate_commands():
 	# initialize registers with random values
 	registers = generate_register_values()
 	registers[0] = 0
+	register_hilo = random_int(64)
 	for i in range(1, 32):
 		builder.add_write_reg(i, registers[i])
+	builder.add_write_hilo(register_hilo)
 		
 	ram = generate_memory_values(1024)
 
@@ -207,6 +260,17 @@ def generate_commands():
 	check_op_3reg('sra', builder, registers, lambda x, y, z: ((x >> (y & 0x1F)) | ((0xFFFFFFFF if x >= 0x80000000 else 0) << (32 - (y & 0x1F)))) & 0xFFFFFFFF)
 	check_op_3reg('slt', builder, registers, lambda x, y, z: 1 if unsigned_to_signed(x, 32) < unsigned_to_signed(y, 32) else 0)
 	check_op_3reg('sltu', builder, registers, lambda x, y, z: 1 if x < y else 0)
+	check_op_3reg('mul', builder, registers, lambda x, y, z: unsigned_to_signed(x, 32) * unsigned_to_signed(y, 32))
+	check_op_2reg_hilo('mult', builder, registers, register_hilo, lambda x, y, z: unsigned_to_signed(x, 32) * unsigned_to_signed(y, 32))
+	check_op_2reg_hilo('multu', builder, registers, register_hilo, lambda x, y, z: x * y)
+	# llvm requires $0 as dest for normal div
+	# Otherwise it matches a pseudo instruction "$rs = div $rs, $rt" where result is a GPR
+	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(32), register_hilo, lambda x, y, z: (unsigned_to_signed(x, 32) % unsigned_to_signed(y, 32), unsigned_to_signed(x, 32) // unsigned_to_signed(y, 32)), '{} $0, ${}, ${}')
+	check_op_2reg_nonrand_hilo2('divu', builder, registers, random_uint(32), random_uint_nonzero(32), register_hilo, lambda x, y, z: (x % y, x // y), '{} $0, ${}, ${}')
+	# test with smaller divisor value (otherwise we always get result 0 or 1)
+	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(16), register_hilo, lambda x, y, z: (unsigned_to_signed(x, 32) % unsigned_to_signed(y, 32), unsigned_to_signed(x, 32) // unsigned_to_signed(y, 32)), '{} $0, ${}, ${}')
+	check_op_2reg_nonrand_hilo2('divu', builder, registers, random_uint(32), random_uint_nonzero(16), register_hilo, lambda x, y, z: (x % y, x // y), '{} $0, ${}, ${}')
+	
 	check_op_2reg_i16('addi', builder, registers, lambda x, y, z: x + y)
 	check_op_2reg_i16('sub', builder, registers, lambda x, y, z: x - y)
 	check_op_2reg_i16('subu', builder, registers, lambda x, y, z: x - sign_extend(y, 16, 32))
@@ -234,7 +298,7 @@ def generate_commands():
 		
 def clang_compile(filepath, outpath):
 	print('compiling {}...'.format(filepath, outpath))
-	err = subprocess.call([clang_path, '-c',  '--target=mipsel', filepath, '-o', outpath])
+	err = subprocess.call([clang_path, '-c', '--target=mipsel', '-mips32', filepath, '-o', outpath])
 	if err != 0:
 		print('clang compilation failed with code {}'.format(err))
 		exit(err)

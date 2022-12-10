@@ -92,6 +92,9 @@ architecture core_test_behavioral of core_test is
 		register_port_in_a : in register_port_in_t;
 		register_port_out_a : out register_port_out_t;
 		
+		register_hilo_in : in hilo_register_port_in_t;
+		register_hilo_out : out hilo_register_port_out_t;
+	
 		-- memory port b
 		m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
 		m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -244,6 +247,8 @@ architecture core_test_behavioral of core_test is
 	
 	signal register_port_in_a : register_port_in_t;
 	signal register_port_out_a : register_port_out_t;
+	signal register_hilo_in : hilo_register_port_in_t;
+	signal register_hilo_out : hilo_register_port_out_t;
 	
 	-- fetch
 	signal fetch_instruction_address_plus_8 : std_logic_vector(31 downto 0);
@@ -328,6 +333,33 @@ architecture core_test_behavioral of core_test is
 		end if;
 	end procedure;
 	
+	procedure check_hilo_value(data : std_logic_vector; signal pin : out hilo_register_port_in_t; signal pout : in hilo_register_port_out_t; variable success : out BOOLEAN) is
+	begin
+		pin.write_enable <= '0';
+		wait for clock_period;
+		if pout.pending = '0' then
+			wait until pout.pending = '1' for 50*clock_period;
+		end if;
+		if pout.pending = '1' then
+			wait until pout.pending = '0' for 50*clock_period;
+		end if;
+		
+		-- if pending is still '1' after 10 clocks, its an error
+		if pout.pending /= '0' then
+			report "check_hilo_value pending timed out" severity ERROR;
+			success := FALSE;
+			return;
+		end if;
+		
+		wait for clock_period;
+		if pout.data = data then
+			success := TRUE;
+		else
+			success := FALSE;
+			report "check_hilo_value failed, expected " & hex(unsigned(data), 64) & ", got " & hex(unsigned(pout.data), 64);
+		end if;
+	end procedure;
+	
 	procedure write_register(r : std_logic_vector; data : std_logic_vector; signal p : out register_port_in_t) is
 	begin
 		p.address <= r;
@@ -335,6 +367,16 @@ architecture core_test_behavioral of core_test is
 		p.write_enable <= '1';
 		p.write_pending <= '0';
 		p.write_strobe <= x"F";
+		wait for clock_period;
+		p.write_enable <= '0';
+	end procedure;
+	
+	procedure write_hilo(data : std_logic_vector; signal p : out hilo_register_port_in_t) is
+	begin
+		p.write_data <= data;
+		p.write_enable <= '1';
+		p.write_pending <= '0';
+		p.write_strobe <= "11";
 		wait for clock_period;
 		p.write_enable <= '0';
 	end procedure;
@@ -361,9 +403,9 @@ begin
 	
 	process
 		-- filepaths are relative to the core_test_proj.sim\sim_1\behav\xsim folder
-		file f : text open read_mode is "../../../../../instruction_test_commands.txt";
+		file f : text open read_mode is "../../../../instruction_test_commands.txt";
 		variable l : line;
-		file f2 : text open read_mode is "../../../../../instruction_test_asm.asm";
+		file f2 : text open read_mode is "../../../../instruction_test_asm.asm";
 		variable l2 : line;
 		
 		variable parts : line_array_ptr_t;
@@ -371,6 +413,7 @@ begin
 		variable instr_data : std_logic_vector(31 downto 0);
 		variable expected_reg : std_logic_vector(5 downto 0);
 		variable expected_data : std_logic_vector(31 downto 0);
+		variable expected_data_hilo : std_logic_vector(63 downto 0);
 		variable iline : NATURAL := 0;
 		variable success : BOOLEAN;
 	begin		
@@ -396,6 +439,19 @@ begin
 				instr_data := std_logic_vector(itmp);
 				send_instruction(instr_data, fetch_data_in, fetch_data_out);
 				READLINE(f2,l2);
+			elsif parts(0)(parts(0)'range) = "CHECK_HILO" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				expected_data_hilo(63 downto 32) := std_logic_vector(itmp);
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				expected_data_hilo(31 downto 0) := std_logic_vector(itmp);
+				check_hilo_value(expected_data_hilo, register_hilo_in, register_hilo_out, success);
+				assert success report "CHECK_HILO failed for instruction " & l2(l2'range) severity FAILURE;
+			elsif parts(0)(parts(0)'range) = "WRITE_HILO" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				expected_data_hilo(63 downto 32) := std_logic_vector(itmp);
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				expected_data_hilo(31 downto 0) := std_logic_vector(itmp);
+				write_hilo(expected_data_hilo, register_hilo_in);
 			elsif parts(0)(parts(0)'range) = "CHECK_REG" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				expected_reg := std_logic_vector(itmp(5 downto 0));
@@ -428,6 +484,8 @@ begin
 	
 		register_port_in_a => register_port_in_a,
 		register_port_out_a => register_port_out_a,
+		register_hilo_in => register_hilo_in,
+		register_hilo_out => register_hilo_out,
 		
 		m_axi_memb_araddr => m_axi_memb_araddr,
 		m_axi_memb_arburst => m_axi_memb_arburst,

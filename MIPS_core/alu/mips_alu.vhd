@@ -34,14 +34,23 @@ architecture mips_alu_behavioral of mips_alu is
 	signal add_sub_select : std_logic; -- 1 for add, 0 for sub
 	signal add_sub_ce : std_logic;
 	
-	signal add_result_pending : std_logic;
-	signal add_result_pending_next : std_logic;
-	signal add_tuser_reg : std_logic_vector(in_ports.add_in_tuser'LENGTH-1 downto 0);
-	signal add_tuser_reg_next : std_logic_vector(in_ports.add_in_tuser'LENGTH-1 downto 0);
-	signal sub_result_pending : std_logic;
-	signal sub_result_pending_next : std_logic;
-	signal sub_tuser_reg : std_logic_vector(in_ports.sub_in_tuser'LENGTH-1 downto 0);
-	signal sub_tuser_reg_next : std_logic_vector(in_ports.sub_in_tuser'LENGTH-1 downto 0);
+	type add_sh_reg_rec is record
+		tuser : std_logic_vector(in_ports.add_in_tuser'LENGTH-1 downto 0);
+		valid : std_logic;
+	end record;
+	type add_sh_reg_t is array(NATURAL range <>) of add_sh_reg_rec;
+	type sub_sh_reg_rec is record
+		tuser : std_logic_vector(in_ports.sub_in_tuser'LENGTH-1 downto 0);
+		valid : std_logic;
+	end record;
+	type sub_sh_reg_t is array(NATURAL range <>) of sub_sh_reg_rec;
+	
+	constant addsub_pipeline_length : NATURAL := 2;
+	
+	signal add_sh_reg : add_sh_reg_t(addsub_pipeline_length-1 downto 0);
+	signal add_sh_reg_next : add_sh_reg_t(addsub_pipeline_length-1 downto 0);
+	signal sub_sh_reg : sub_sh_reg_t(addsub_pipeline_length-1 downto 0);
+	signal sub_sh_reg_next : sub_sh_reg_t(addsub_pipeline_length-1 downto 0);
 	COMPONENT mult_gen_0
 	  PORT (
 		CLK : IN STD_LOGIC;
@@ -79,14 +88,11 @@ architecture mips_alu_behavioral of mips_alu is
 		aclk : IN STD_LOGIC;
 		aresetn : IN STD_LOGIC;
 		s_axis_divisor_tvalid : IN STD_LOGIC;
-		s_axis_divisor_tready : OUT STD_LOGIC;
 		s_axis_divisor_tdata : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
 		s_axis_dividend_tvalid : IN STD_LOGIC;
-		s_axis_dividend_tready : OUT STD_LOGIC;
 		s_axis_dividend_tuser : IN STD_LOGIC_VECTOR(5 DOWNTO 0);
 		s_axis_dividend_tdata : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
 		m_axis_dout_tvalid : OUT STD_LOGIC;
-		m_axis_dout_tready : IN STD_LOGIC;
 		m_axis_dout_tuser : OUT STD_LOGIC_VECTOR(5 DOWNTO 0);
 		m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(63 DOWNTO 0)
 	  );
@@ -95,19 +101,25 @@ architecture mips_alu_behavioral of mips_alu is
 	signal mul_ce : std_logic;
 	
 	type mul_sh_reg_rec is record
+		tuser : alu_mul_tuser_t;
+		valid : std_logic;
+	end record;
+	
+	type multu_sh_reg_rec is record
 		tuser : std_logic_vector(5 downto 0);
 		valid : std_logic;
 	end record;
 	
 	type mul_sh_reg_t is array(NATURAL range <>) of mul_sh_reg_rec;
+	type multu_sh_reg_t is array(NATURAL range <>) of multu_sh_reg_rec;
 	
 	constant MUL_PIPELINE_LENGTH : NATURAL := 5;
 	signal mul_sh_reg : mul_sh_reg_t(MUL_PIPELINE_LENGTH-1 downto 0);
 	signal mul_sh_reg_next : mul_sh_reg_t(MUL_PIPELINE_LENGTH-1 downto 0);
 	
 	signal multu_ce : std_logic;
-	signal multu_sh_reg : mul_sh_reg_t(MUL_PIPELINE_LENGTH-1 downto 0);
-	signal multu_sh_reg_next : mul_sh_reg_t(MUL_PIPELINE_LENGTH-1 downto 0);
+	signal multu_sh_reg : multu_sh_reg_t(MUL_PIPELINE_LENGTH-1 downto 0);
+	signal multu_sh_reg_next : multu_sh_reg_t(MUL_PIPELINE_LENGTH-1 downto 0);
 	signal multu_result : std_logic_vector(63 downto 0);
 	
 	COMPONENT xbip_multadd_0
@@ -250,10 +262,8 @@ begin
 	process (clock) is
 	begin
 		if rising_edge(clock) then
-			add_result_pending <= add_result_pending_next;
-			add_tuser_reg <= add_tuser_reg_next;
-			sub_result_pending <= sub_result_pending_next;
-			sub_tuser_reg <= sub_tuser_reg_next;
+			add_sh_reg <= add_sh_reg_next;
+			sub_sh_reg <= sub_sh_reg_next;
 			
 			mul_sh_reg <= mul_sh_reg_next;
 			multu_sh_reg <= multu_sh_reg_next;
@@ -298,10 +308,8 @@ begin
 			
 		in_ports,
 					
-		add_result_pending,
-		add_tuser_reg,
-		sub_result_pending,
-		sub_tuser_reg,
+		add_sh_reg,
+		sub_sh_reg,
 			
 		add_sub_carry,
 		add_sub_op_c
@@ -310,47 +318,43 @@ begin
 		add_sub_op_a <= (others => '0');
 		add_sub_op_b <= (others => '0');
 		add_sub_select <= '1';
-		add_sub_ce <= '0';
+		add_sub_ce <= '1';
 			
-		out_ports.add_out_tvalid <= add_result_pending;
-		out_ports.sub_out_tvalid <= sub_result_pending;
+		out_ports.add_out_tvalid <= add_sh_reg(add_sh_reg'HIGH).valid;
+		out_ports.sub_out_tvalid <= sub_sh_reg(sub_sh_reg'HIGH).valid;
 			
 		out_ports.add_out_tdata <= add_sub_carry & add_sub_op_c;
 		out_ports.sub_out_tdata <= add_sub_carry & add_sub_op_c;
 			
-		out_ports.add_out_tuser <= add_tuser_reg;
-		out_ports.sub_out_tuser <= sub_tuser_reg;
+		out_ports.add_out_tuser <= add_sh_reg(add_sh_reg'HIGH).tuser;
+		out_ports.sub_out_tuser <= sub_sh_reg(sub_sh_reg'HIGH).tuser;
 			
-		add_result_pending_next <= add_result_pending;
-		add_tuser_reg_next <= add_tuser_reg;
-		sub_result_pending_next <= sub_result_pending;
-		sub_tuser_reg_next <= sub_tuser_reg;
+		add_sh_reg_next <= add_sh_reg;
+		sub_sh_reg_next <= sub_sh_reg;
 		
 		if resetn = '0' then
-			add_result_pending_next <= '0';
-			add_tuser_reg_next <= (others => '0');
-			sub_result_pending_next <= '0';
-			sub_tuser_reg_next <= (others => '0');
+			add_sh_reg_next <= (others => (tuser => (others => '0'), valid => '1'));
+			sub_sh_reg_next <= (others => (tuser => (others => '0'), valid => '1'));
 		elsif enable = '1' then
-			add_result_pending_next <= in_ports.add_in_tvalid;
-			add_tuser_reg_next <= add_tuser_reg;
-			sub_result_pending_next <= in_ports.sub_in_tvalid and not in_ports.add_in_tvalid;
-			sub_tuser_reg_next <= sub_tuser_reg;
+			add_sh_reg_next(add_sh_reg_next'HIGH downto 1) <= add_sh_reg(add_sh_reg'HIGH-1 downto 0);
+			add_sh_reg_next(0).tuser <= (others => '0');
+			add_sh_reg_next(0).valid <= '0';
+			sub_sh_reg_next(sub_sh_reg_next'HIGH downto 1) <= sub_sh_reg(sub_sh_reg'HIGH-1 downto 0);
+			sub_sh_reg_next(0).tuser <= (others => '0');
+			sub_sh_reg_next(0).valid <= '0';
 			
 			if in_ports.add_in_tvalid = '1' then
 				add_sub_op_a <= in_ports.add_in_tdata(31 downto 0);
 				add_sub_op_b <= in_ports.add_in_tdata(63 downto 32);
 				add_sub_select <= '1';
-				add_sub_ce <= '1';
-				add_tuser_reg_next <= in_ports.add_in_tuser;
-				add_result_pending_next <= '1';
+				add_sh_reg_next(0).tuser <= in_ports.add_in_tuser;
+				add_sh_reg_next(0).valid <= '1';
 			elsif in_ports.sub_in_tvalid = '1' then
 				add_sub_op_a <= in_ports.sub_in_tdata(31 downto 0);
 				add_sub_op_b <= in_ports.sub_in_tdata(63 downto 32);
 				add_sub_select <= '0';
-				add_sub_ce <= '1';
-				sub_tuser_reg_next <= in_ports.sub_in_tuser;
-				sub_result_pending_next <= '1';
+				sub_sh_reg_next(0).tuser <= in_ports.sub_in_tuser;
+				sub_sh_reg_next(0).valid <= '1';
 			end if;
 				
 		end if;
@@ -375,19 +379,17 @@ begin
 			out_ports.mul_out_tvalid <= '0';
 			out_ports.mul_out_tuser <= (others => '0');
 			for i in 0 to mul_sh_reg'HIGH loop
-				mul_sh_reg_next(i).tuser <= (others => '0');
+				mul_sh_reg_next(i).tuser <= (rd => (others => '0'), use_hilo => '0');
 				mul_sh_reg_next(i).valid <= '0';
 			end loop;
 		elsif enable = '1' then
 			
 			mul_ce <= '1';
-			out_ports.mul_out_tuser <= mul_sh_reg(mul_sh_reg'HIGH).tuser;
+			out_ports.mul_out_tuser <= mul_tuser_to_slv(mul_sh_reg(mul_sh_reg'HIGH).tuser);
 			out_ports.mul_out_tvalid <= mul_sh_reg(mul_sh_reg'HIGH).valid;
 				
-			for i in 0 to mul_sh_reg'HIGH-1 loop
-				mul_sh_reg_next(i + 1) <= mul_sh_reg(i);
-			end loop;
-			mul_sh_reg_next(0).tuser <= in_ports.mul_in_tuser;
+			mul_sh_reg_next(mul_sh_reg_next'HIGH downto 1) <= mul_sh_reg(mul_sh_reg'HIGH-1 downto 0);
+			mul_sh_reg_next(0).tuser <= slv_to_mul_tuser(in_ports.mul_in_tuser);
 			mul_sh_reg_next(0).valid <= in_ports.mul_in_tvalid;
 		end if;
 	end process;
@@ -429,93 +431,93 @@ begin
 		end if;
 	end process;
 		
-	process (
-		enable,
-		resetn,
-		in_ports,
-		multadd_sh_reg,
-		multadd_c_shift_reg
-		)
-	begin
-		multadd_sh_reg_next <= multadd_sh_reg;
-		multadd_c_shift_reg_next <= multadd_c_shift_reg;
-		multadd_ce <= '0';
-		out_ports.multadd_out_tvalid <= '0';
-		out_ports.multadd_out_tuser <= (others => '0');
-			
-		if resetn = '0' then
-			multadd_ce <= '0';
-			out_ports.multadd_out_tvalid <= '0';
-			out_ports.multadd_out_tuser <= (others => '0');
-			for i in 0 to multadd_sh_reg'HIGH loop
-				multadd_sh_reg_next(i).tuser <= (others => '0');
-				multadd_sh_reg_next(i).valid <= '0';
-			end loop;
-			for i in 0 to multadd_c_shift_reg'HIGH loop
-				multadd_c_shift_reg_next(i) <= (others => '0');
-			end loop;
-		elsif enable = '1' then
-			
-			multadd_ce <= '1';
-			out_ports.multadd_out_tuser <= multadd_sh_reg(multadd_sh_reg'HIGH).tuser;
-			out_ports.multadd_out_tvalid <= multadd_sh_reg(multadd_sh_reg'HIGH).valid;
-		
-			for i in 0 to multadd_sh_reg'HIGH-1 loop
-				multadd_sh_reg_next(i + 1) <= multadd_sh_reg(i);
-			end loop;
-			multadd_sh_reg_next(0).tuser <= in_ports.multadd_in_tuser;
-			multadd_sh_reg_next(0).valid <= in_ports.multadd_in_tvalid;
-					
-			for i in 0 to multadd_c_shift_reg'HIGH-1 loop
-				multadd_c_shift_reg_next(i + 1) <= multadd_c_shift_reg(i);
-			end loop;
-			multadd_c_shift_reg_next(0) <= in_ports.multadd_in_tdata(127 downto 64);
-		end if;
-	end process;
-		
-	process (
-		enable,
-		resetn,
-		in_ports,
-		multaddu_sh_reg,
-		multaddu_c_shift_reg
-		)
-	begin
-		multaddu_sh_reg_next <= multaddu_sh_reg;
-		multaddu_c_shift_reg_next <= multaddu_c_shift_reg;
-		multaddu_ce <= '0';
-		out_ports.multaddu_out_tvalid <= '0';
-		out_ports.multaddu_out_tuser <= (others => '0');
-			
-		if resetn = '0' then
-			multaddu_ce <= '0';
-			out_ports.multaddu_out_tvalid <= '0';
-			out_ports.multaddu_out_tuser <= (others => '0');
-			for i in 0 to multaddu_sh_reg'HIGH loop
-				multaddu_sh_reg_next(i).tuser <= (others => '0');
-				multaddu_sh_reg_next(i).valid <= '0';
-			end loop;
-			for i in 0 to multaddu_c_shift_reg'HIGH loop
-				multaddu_c_shift_reg_next(i) <= (others => '0');
-			end loop;
-		elsif enable = '1' then
-			
-			multaddu_ce <= '1';
-			out_ports.multaddu_out_tuser <= multaddu_sh_reg(multaddu_sh_reg'HIGH).tuser;
-			out_ports.multaddu_out_tvalid <= multaddu_sh_reg(multaddu_sh_reg'HIGH).valid;
-		
-			for i in 0 to multaddu_sh_reg'HIGH-1 loop
-				multaddu_sh_reg_next(i + 1) <= multaddu_sh_reg(i);
-			end loop;
-			multaddu_sh_reg_next(0).tuser <= in_ports.multaddu_in_tuser;
-			multaddu_sh_reg_next(0).valid <= in_ports.multaddu_in_tvalid;
-					
-			for i in 0 to multaddu_c_shift_reg'HIGH-1 loop
-				multaddu_c_shift_reg_next(i + 1) <= multaddu_c_shift_reg(i);
-			end loop;
-			multaddu_c_shift_reg_next(0) <= in_ports.multaddu_in_tdata(127 downto 64);
-		end if;
-	end process;
+	--process (
+	--	enable,
+	--	resetn,
+	--	in_ports,
+	--	multadd_sh_reg,
+	--	multadd_c_shift_reg
+	--	)
+	--begin
+	--	multadd_sh_reg_next <= multadd_sh_reg;
+	--	multadd_c_shift_reg_next <= multadd_c_shift_reg;
+	--	multadd_ce <= '0';
+	--	out_ports.multadd_out_tvalid <= '0';
+	--	out_ports.multadd_out_tuser <= (others => '0');
+	--			
+	--	if resetn = '0' then
+	--		multadd_ce <= '0';
+	--		out_ports.multadd_out_tvalid <= '0';
+	--		out_ports.multadd_out_tuser <= (others => '0');
+	--		for i in 0 to multadd_sh_reg'HIGH loop
+	--			multadd_sh_reg_next(i).tuser <= (others => '0');
+	--			multadd_sh_reg_next(i).valid <= '0';
+	--		end loop;
+	--		for i in 0 to multadd_c_shift_reg'HIGH loop
+	--			multadd_c_shift_reg_next(i) <= (others => '0');
+	--		end loop;
+	--	elsif enable = '1' then
+	--			
+	--		multadd_ce <= '1';
+	--		out_ports.multadd_out_tuser <= multadd_sh_reg(multadd_sh_reg'HIGH).tuser;
+	--		out_ports.multadd_out_tvalid <= multadd_sh_reg(multadd_sh_reg'HIGH).valid;
+	--		
+	--		for i in 0 to multadd_sh_reg'HIGH-1 loop
+	--			multadd_sh_reg_next(i + 1) <= multadd_sh_reg(i);
+	--		end loop;
+	--		multadd_sh_reg_next(0).tuser <= in_ports.multadd_in_tuser;
+	--		multadd_sh_reg_next(0).valid <= in_ports.multadd_in_tvalid;
+	--					
+	--		for i in 0 to multadd_c_shift_reg'HIGH-1 loop
+	--			multadd_c_shift_reg_next(i + 1) <= multadd_c_shift_reg(i);
+	--		end loop;
+	--		multadd_c_shift_reg_next(0) <= in_ports.multadd_in_tdata(127 downto 64);
+	--	end if;
+	--end process;
+	--		
+	--process (
+	--	enable,
+	--	resetn,
+	--	in_ports,
+	--	multaddu_sh_reg,
+	--	multaddu_c_shift_reg
+	--	)
+	--begin
+	--	multaddu_sh_reg_next <= multaddu_sh_reg;
+	--	multaddu_c_shift_reg_next <= multaddu_c_shift_reg;
+	--	multaddu_ce <= '0';
+	--	out_ports.multaddu_out_tvalid <= '0';
+	--	out_ports.multaddu_out_tuser <= (others => '0');
+	--			
+	--	if resetn = '0' then
+	--		multaddu_ce <= '0';
+	--		out_ports.multaddu_out_tvalid <= '0';
+	--		out_ports.multaddu_out_tuser <= (others => '0');
+	--		for i in 0 to multaddu_sh_reg'HIGH loop
+	--			multaddu_sh_reg_next(i).tuser <= (others => '0');
+	--			multaddu_sh_reg_next(i).valid <= '0';
+	--		end loop;
+	--		for i in 0 to multaddu_c_shift_reg'HIGH loop
+	--			multaddu_c_shift_reg_next(i) <= (others => '0');
+	--		end loop;
+	--	elsif enable = '1' then
+	--			
+	--		multaddu_ce <= '1';
+	--		out_ports.multaddu_out_tuser <= multaddu_sh_reg(multaddu_sh_reg'HIGH).tuser;
+	--		out_ports.multaddu_out_tvalid <= multaddu_sh_reg(multaddu_sh_reg'HIGH).valid;
+	--		
+	--		for i in 0 to multaddu_sh_reg'HIGH-1 loop
+	--			multaddu_sh_reg_next(i + 1) <= multaddu_sh_reg(i);
+	--		end loop;
+	--		multaddu_sh_reg_next(0).tuser <= in_ports.multaddu_in_tuser;
+	--		multaddu_sh_reg_next(0).valid <= in_ports.multaddu_in_tvalid;
+	--					
+	--		for i in 0 to multaddu_c_shift_reg'HIGH-1 loop
+	--			multaddu_c_shift_reg_next(i + 1) <= multaddu_c_shift_reg(i);
+	--		end loop;
+	--		multaddu_c_shift_reg_next(0) <= in_ports.multaddu_in_tdata(127 downto 64);
+	--	end if;
+	--end process;
 		
 		
 	process (
@@ -715,38 +717,35 @@ begin
 		aclk => clock,
 		aresetn => resetn,
 		s_axis_divisor_tvalid => in_ports.div_in_tvalid,
-		s_axis_divisor_tdata => in_ports.div_in_tdata(31 downto 0),
+		s_axis_divisor_tdata => in_ports.div_in_tdata(63 downto 32),
 		s_axis_dividend_tvalid => in_ports.div_in_tvalid,
 		s_axis_dividend_tuser => in_ports.div_in_tuser,
-		s_axis_dividend_tdata => in_ports.div_in_tdata(63 downto 32),
+		s_axis_dividend_tdata => in_ports.div_in_tdata(31 downto 0),
 		m_axis_dout_tvalid => out_ports.div_out_tvalid,
 		m_axis_dout_tuser => out_ports.div_out_tuser,
 		m_axis_dout_tdata => out_ports.div_out_tdata
 	  );
-	--mult_i2 : mult_gen_1
-	--  PORT MAP (
-	--	CLK => clock,
-	--	A => multu_in_tdata(31 downto 0),
-	--	B => multu_in_tdata(63 downto 32),
-	--	CE => multu_ce,
-	--	P => multu_result
-	--  );
-	--div_i2 : div_gen_1
-	--  PORT MAP (
-	--	aclk => clock,
-	--	aresetn => resetn,
-	--	s_axis_divisor_tvalid => divu_in_tvalid,
-	--	s_axis_divisor_tready => divu_in_tready,
-	--	s_axis_divisor_tdata => divu_in_tdata(31 downto 0),
-	--	s_axis_dividend_tvalid => divu_in_tvalid,
-	--	--s_axis_dividend_tready => s_axis_dividend_tready,
-	--	s_axis_dividend_tuser => divu_in_tuser,
-	--	s_axis_dividend_tdata => divu_in_tdata(63 downto 32),
-	--	m_axis_dout_tvalid => divu_out_tvalid,
-	--	m_axis_dout_tready => divu_out_tready,
-	--	m_axis_dout_tuser => divu_out_tuser,
-	--	m_axis_dout_tdata => divu_out_tdata
-	--  );
+	mult_i2 : mult_gen_1
+	  PORT MAP (
+		CLK => clock,
+		A => in_ports.multu_in_tdata(31 downto 0),
+		B => in_ports.multu_in_tdata(63 downto 32),
+		CE => multu_ce,
+		P => multu_result
+	  );
+	div_i2 : div_gen_1
+	  PORT MAP (
+		aclk => clock,
+		aresetn => resetn,
+		s_axis_divisor_tvalid => in_ports.divu_in_tvalid,
+		s_axis_divisor_tdata => in_ports.divu_in_tdata(63 downto 32),
+		s_axis_dividend_tvalid => in_ports.divu_in_tvalid,
+		s_axis_dividend_tuser => in_ports.divu_in_tuser,
+		s_axis_dividend_tdata => in_ports.divu_in_tdata(31 downto 0),
+		m_axis_dout_tvalid => out_ports.divu_out_tvalid,
+		m_axis_dout_tuser => out_ports.divu_out_tuser,
+		m_axis_dout_tdata => out_ports.divu_out_tdata
+	  );
 			
 	--multadd_i : xbip_multadd_0
 	--  PORT MAP (

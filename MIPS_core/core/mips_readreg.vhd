@@ -29,6 +29,9 @@ entity mips_readreg is
 	register_port_in_d : out register_port_in_t;
 	register_port_out_d : in register_port_out_t;
 	
+	register_hilo_in : out hilo_register_port_in_t;
+	register_hilo_out : in hilo_register_port_out_t;
+	
 	-- alu
 	alu_in_ports : out alu_in_ports_t;
 	
@@ -90,6 +93,7 @@ architecture mips_readreg_behavioral of mips_readreg is
 	
 	signal alu_add_tuser : alu_add_out_tuser_t;
 	signal alu_cmp_tuser : alu_cmp_tuser_t;
+	signal alu_mul_tuser : alu_mul_tuser_t;
 	
 	function reorder(b : std_logic_vector; a : std_logic_vector; r : std_logic) return std_logic_vector is
 		ALIAS d1 : std_logic_vector(a'length-1 DOWNTO 0) is a;
@@ -120,9 +124,11 @@ begin
 	
 	stall <= stall_internal;
 	
-	register_a_pending_bypass <= register_a_written or register_port_out_a.pending;
+	register_a_pending_bypass <= register_hilo_out.pending when operation_reg.op_fromhilo = '1'
+		else register_a_written or register_port_out_a.pending;
 	register_b_pending_bypass <= register_b_written or register_port_out_b.pending;
-	register_c_pending_bypass <= register_c_written or register_port_out_c.pending;
+	register_c_pending_bypass <= register_hilo_out.pending when operation_reg.op_tohilo = '1'
+		else register_c_written or register_port_out_c.pending;
 	
 	-- /!\ when branch, add operands are always immediates, because registers are used by cmp
 	alu_in_ports.add_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b or operation_reg.op_branch) &
@@ -147,6 +153,28 @@ begin
 		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.sub_in_tvalid <= operation_reg.op_sub and not stall_internal;
 	alu_in_ports.sub_in_tuser <= register_c_reg;
+	
+	alu_in_ports.mul_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	alu_in_ports.mul_in_tvalid <= operation_reg.op_mul and not operation_reg.op_unsigned and not stall_internal;
+	alu_in_ports.mul_in_tuser <= mul_tuser_to_slv(alu_mul_tuser);
+	alu_mul_tuser.rd <= register_c_reg;
+	alu_mul_tuser.use_hilo <= operation_reg.op_hi or operation_reg.op_lo;
+	
+	alu_in_ports.multu_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	alu_in_ports.multu_in_tvalid <= operation_reg.op_mul and operation_reg.op_unsigned and not stall_internal;
+	alu_in_ports.multu_in_tuser <= register_c_reg;
+	
+	alu_in_ports.div_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	alu_in_ports.div_in_tvalid <= operation_reg.op_div and not operation_reg.op_unsigned and not stall_internal;
+	alu_in_ports.div_in_tuser <= register_c_reg;
+	
+	alu_in_ports.divu_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	alu_in_ports.divu_in_tvalid <= operation_reg.op_div and operation_reg.op_unsigned and not stall_internal;
+	alu_in_ports.divu_in_tuser <= register_c_reg;
 	
 	alu_in_ports.and_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
@@ -192,9 +220,25 @@ begin
 	alu_cmp_tuser.branch <= operation_reg.op_branch;
 	alu_cmp_tuser.likely <= operation_reg.op_branch_likely;
 	
+	register_hilo_in.write_data <= register_port_out_a.data & register_port_out_a.data;
+	register_hilo_in.write_strobe <= operation_reg.op_hi & operation_reg.op_lo;
+	register_hilo_in.write_pending <= '0';
+	register_hilo_in.write_enable <= operation_reg.op_tohilo and not stall_internal;
+	
 	override_address_valid <= '0';
 	override_address <= register_port_out_a.data;
 		
+	register_port_in_d.address <= register_c_reg;
+	register_port_in_d.write_data <= link_address_reg when (operation_reg.op_link = '1' and fast_cmp_result = '1')
+		else immediate_a_reg when operation_reg.op_immediate_a = '1'
+		else register_hilo_out.data(63 downto 32) when operation_reg.op_fromhilo = '1' and operation_reg.op_hi = '1'
+		else register_hilo_out.data(31 downto 0) when operation_reg.op_fromhilo = '1' and operation_reg.op_lo = '1'
+		else register_port_out_a.data;
+	register_port_in_d.write_strobe <= mov_strobe_reg;
+	register_port_in_d.write_pending <= '0' when operation_reg.op_mov = '1'
+		else not store_reg;
+	register_port_in_d.write_enable <= operation_valid_reg;
+	
 	--stall <= stall_reg;
 	
 	process(clock)
@@ -280,11 +324,6 @@ begin
 		register_port_in_c.write_data <= (others => '0');
 		register_port_in_c.write_strobe <= (others => '0');
 		register_port_in_c.write_pending <= '0';
-		register_port_in_d.address <= register_c_reg;
-		register_port_in_d.write_enable <= '0';
-		register_port_in_d.write_data <= (others => '0');
-		register_port_in_d.write_strobe <= (others => '0');
-		register_port_in_d.write_pending <= '1';
 		
 		register_a_reg_next <= register_a_reg;
 		register_b_reg_next <= register_b_reg;
@@ -351,23 +390,7 @@ begin
 				mov_strobe_reg_next <= mov_strobe;
 				
 				-- write register pending for target register
-				register_port_in_d.address <= register_c_reg;
-				register_port_in_d.write_enable <= operation_valid_reg;
 				
-				-- OPERATION_INDEX_MOV is used to simply write a register
-				if operation_reg.op_mov = '1' then
-					if operation_reg.op_link = '1' and fast_cmp_result = '1' then
-						register_port_in_d.write_data <= link_address_reg;
-					elsif operation_reg.op_immediate_a = '1' then
-						register_port_in_d.write_data <= immediate_a_reg;
-					else
-						register_port_in_d.write_data <= register_port_out_a.data;
-					end if;
-					register_port_in_d.write_strobe <= mov_strobe_reg;
-					register_port_in_d.write_pending <= '0';
-				else
-					register_port_in_d.write_pending <= not store_reg;
-				end if;
 				target_register_address_next <= register_c_reg;
 				
 				-- register pending bypass, only when reg != $0

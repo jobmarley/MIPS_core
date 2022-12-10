@@ -161,7 +161,7 @@ begin
 		immediate_a_reg_next <= (others => '0');
 		immediate_b_reg_next <= (others => '0');
 		link_address_reg_next <= (others => '0');
-		mov_strobe_reg_next <= x"F";
+		mov_strobe_reg_next <= x"0";
 		
 		instr_data_ready <= '0';
 		panic <= '0';
@@ -202,10 +202,27 @@ begin
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_div_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_div <= '1';
+								operation_reg_next.op_hi <= '1';
+								operation_reg_next.op_lo <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_divu_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_div <= '1';
+								operation_reg_next.op_unsigned <= '1';
+								operation_reg_next.op_hi <= '1';
+								operation_reg_next.op_lo <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_mult_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mul <= '1';
+								operation_reg_next.op_hi <= '1';
+								operation_reg_next.op_lo <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -213,6 +230,8 @@ begin
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mul <= '1';
 								operation_reg_next.op_unsigned <= '1';
+								operation_reg_next.op_hi <= '1';
+								operation_reg_next.op_lo <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -305,6 +324,7 @@ begin
 								operation_reg_next.op_add <= '1';
 								operation_reg_next.op_jump <= '1';
 								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= "000000";
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -322,9 +342,33 @@ begin
 								wait_jump <= '1';
 							
 							when instr_mfhi_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_mov <= '1';
+								operation_reg_next.op_hi <= '1';
+								operation_reg_next.op_fromhilo <= '1';
+								register_c_reg_next <= '0' & instruction_data_r.rd;
+								mov_strobe_reg_next <= "1111";
 							when instr_mflo_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_mov <= '1';
+								operation_reg_next.op_lo <= '1';
+								operation_reg_next.op_fromhilo <= '1';
+								register_c_reg_next <= '0' & instruction_data_r.rd;
+								mov_strobe_reg_next <= "1111";
 							when instr_mthi_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_mov <= '1';
+								operation_reg_next.op_hi <= '1';
+								operation_reg_next.op_tohilo <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								mov_strobe_reg_next <= "1111";
 							when instr_mtlo_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_mov <= '1';
+								operation_reg_next.op_lo <= '1';
+								operation_reg_next.op_tohilo <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								mov_strobe_reg_next <= "1111";
 	
 							when instr_movn_opc.funct =>
 							when instr_movz_opc.funct =>
@@ -462,6 +506,7 @@ begin
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
@@ -480,6 +525,7 @@ begin
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_branch_likely <= '1';
 								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
@@ -519,6 +565,7 @@ begin
 								operation_reg_next.op_cmp_gez <= '1';
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
@@ -537,6 +584,7 @@ begin
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_branch_likely <= '1';
 								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
@@ -642,6 +690,7 @@ begin
 						override_address_reg_next <= instr_address(31 downto 28) & instruction_data_j.address & "00";
 						override_address_valid_reg_next <= '1';
 						operation_reg_next.op_mov <= '1';
+						mov_strobe_reg_next <= x"F";
 						register_a_reg_next <= "000000";
 						register_c_reg_next <= "011111";
 						immediate_a_reg_next <= instr_address_plus_8;

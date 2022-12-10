@@ -28,6 +28,9 @@ entity mips_core_internal is
 	register_port_in_a : in register_port_in_t;
 	register_port_out_a : out register_port_out_t;
 		
+	register_hilo_in : in hilo_register_port_in_t;
+	register_hilo_out : out hilo_register_port_out_t;
+	
 	-- memory port b
 	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
 	m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -143,15 +146,19 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	
 	component mips_registers is
 		generic (
-			port_type1_count : NATURAL
+			port_type1_count : NATURAL;
+			port_hilo_in_count : NATURAL;
+			port_hilo_out_count : NATURAL
 		);
 		port (
 			resetn : in std_logic;
 			clock : in std_logic;
 		
 			port_in : in register_port_in_array_t(port_type1_count-1 downto 0);
-			port_out : out register_port_out_array_t(port_type1_count-1 downto 0)
+			port_out : out register_port_out_array_t(port_type1_count-1 downto 0);
 	
+			hilo_in : in hilo_register_port_in_array_t(port_hilo_in_count-1 downto 0);
+			hilo_out : out hilo_register_port_out_array_t(port_hilo_out_count-1 downto 0)
 		);
 	end component;
 	
@@ -168,6 +175,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		register_port_out_a : in register_port_out_t;
 		register_port_in_b : out register_port_in_t;
 		register_port_out_b : in register_port_out_t;
+		register_port_in_c : out register_port_in_t;
+		register_port_out_c : in register_port_out_t;
+		register_hilo_in : out hilo_register_port_in_t;
 	
 		-- fetch
 		fetch_override_address : out std_logic_vector(31 downto 0);
@@ -301,6 +311,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		register_port_in_d : out register_port_in_t;
 		register_port_out_d : in register_port_out_t;
 	
+		register_hilo_in : out hilo_register_port_in_t;
+		register_hilo_out : in hilo_register_port_out_t;
+	
 		-- alu
 		alu_in_ports : out alu_in_ports_t;
 	
@@ -312,9 +325,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		stall : out std_logic
 		);
 	end component;
+		
 	
-	signal register_out : std_logic_vector(31 downto 0);
-	signal register_in : std_logic_vector(31 downto 0);
 	signal register_write : std_logic;
 	signal register_address : std_logic_vector(5 downto 0);
 	signal processor_enable : std_logic;
@@ -326,11 +338,14 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal readmem_error : std_logic;
 	
 	-- registers
-	constant register_port_count : NATURAL := 8;
+	constant register_port_count : NATURAL := 9;
+	constant register_hilo_in_count : NATURAL := 3;
+	constant register_hilo_out_count : NATURAL := 2;
 	signal register_port_out : register_port_out_array_t(register_port_count-1 downto 0);
 	signal register_port_in : register_port_in_array_t(register_port_count-1 downto 0);
-	
-	
+	signal register_hilo_in_internal : hilo_register_port_in_array_t(register_hilo_in_count-1 downto 0);
+	signal register_hilo_out_internal : hilo_register_port_out_array_t(register_hilo_out_count-1 downto 0);
+		
 	-- decode	
 	signal decode_register_a : std_logic_vector(5 downto 0);
 	signal decode_register_b : std_logic_vector(5 downto 0);
@@ -373,6 +388,8 @@ begin
 	
 	register_port_in(7) <= register_port_in_a;
 	register_port_out_a <= register_port_out(7);
+	register_hilo_in_internal(2) <= register_hilo_in;
+	register_hilo_out <= register_hilo_out_internal(1);
 	
 	fetch_override_address <= decode_override_address when decode_override_address_valid = '1'
 		else readreg_override_address when readreg_override_address_valid = '1'
@@ -406,6 +423,8 @@ begin
 		register_port_out_c => register_port_out(5),
 		register_port_in_d => register_port_in(6),
 		register_port_out_d => register_port_out(6),
+		register_hilo_in => register_hilo_in_internal(1),
+		register_hilo_out => register_hilo_out_internal(0),
 	
 		-- alu
 		alu_in_ports => alu_in_ports,
@@ -469,6 +488,10 @@ begin
 		register_port_out_a => register_port_out(1),
 		register_port_in_b => register_port_in(2),
 		register_port_out_b => register_port_out(2),
+		register_port_in_c => register_port_in(8),
+		register_port_out_c => register_port_out(8),
+	
+		register_hilo_in => register_hilo_in_internal(0),
 	
 		-- fetch
 		fetch_override_address => writeback_override_address,
@@ -479,13 +502,18 @@ begin
 	
 	mips_registers_i0 : mips_registers 
 		generic map(
-			port_type1_count => register_port_count
+			port_type1_count => register_port_count,
+			port_hilo_in_count => register_hilo_in_count,
+			port_hilo_out_count => register_hilo_out_count
 		)
 		port map(
 			resetn => resetn,
 			clock => clock,
 			port_in => register_port_in,
-			port_out => register_port_out
+			port_out => register_port_out,
+	
+			hilo_in => register_hilo_in_internal,
+			hilo_out => register_hilo_out_internal
 		);
 	mips_readmem_i0 : mips_readmem port map(
 		resetn => resetn,
