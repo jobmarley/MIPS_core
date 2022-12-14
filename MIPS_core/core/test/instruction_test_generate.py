@@ -211,6 +211,20 @@ def check_op_1reg_imm(instr, builder, registers, v, f, syntax = '{} ${}, {}'):
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
+# [r1] = v
+# [rdest] = f(v, [rdest])
+# [r1] = restore
+def check_op_1reg_1nonrand(instr, builder, registers, v, f, syntax = '{} ${}, ${}'):
+	r = random_register_non_zero(2)
+	builder.add_write_reg(r[1], to_unsigned(v, 32))
+	builder.add_instruction(syntax.format(instr, *r))
+	e = f(v, registers[r[0]])
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
+	builder.add_check_reg(r[0], e)
+	builder.add_write_reg(r[0], registers[r[0]])
+	builder.add_write_reg(r[1], registers[r[1]])
+
 # [rdest] = f([r1], v, [rdest])
 # write r with a random value before hand
 # r and v are generated such as aligned([r1] + v) is a valid address
@@ -279,6 +293,18 @@ def correct_signed_div(x, y):
         a = a - y
     return a, b
 
+def count_leading_one(x, size):
+	for i in range(0, size):
+		if (x >> size-1-i) & 1 == 0:
+			return i
+	return size
+
+def count_leading_zero(x, size):
+	for i in range(0, size):
+		if (x >> size-1-i) & 1 == 1:
+			return i
+	return size
+
 def generate_commands():
 	
 	builder = instruction_builder(instr_asm_filename, instr_cmd_filename)
@@ -335,6 +361,8 @@ def generate_commands():
 	# this is weird, operand is a signed 16bits, signed extended to 32 and compared to the other operand
 	check_op_2reg_imm('sltiu', builder, registers, random_int(16), lambda x, y, z: 1 if x < sign_extend(y, 16, 32) else 0)
 	check_op_1reg_imm('lui', builder, registers, random_uint(16), lambda y, z: (z & 0xFFFF) | (y << 16))
+	check_op_1reg_1nonrand('clo', builder, registers, invert(random_uint(random_uint(5)), 32), lambda y, z: count_leading_one(y, 32))
+	check_op_1reg_1nonrand('clz', builder, registers, random_uint(random_uint(5)), lambda y, z: count_leading_zero(y, 32))
 	
 	check_op_ram('lb', 1, builder, ram, registers, lambda x, y, z: sign_extend(get_ram(ram, x + y, 8), 8, 32))
 	check_op_ram('lbu', 1, builder, ram, registers, lambda x, y, z: get_ram(ram, x + y, 8))

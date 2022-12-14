@@ -408,7 +408,15 @@ begin
 							when instr_msub_opc.funct =>
 							when instr_msubu_opc.funct =>
 							when instr_clo_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_clo <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_clz_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_clz <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sdbbp_opc.funct =>
 							when others =>
 								panic <= '1';

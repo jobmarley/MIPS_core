@@ -85,7 +85,7 @@ begin
 		cmp_result
 		
 	)
-		variable andorxornor : std_logic_vector(6 downto 0);
+		variable andorxornor : std_logic_vector(8 downto 0);
 	begin
 		
 		register_port_in_b.address <= (others => '0');
@@ -100,51 +100,65 @@ begin
 			alu_out_ports.nor_out_tvalid &
 			alu_out_ports.shl_out_tvalid & 
 			alu_out_ports.shr_out_tvalid &
-			alu_out_ports.cmp_out_tvalid;
+			alu_out_ports.cmp_out_tvalid &
+			alu_out_ports.clo_out_tvalid &
+			alu_out_ports.clz_out_tvalid;
 		
 		if resetn = '0' then
 		else
 			
 			case (andorxornor) is
-				when "1000000" =>
+				when "100000000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.and_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.and_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
-				when "0100000" =>
+				when "010000000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.or_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.or_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
-				when "0010000" =>
+				when "001000000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.xor_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.xor_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
-				when "0001000" =>
+				when "000100000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.nor_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.nor_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
-				when "0000100" =>
+				when "000010000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.shl_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.shl_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
-				when "0000010" =>
+				when "000001000" =>
 					register_port_in_b.address <= '0' & alu_out_ports.shr_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.shr_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
-				when "0000001" =>
+				when "000000100" =>
 					register_port_in_b.address <= '0' & alu_out_ports.cmp_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= x"0000000" & "000" & cmp_result;
+					register_port_in_b.write_enable <= '1';
+					register_port_in_b.write_pending <= '0';
+					register_port_in_b.write_strobe <= x"F";
+				when "000000010" =>
+					register_port_in_b.address <= '0' & alu_out_ports.clo_out_tuser(4 downto 0);
+					register_port_in_b.write_data <= alu_out_ports.clo_out_tdata;
+					register_port_in_b.write_enable <= '1';
+					register_port_in_b.write_pending <= '0';
+					register_port_in_b.write_strobe <= x"F";
+				when "000000001" =>
+					register_port_in_b.address <= '0' & alu_out_ports.clz_out_tuser(4 downto 0);
+					register_port_in_b.write_data <= alu_out_ports.clz_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";

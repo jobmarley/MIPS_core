@@ -317,7 +317,9 @@ package mips_utils is
 		op_hi : std_logic;				-- use hi register
 		op_lo : std_logic;				-- use lo register
 		op_fromhilo : std_logic;
-		op_tohilo : std_logic;		
+		op_tohilo : std_logic;
+		op_clo : std_logic;
+		op_clz : std_logic;
 	end record;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
@@ -434,6 +436,14 @@ package mips_utils is
 	    cmp_in_tvalid : std_logic;
 	    cmp_in_tdata : std_logic_vector(63 downto 0);
 	    cmp_in_tuser : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
+	
+	    clo_in_tvalid : std_logic;
+	    clo_in_tdata : std_logic_vector(31 downto 0);
+	    clo_in_tuser : std_logic_vector(5 downto 0);
+	
+	    clz_in_tvalid : std_logic;
+	    clz_in_tdata : std_logic_vector(31 downto 0);
+	    clz_in_tuser : std_logic_vector(5 downto 0);
 	end record;
 	
 	type alu_out_ports_t is record
@@ -496,6 +506,14 @@ package mips_utils is
 	    cmp_out_tvalid : std_logic;
 	    cmp_out_tdata : std_logic_vector(0 downto 0);
 	    cmp_out_tuser : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
+	
+	    clo_out_tvalid : std_logic;
+	    clo_out_tdata : std_logic_vector(31 downto 0);
+	    clo_out_tuser : std_logic_vector(5 downto 0);
+	
+	    clz_out_tvalid : std_logic;
+	    clz_out_tdata : std_logic_vector(31 downto 0);
+	    clz_out_tuser : std_logic_vector(5 downto 0);
 	end record;
 	
 end package;

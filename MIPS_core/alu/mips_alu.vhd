@@ -215,6 +215,20 @@ architecture mips_alu_behavioral of mips_alu is
 	signal shr_out_tvalid_reg : std_logic;
 	signal shr_out_tvalid_reg_next : std_logic;
 		
+	signal clo_out_tdata_reg : std_logic_vector(31 downto 0);
+	signal clo_out_tdata_reg_next : std_logic_vector(31 downto 0);
+	signal clo_out_tuser_reg : std_logic_vector(in_ports.clo_in_tuser'LENGTH-1 downto 0);
+	signal clo_out_tuser_reg_next : std_logic_vector(in_ports.clo_in_tuser'LENGTH-1 downto 0);
+	signal clo_out_tvalid_reg : std_logic;
+	signal clo_out_tvalid_reg_next : std_logic;
+	
+	signal clz_out_tdata_reg : std_logic_vector(31 downto 0);
+	signal clz_out_tdata_reg_next : std_logic_vector(31 downto 0);
+	signal clz_out_tuser_reg : std_logic_vector(in_ports.clz_in_tuser'LENGTH-1 downto 0);
+	signal clz_out_tuser_reg_next : std_logic_vector(in_ports.clz_in_tuser'LENGTH-1 downto 0);
+	signal clz_out_tvalid_reg : std_logic;
+	signal clz_out_tvalid_reg_next : std_logic;
+	
 	function shift_right_arith(data : std_logic_vector; n : NATURAL) return std_logic_vector is
 		alias d : std_logic_vector(data'LENGTH-1 downto 0) is data;
 		variable result : std_logic_vector(data'LENGTH-1 downto 0) := data;
@@ -227,6 +241,29 @@ architecture mips_alu_behavioral of mips_alu is
 	
 	signal cmp_tuser : alu_cmp_tuser_t;
 	signal shr_tuser : alu_shr_tuser_t;
+	
+	
+	function count_leading_one(data : std_logic_vector) return NATURAL is
+		alias d : std_logic_vector(data'LENGTH-1 downto 0) is data;
+	begin
+		for i in 0 to d'HIGH loop
+			if data(d'HIGH - i) /= '1' then
+				return i;
+			end if;
+		end loop;
+		return d'HIGH;
+	end function;
+	
+	function count_leading_zero(data : std_logic_vector) return NATURAL is
+		alias d : std_logic_vector(data'LENGTH-1 downto 0) is data;
+	begin
+		for i in 0 to d'HIGH loop
+			if data(d'HIGH - i) /= '0' then
+				return i;
+			end if;
+		end loop;
+		return d'HIGH;
+	end function;
 begin
 	cmp_tuser <= slv_to_cmp_tuser(in_ports.cmp_in_tuser);
 	shr_tuser <= slv_to_shr_tuser(in_ports.shr_in_tuser);
@@ -258,6 +295,14 @@ begin
 	out_ports.cmp_out_tdata(0) <= cmp_result;
 	out_ports.cmp_out_tuser <= cmp_result_tuser;
 	out_ports.cmp_out_tvalid <= cmp_valid_reg;
+	
+	out_ports.clo_out_tvalid <= clo_out_tvalid_reg;
+	out_ports.clo_out_tdata <= clo_out_tdata_reg;
+	out_ports.clo_out_tuser <= clo_out_tuser_reg;
+	
+	out_ports.clz_out_tvalid <= clz_out_tvalid_reg;
+	out_ports.clz_out_tdata <= clz_out_tdata_reg;
+	out_ports.clz_out_tuser <= clz_out_tuser_reg;
 	
 	process (clock) is
 	begin
@@ -299,6 +344,14 @@ begin
 			shr_out_tdata_reg <= shr_out_tdata_reg_next;
 			shr_out_tuser_reg <= shr_out_tuser_reg_next;
 			shr_out_tvalid_reg <= shr_out_tvalid_reg_next;
+			
+			clo_out_tdata_reg <= clo_out_tdata_reg_next;
+			clo_out_tuser_reg <= clo_out_tuser_reg_next;
+			clo_out_tvalid_reg <= clo_out_tvalid_reg_next;
+			
+			clz_out_tdata_reg <= clz_out_tdata_reg_next;
+			clz_out_tuser_reg <= clz_out_tuser_reg_next;
+			clz_out_tvalid_reg <= clz_out_tvalid_reg_next;
 		end if;
 	end process;
 	
@@ -612,7 +665,14 @@ begin
 		shr_out_tdata_reg,
 		shr_out_tuser_reg,
 		shr_out_tvalid_reg,
-		shr_tuser
+		shr_tuser,
+		
+		clo_out_tdata_reg,
+		clo_out_tuser_reg,
+		clo_out_tvalid_reg,
+		clz_out_tdata_reg,
+		clz_out_tuser_reg,
+		clz_out_tvalid_reg
 		)
 	begin
 		and_out_tdata_reg_next <= and_out_tdata_reg;
@@ -639,6 +699,14 @@ begin
 		shr_out_tuser_reg_next <= shr_out_tuser_reg;
 		shr_out_tvalid_reg_next <= shr_out_tvalid_reg;
 					
+		clo_out_tdata_reg_next <= clo_out_tdata_reg;
+		clo_out_tuser_reg_next <= clo_out_tuser_reg;
+		clo_out_tvalid_reg_next <= clo_out_tvalid_reg;
+		
+		clz_out_tdata_reg_next <= clz_out_tdata_reg;
+		clz_out_tuser_reg_next <= clz_out_tuser_reg;
+		clz_out_tvalid_reg_next <= clz_out_tvalid_reg;
+		
 		if resetn = '0' then
 			and_out_tdata_reg_next <= (others => '0');
 			and_out_tuser_reg_next <= (others => '0');
@@ -663,6 +731,14 @@ begin
 			shr_out_tdata_reg_next <= (others => '0');
 			shr_out_tuser_reg_next <= (others => '0');
 			shr_out_tvalid_reg_next <= '0';
+			
+			clo_out_tdata_reg_next <= (others => '0');
+			clo_out_tuser_reg_next <= (others => '0');
+			clo_out_tvalid_reg_next <= '0';
+		
+			clz_out_tdata_reg_next <= (others => '0');
+			clz_out_tuser_reg_next <= (others => '0');
+			clz_out_tvalid_reg_next <= '0';
 		elsif enable = '1' then
 			and_out_tvalid_reg_next <= in_ports.and_in_tvalid;
 			and_out_tdata_reg_next <= in_ports.and_in_tdata(63 downto 32) and in_ports.and_in_tdata(31 downto 0);
@@ -691,6 +767,15 @@ begin
 				shr_out_tdata_reg_next <= in_ports.shr_in_tdata(31 downto 0) srl TO_INTEGER(UNSIGNED(in_ports.shr_in_tdata(36 downto 32)));
 			end if;
 			shr_out_tuser_reg_next <= in_ports.shr_in_tuser;
+			
+			clo_out_tdata_reg_next <= std_logic_vector(TO_UNSIGNED(count_leading_one(in_ports.clo_in_tdata), 32));
+			clo_out_tvalid_reg_next <= in_ports.clo_in_tvalid;
+			clo_out_tuser_reg_next <= in_ports.clo_in_tuser;
+		
+			clz_out_tdata_reg_next <= std_logic_vector(TO_UNSIGNED(count_leading_zero(in_ports.clz_in_tdata), 32));
+			clz_out_tvalid_reg_next <= in_ports.clz_in_tvalid;
+			clz_out_tuser_reg_next <= in_ports.clz_in_tuser;
+			
 		end if;
 	end process;
 	

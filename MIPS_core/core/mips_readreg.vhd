@@ -220,6 +220,14 @@ begin
 	alu_cmp_tuser.branch <= operation_reg.op_branch;
 	alu_cmp_tuser.likely <= operation_reg.op_branch_likely;
 	
+	alu_in_ports.clo_in_tdata <= select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	alu_in_ports.clo_in_tvalid <= operation_reg.op_clo and not stall_internal;
+	alu_in_ports.clo_in_tuser <= register_c_reg;
+	
+	alu_in_ports.clz_in_tdata <= select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
+	alu_in_ports.clz_in_tvalid <= operation_reg.op_clz and not stall_internal;
+	alu_in_ports.clz_in_tuser <= register_c_reg;
+	
 	register_hilo_in.write_data <= register_port_out_a.data & register_port_out_a.data;
 	register_hilo_in.write_strobe <= operation_reg.op_hi & operation_reg.op_lo;
 	register_hilo_in.write_pending <= '0';
