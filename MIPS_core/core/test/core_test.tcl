@@ -21,6 +21,7 @@ read_vhdl ../../alu/mips_alu.vhd
 read_vhdl ../mips_core_internal.vhd
 read_vhdl ./core_test.vhd
 read_vhdl ./test_utils.vhd
+read_vhdl ../cop0_registers.vhd
 
 import_ip ../../alu/c_addsub_0.xci
 import_ip ../../alu/c_addsub_1.xci

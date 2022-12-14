@@ -97,6 +97,9 @@ architecture core_test_behavioral of core_test is
 		register_hilo_in : in hilo_register_port_in_t;
 		register_hilo_out : out hilo_register_port_out_t;
 	
+		cop0_reg_port_in_a : in cop0_register_port_in_t;
+		cop0_reg_port_out_a : out cop0_register_port_out_t;
+	
 		-- memory port b
 		m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
 		m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -156,6 +159,9 @@ architecture core_test_behavioral of core_test is
 	signal register_hilo_in : hilo_register_port_in_t;
 	signal register_hilo_out : hilo_register_port_out_t;
 	
+	signal cop0_reg_port_in_a : cop0_register_port_in_t;
+	signal cop0_reg_port_out_a : cop0_register_port_out_t;
+	
 	-- fetch
 	signal fetch_instruction_address_plus_8 : std_logic_vector(31 downto 0);
 	signal fetch_instruction_address_plus_4 : std_logic_vector(31 downto 0);
@@ -211,31 +217,49 @@ architecture core_test_behavioral of core_test is
 		fdo.fetch_instruction_data_valid <= '0';
 	end procedure;
 	
-	procedure check_register_value(r : std_logic_vector; data : std_logic_vector; signal pin : out register_port_in_t; signal pout : in register_port_out_t; variable success : out BOOLEAN) is
+	procedure check_register_value(r : std_logic_vector; data : std_logic_vector;
+		signal pin : out register_port_in_t;
+		signal pout : in register_port_out_t;
+		signal pc0in : out cop0_register_port_in_t;
+		signal pc0out : in cop0_register_port_out_t;
+		variable success : out BOOLEAN) is
 	begin
-		pin.address <= r;
-		pin.write_enable <= '0';
-		wait for clock_period;
-		if pout.pending = '0' then
-			wait until pout.pending = '1' for 50*clock_period;
-		end if;
-		if pout.pending = '1' then
-			wait until pout.pending = '0' for 50*clock_period;
-		end if;
+		if r(5) = '0' then
+			pin.address <= r(4 downto 0);
+			pin.write_enable <= '0';
+			wait for clock_period;
+			if pout.pending = '0' then
+				wait until pout.pending = '1' for 50*clock_period;
+			end if;
+			if pout.pending = '1' then
+				wait until pout.pending = '0' for 50*clock_period;
+			end if;
 		
-		-- if pending is still '1' after 10 clocks, its an error
-		if pout.pending /= '0' then
-			report "check_register_value pending timed out" severity ERROR;
-			success := FALSE;
-			return;
-		end if;
+			-- if pending is still '1' after 10 clocks, its an error
+			if pout.pending /= '0' then
+				report "check_register_value pending timed out" severity ERROR;
+				success := FALSE;
+				return;
+			end if;
 		
-		wait for clock_period;
-		if pout.data = data then
-			success := TRUE;
+			wait for clock_period;
+			if pout.data = data then
+				success := TRUE;
+			else
+				success := FALSE;
+				report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(unsigned(data)) & ", got " & hex(unsigned(pout.data));
+			end if;
 		else
-			success := FALSE;
-			report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(unsigned(data)) & ", got " & hex(unsigned(pout.data));
+			pc0in.address <= r(4 downto 0);
+			pc0in.write_enable <= '0';
+			wait for clock_period;
+			wait until pc0out.data = data for 50*clock_period;
+			if pc0out.data = data then
+				success := TRUE;
+			else
+				success := FALSE;
+				report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(unsigned(data)) & ", got " & hex(unsigned(pc0out.data));
+			end if;
 		end if;
 	end procedure;
 	
@@ -266,15 +290,22 @@ architecture core_test_behavioral of core_test is
 		end if;
 	end procedure;
 	
-	procedure write_register(r : std_logic_vector; data : std_logic_vector; signal p : out register_port_in_t) is
+	procedure write_register(r : std_logic_vector; data : std_logic_vector; signal p : out register_port_in_t; signal pc0 : out cop0_register_port_in_t) is
 	begin
-		p.address <= r;
+		p.address <= r(4 downto 0);
 		p.write_data <= data;
-		p.write_enable <= '1';
+		p.write_enable <= not r(5);
 		p.write_pending <= '0';
 		p.write_strobe <= x"F";
+		
+		pc0.address <= r(4 downto 0);
+		pc0.write_data <= data;
+		pc0.write_enable <= r(5);
+		pc0.write_strobe <= x"F";
+		
 		wait for clock_period;
 		p.write_enable <= '0';
+		pc0.write_enable <= '0';
 	end procedure;
 	
 	procedure write_hilo(data : std_logic_vector; signal p : out hilo_register_port_in_t) is
@@ -374,6 +405,11 @@ begin
 		register_port_in_a.write_enable <= '0';
 		register_port_in_a.write_pending <= '0';
 		register_port_in_a.write_strobe <= x"F";
+		
+		cop0_reg_port_in_a.address <= (others => '0');
+		cop0_reg_port_in_a.write_data <= (others => '0');
+		cop0_reg_port_in_a.write_enable <= '0';
+		cop0_reg_port_in_a.write_strobe <= x"F";
 		wait until resetn = '1';
 		
 		while not endfile(f) loop
@@ -405,14 +441,14 @@ begin
 				expected_reg := std_logic_vector(itmp(5 downto 0));
 				itmp := string_to_integer(parts(2)(parts(2)'range));
 				expected_data := std_logic_vector(itmp);
-				check_register_value(expected_reg, expected_data, register_port_in_a, register_port_out_a, success);
+				check_register_value(expected_reg, expected_data, register_port_in_a, register_port_out_a, cop0_reg_port_in_a, cop0_reg_port_out_a, success);
 				assert success report "CHECK_REG failed for instruction " & l2(l2'range) severity FAILURE;
 			elsif  parts(0)(parts(0)'range) = "WRITE_REG" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				expected_reg := std_logic_vector(itmp(5 downto 0));
 				itmp := string_to_integer(parts(2)(parts(2)'range));
 				expected_data := std_logic_vector(itmp);
-				write_register(expected_reg, expected_data, register_port_in_a);
+				write_register(expected_reg, expected_data, register_port_in_a, cop0_reg_port_in_a);
 			elsif parts(0)(parts(0)'range) = "CHECK_RAM" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				ram_address := std_logic_vector(itmp);
@@ -445,6 +481,9 @@ begin
 		register_hilo_in => register_hilo_in,
 		register_hilo_out => register_hilo_out,
 		
+		cop0_reg_port_in_a => cop0_reg_port_in_a,
+		cop0_reg_port_out_a => cop0_reg_port_out_a,
+	
 		m_axi_memb_araddr => m_axi_memb_araddr,
 		m_axi_memb_arburst => m_axi_memb_arburst,
 		m_axi_memb_arcache => m_axi_memb_arcache,

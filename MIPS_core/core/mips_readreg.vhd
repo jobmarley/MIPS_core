@@ -32,6 +32,11 @@ entity mips_readreg is
 	register_hilo_in : out hilo_register_port_in_t;
 	register_hilo_out : in hilo_register_port_out_t;
 	
+	cop0_reg_port_in_a : out cop0_register_port_in_t;
+	cop0_reg_port_out_a : in cop0_register_port_out_t;
+	cop0_reg_port_in_b : out cop0_register_port_in_t;
+	cop0_reg_port_out_b : in cop0_register_port_out_t;
+	
 	-- alu
 	alu_in_ports : out alu_in_ports_t;
 	
@@ -238,16 +243,27 @@ begin
 	override_address_valid <= '0';
 	override_address <= register_port_out_a.data;
 		
-	register_port_in_d.address <= register_c_reg;
+	register_port_in_d.address <= register_c_reg(4 downto 0);
 	register_port_in_d.write_data <= link_address_reg when (operation_reg.op_link = '1' and fast_cmp_result = '1')
 		else immediate_a_reg when operation_reg.op_immediate_a = '1'
 		else register_hilo_out.data(63 downto 32) when operation_reg.op_fromhilo = '1' and operation_reg.op_hi = '1'
 		else register_hilo_out.data(31 downto 0) when operation_reg.op_fromhilo = '1' and operation_reg.op_lo = '1'
+		else cop0_reg_port_out_a.data when register_a_reg(5) = '1'
 		else register_port_out_a.data;
 	register_port_in_d.write_strobe <= mov_strobe_reg;
 	register_port_in_d.write_pending <= '0' when operation_reg.op_mov = '1'
 		else not store_reg;
-	register_port_in_d.write_enable <= operation_valid_reg;
+	register_port_in_d.write_enable <= not register_c_reg(5) and operation_valid_reg;
+	
+	cop0_reg_port_in_a.address <= register_a(4 downto 0);
+	cop0_reg_port_in_a.write_data <= (others => '0');
+	cop0_reg_port_in_a.write_enable <= '0';
+	cop0_reg_port_in_a.write_strobe <= (others => '0');
+	
+	cop0_reg_port_in_b.address <= register_c_reg(4 downto 0);
+	cop0_reg_port_in_b.write_data <= register_port_out_a.data;
+	cop0_reg_port_in_b.write_enable <= operation_reg.op_mov and register_c_reg(5) and operation_valid_reg;
+	cop0_reg_port_in_b.write_strobe <= mov_strobe_reg;
 	
 	--stall <= stall_reg;
 	
@@ -319,17 +335,17 @@ begin
         variable instruction_data_i : instruction_i_t;
         variable instruction_data_j : instruction_j_t;
 	begin
-		register_port_in_a.address <= register_a;
+		register_port_in_a.address <= register_a(4 downto 0);
 		register_port_in_a.write_enable <= '0';
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= (others => '0');
 		register_port_in_a.write_pending <= '0';
-		register_port_in_b.address <= register_b;
+		register_port_in_b.address <= register_b(4 downto 0);
 		register_port_in_b.write_enable <= '0';
 		register_port_in_b.write_data <= (others => '0');
 		register_port_in_b.write_strobe <= (others => '0');
 		register_port_in_b.write_pending <= '0';
-		register_port_in_c.address <= register_c;
+		register_port_in_c.address <= register_c(4 downto 0);
 		register_port_in_c.write_enable <= '0';
 		register_port_in_c.write_data <= (others => '0');
 		register_port_in_c.write_strobe <= (others => '0');
@@ -381,9 +397,9 @@ begin
 				register_c_pending_bypass = '1') then
 				
 				stall_internal <= '1';
-				register_port_in_a.address <= register_a_reg;
-				register_port_in_b.address <= register_b_reg;
-				register_port_in_c.address <= register_c_reg;
+				register_port_in_a.address <= register_a_reg(4 downto 0);
+				register_port_in_b.address <= register_b_reg(4 downto 0);
+				register_port_in_c.address <= register_c_reg(4 downto 0);
 			else
 				stall_internal <= '0';
 				register_a_reg_next <= register_a;

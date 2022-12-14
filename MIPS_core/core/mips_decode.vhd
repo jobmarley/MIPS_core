@@ -853,16 +853,25 @@ begin
 	
 					
 					when instr_mfc0_opc.opcode =>
-						-- -- hmmm...
-						--case (instruction_data_cop0.funct) is
-						--	when instr_mfc0_opc.funct =>
-						--	when instr_mtc0_opc.funct =>
-						--	when instr_deret_opc.funct =>
-						--	when instr_eret_opc.funct =>
-						--							
-						--	when others =>
-						--		panic <= '1';
-						--end case;
+						case (instruction_data_cop0.funct) is
+							when instr_mfc0_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
+								register_a_reg_next <= '1' & instruction_data_r.rd;
+								register_c_reg_next <= '0' & instruction_data_r.rt;
+							when instr_mtc0_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_mov <= '1';
+								mov_strobe_reg_next <= x"F";
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_c_reg_next <= '1' & instruction_data_r.rd;
+							--when instr_deret_opc.funct =>
+							--when instr_eret_opc.funct =>
+													
+							when others =>
+								panic <= '1';
+						end case;
 					
 					when others =>
 						panic <= '1';

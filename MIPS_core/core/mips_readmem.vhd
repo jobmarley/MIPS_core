@@ -132,7 +132,7 @@ begin
 		address_reg
 	)
 	begin
-		register_port_in_a.address <= tuser_reg.rt;
+		register_port_in_a.address <= tuser_reg.rt(4 downto 0);
 		register_port_in_a.write_enable <= read_data_valid;
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= "0000";

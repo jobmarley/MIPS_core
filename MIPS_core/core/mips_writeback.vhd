@@ -40,13 +40,13 @@ begin
 	cmp_tuser <= slv_to_cmp_tuser(alu_out_ports.cmp_out_tuser);
 	mul_tuser <= slv_to_mul_tuser(alu_out_ports.mul_out_tuser);
 	
-	register_port_in_a.address <= '0' & alu_out_ports.add_out_tuser(4 downto 0) when alu_out_ports.add_out_tvalid = '1' else '0' & alu_out_ports.sub_out_tuser(4 downto 0);
+	register_port_in_a.address <= alu_out_ports.add_out_tuser(4 downto 0) when alu_out_ports.add_out_tvalid = '1' else alu_out_ports.sub_out_tuser(4 downto 0);
 	register_port_in_a.write_enable <= (alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store and not add_tuser.branch) or alu_out_ports.sub_out_tvalid;
 	register_port_in_a.write_data <= alu_out_ports.add_out_tdata(31 downto 0) when alu_out_ports.add_out_tvalid = '1' else alu_out_ports.sub_out_tdata(31 downto 0);
 	register_port_in_a.write_strobe <= x"F";
 	register_port_in_a.write_pending <= '0';
 	
-	register_port_in_c.address <= '0' & alu_out_ports.mul_out_tuser(4 downto 0);
+	register_port_in_c.address <= alu_out_ports.mul_out_tuser(4 downto 0);
 	register_port_in_c.write_enable <= not mul_tuser.use_hilo and alu_out_ports.mul_out_tvalid;
 	register_port_in_c.write_data <= alu_out_ports.mul_out_tdata(31 downto 0);
 	register_port_in_c.write_strobe <= x"F";
@@ -109,43 +109,43 @@ begin
 			
 			case (andorxornor) is
 				when "100000000" =>
-					register_port_in_b.address <= '0' & alu_out_ports.and_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.and_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.and_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "010000000" =>
-					register_port_in_b.address <= '0' & alu_out_ports.or_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.or_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.or_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "001000000" =>
-					register_port_in_b.address <= '0' & alu_out_ports.xor_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.xor_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.xor_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "000100000" =>
-					register_port_in_b.address <= '0' & alu_out_ports.nor_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.nor_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.nor_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "000010000" =>
-					register_port_in_b.address <= '0' & alu_out_ports.shl_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.shl_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.shl_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "000001000" =>
-					register_port_in_b.address <= '0' & alu_out_ports.shr_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.shr_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.shr_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "000000100" =>
-					register_port_in_b.address <= '0' & alu_out_ports.cmp_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.cmp_out_tuser(4 downto 0);
 					if cmp_tuser.mov = '0' then
 						register_port_in_b.write_data <= x"0000000" & "000" & cmp_result;
 						register_port_in_b.write_strobe <= x"F";
@@ -160,13 +160,13 @@ begin
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 				when "000000010" =>
-					register_port_in_b.address <= '0' & alu_out_ports.clo_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.clo_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.clo_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
 					register_port_in_b.write_strobe <= x"F";
 				when "000000001" =>
-					register_port_in_b.address <= '0' & alu_out_ports.clz_out_tuser(4 downto 0);
+					register_port_in_b.address <= alu_out_ports.clz_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.clz_out_tdata;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';

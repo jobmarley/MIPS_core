@@ -22,7 +22,7 @@ entity mips_registers is
 end mips_registers;
 
 architecture mips_registers_behavioral of mips_registers is
-	constant register_count : NATURAL := 64;
+	constant register_count : NATURAL := 32;
 	signal registers : slv32_array_t(register_count-1 downto 0);
 	signal registers_next : slv32_array_t(register_count-1 downto 0);
 	signal registers_pending : std_logic_vector(register_count-1 downto 0);

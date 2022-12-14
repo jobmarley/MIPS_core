@@ -31,6 +31,9 @@ entity mips_core_internal is
 	register_hilo_in : in hilo_register_port_in_t;
 	register_hilo_out : out hilo_register_port_out_t;
 	
+	cop0_reg_port_in_a : in cop0_register_port_in_t;
+	cop0_reg_port_out_a : out cop0_register_port_out_t;
+	
 	-- memory port b
 	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
 	m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -161,7 +164,20 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 			hilo_out : out hilo_register_port_out_array_t(port_hilo_out_count-1 downto 0)
 		);
 	end component;
+
+	component cop0_registers is
+		generic(
+			port_count : NATURAL
+		);
+		port(
+			resetn : in std_logic;
+			clock : in std_logic;
 	
+			ports_in : in cop0_register_port_in_array_t(port_count-1 downto 0);
+			ports_out : out cop0_register_port_out_array_t(port_count-1 downto 0)
+		);
+	end component;
+
 	component mips_writeback is
 		port (
 		resetn : in std_logic;
@@ -314,6 +330,11 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		register_hilo_in : out hilo_register_port_in_t;
 		register_hilo_out : in hilo_register_port_out_t;
 	
+		cop0_reg_port_in_a : out cop0_register_port_in_t;
+		cop0_reg_port_out_a : in cop0_register_port_out_t;
+		cop0_reg_port_in_b : out cop0_register_port_in_t;
+		cop0_reg_port_out_b : in cop0_register_port_out_t;
+	
 		-- alu
 		alu_in_ports : out alu_in_ports_t;
 	
@@ -346,6 +367,10 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal register_hilo_in_internal : hilo_register_port_in_array_t(register_hilo_in_count-1 downto 0);
 	signal register_hilo_out_internal : hilo_register_port_out_array_t(register_hilo_out_count-1 downto 0);
 		
+	constant cop0_port_count : NATURAL := 3;
+	signal cop0_ports_in : cop0_register_port_in_array_t(cop0_port_count-1 downto 0);
+	signal cop0_ports_out : cop0_register_port_out_array_t(cop0_port_count-1 downto 0);
+	
 	-- decode	
 	signal decode_register_a : std_logic_vector(5 downto 0);
 	signal decode_register_b : std_logic_vector(5 downto 0);
@@ -391,6 +416,9 @@ begin
 	register_hilo_in_internal(2) <= register_hilo_in;
 	register_hilo_out <= register_hilo_out_internal(1);
 	
+	cop0_ports_in(1) <= cop0_reg_port_in_a;
+	cop0_reg_port_out_a <= cop0_ports_out(1);
+	
 	fetch_override_address <= decode_override_address when decode_override_address_valid = '1'
 		else readreg_override_address when readreg_override_address_valid = '1'
 		else writeback_override_address;
@@ -425,6 +453,11 @@ begin
 		register_port_out_d => register_port_out(6),
 		register_hilo_in => register_hilo_in_internal(1),
 		register_hilo_out => register_hilo_out_internal(0),
+	
+		cop0_reg_port_in_a => cop0_ports_in(0),
+		cop0_reg_port_out_a => cop0_ports_out(0),
+		cop0_reg_port_in_b => cop0_ports_in(2),
+		cop0_reg_port_out_b => cop0_ports_out(2),
 	
 		-- alu
 		alu_in_ports => alu_in_ports,
@@ -515,6 +548,19 @@ begin
 			hilo_in => register_hilo_in_internal,
 			hilo_out => register_hilo_out_internal
 		);
+	
+	cop0_registers_i0 : cop0_registers 
+		generic map(
+			port_count => cop0_port_count
+		)
+		port map(
+			resetn => resetn,
+			clock => clock,
+	
+			ports_in => cop0_ports_in,
+			ports_out => cop0_ports_out
+		);
+	
 	mips_readmem_i0 : mips_readmem port map(
 		resetn => resetn,
 		clock => clock,

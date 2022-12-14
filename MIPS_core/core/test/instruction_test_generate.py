@@ -146,6 +146,15 @@ def check_op_3reg(instr, builder, registers, f):
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	
+def check_op_2reg(instr, builder, registers, f):
+	r = random_register_non_zero() + random_register()
+	builder.add_instruction('{} ${}, ${}'.format(instr, *r))
+	e = f(registers[r[1]], registers[r[0]])
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
+	builder.add_check_reg(r[0], e)
+	builder.add_write_reg(r[0], registers[r[0]])
+
 # same as above but with random i16, f([r1], i16, [rdest])
 def check_op_2reg_i16(instr, builder, registers, f):
 	r = random_register_non_zero() + random_register(1)
@@ -158,9 +167,9 @@ def check_op_2reg_i16(instr, builder, registers, f):
 	builder.add_write_reg(r[0], registers[r[0]])
 	
 # same as above but with given immediate, f([r1], imm, [rdest])
-def check_op_2reg_imm(instr, builder, registers, imm, f):
+def check_op_2reg_imm(instr, builder, registers, imm, f, syntax = '{} ${}, ${}, {}'):
 	r = random_register_non_zero() + random_register(1)
-	builder.add_instruction('{} ${}, ${}, {}'.format(instr, *r, imm))
+	builder.add_instruction(syntax.format(instr, *r, imm))
 	e = f(registers[r[1]], imm, registers[r[0]])
 	e = to_unsigned(e, 32)
 	e = e & 0xFFFFFFFF
@@ -320,6 +329,18 @@ def count_leading_zero(x, size):
 			return i
 	return size
 
+
+def test_mfc0(builder, registers):
+	# just test with register cop0 4: TLB pointer
+	check_op_1reg_imm('mfc0', builder, registers, 4, lambda y, z: registers[32 + y], '{} ${}, ${}')
+	
+def test_mtc0(builder, registers):
+	# just test with register cop0 4: TLB pointer
+	r = random_register_non_zero()
+	builder.add_instruction('mtc0 ${}, $4'.format(*r))
+	builder.add_check_reg(32 + 4, registers[r[0]])
+	builder.add_write_reg(32 + 4, registers[32 + 4])
+
 def generate_commands():
 	
 	builder = instruction_builder(instr_asm_filename, instr_cmd_filename)
@@ -328,7 +349,7 @@ def generate_commands():
 	registers = generate_register_values()
 	registers[0] = 0
 	register_hilo = random_int(64)
-	for i in range(1, 32):
+	for i in range(1, 64):
 		builder.add_write_reg(i, registers[i])
 	builder.add_write_hilo(register_hilo)
 		
@@ -366,6 +387,9 @@ def generate_commands():
 	check_op_2reg_1nonrand('movn', builder, registers, random_uint_nonzero(32), lambda x, y, z: x if y != 0 else z)
 	check_op_2reg_1nonrand('movz', builder, registers, 0, lambda x, y, z: x if y == 0 else z)
 	check_op_2reg_1nonrand('movz', builder, registers, random_uint_nonzero(32), lambda x, y, z: x if y == 0 else z)
+	
+	test_mfc0(builder, registers)
+	test_mtc0(builder, registers)
 
 	check_op_2reg_i16('addi', builder, registers, lambda x, y, z: x + y)
 	check_op_2reg_i16('sub', builder, registers, lambda x, y, z: x - y)

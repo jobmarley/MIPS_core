@@ -127,7 +127,7 @@ package mips_utils is
 	type cop0_register_t is array(31 downto 0) of slv32_array_t(7 downto 0);
 	
 	type register_port_in_t is record
-		address : std_logic_vector(5 DOWNTO 0);
+		address : std_logic_vector(4 DOWNTO 0);
 		write_enable : std_logic;
 		write_data : std_logic_vector(31 downto 0);
 		write_strobe : std_logic_vector(3 downto 0);
@@ -153,6 +153,19 @@ package mips_utils is
 	end record;
 	type hilo_register_port_in_array_t is array(NATURAL RANGE <>) of hilo_register_port_in_t;
 	type hilo_register_port_out_array_t is array(NATURAL RANGE <>) of hilo_register_port_out_t;
+	
+	
+	type cop0_register_port_in_t is record
+		address : std_logic_vector(4 DOWNTO 0);
+		write_enable : std_logic;
+		write_data : std_logic_vector(31 downto 0);
+		write_strobe : std_logic_vector(3 downto 0);
+	end record;
+	type cop0_register_port_out_t is record
+		data : std_logic_vector(31 downto 0);
+	end record;
+	type cop0_register_port_in_array_t is array(NATURAL RANGE <>) of cop0_register_port_in_t;
+	type cop0_register_port_out_array_t is array(NATURAL RANGE <>) of cop0_register_port_out_t;
 	
 	type instruction_r_t is record
 		opcode : std_logic_vector(5 downto 0);
