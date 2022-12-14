@@ -371,7 +371,7 @@ begin
 		add_sub_op_a <= (others => '0');
 		add_sub_op_b <= (others => '0');
 		add_sub_select <= '1';
-		add_sub_ce <= '1';
+		add_sub_ce <= '0';
 			
 		out_ports.add_out_tvalid <= add_sh_reg(add_sh_reg'HIGH).valid;
 		out_ports.sub_out_tvalid <= sub_sh_reg(sub_sh_reg'HIGH).valid;
@@ -389,6 +389,7 @@ begin
 			add_sh_reg_next <= (others => (tuser => (others => '0'), valid => '1'));
 			sub_sh_reg_next <= (others => (tuser => (others => '0'), valid => '1'));
 		elsif enable = '1' then
+			add_sub_ce <= '1';
 			add_sh_reg_next(add_sh_reg_next'HIGH downto 1) <= add_sh_reg(add_sh_reg'HIGH-1 downto 0);
 			add_sh_reg_next(0).tuser <= (others => '0');
 			add_sh_reg_next(0).valid <= '0';
