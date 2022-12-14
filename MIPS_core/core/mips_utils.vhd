@@ -325,6 +325,7 @@ package mips_utils is
 		op_reorder : std_logic;			-- swap alu operands
 		op_unsigned : std_logic;
 		op_link : std_logic;			-- link_address is used for the mov
+		op_link_branch : std_logic;	
 		op_immediate_a : std_logic;		-- use immediate a instead of register
 		op_immediate_b : std_logic;		-- use immediate b instead of register
 		op_hi : std_logic;				-- use hi register
@@ -342,8 +343,9 @@ package mips_utils is
 	constant memory_op_type_half_left : std_logic_vector(2 downto 0) := "100";
 	constant memory_op_type_half_right : std_logic_vector(2 downto 0) := "101";
 	type alu_add_out_tuser_t is record
-		jump : std_logic;
-		branch : std_logic;
+		mov : std_logic;		-- write to register
+		jump : std_logic;		-- jump
+		branch : std_logic;		-- jump, associated with cmp
 		exclusive : std_logic;
 		signed : std_logic;
 		memop_type : std_logic_vector(2 downto 0);
@@ -352,7 +354,7 @@ package mips_utils is
 		load : std_logic;
 		rt : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_add_out_tuser_length : NATURAL := 47;
+	constant alu_add_out_tuser_length : NATURAL := 48;
 	
 	function slv_to_add_out_tuser(data : std_logic_vector) return alu_add_out_tuser_t;
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
@@ -608,6 +610,7 @@ package body mips_utils is
 		vresult.exclusive := data(44);
 		vresult.branch := data(45);
 		vresult.jump := data(46);
+		vresult.mov := data(47);
 		return vresult; 
 	end function;
 	
@@ -623,6 +626,7 @@ package body mips_utils is
 		vresult(44) := tuser.exclusive;
 		vresult(45) := tuser.branch;
 		vresult(46) := tuser.jump;
+		vresult(47) := tuser.mov;
 		return vresult;
 	end function;
 	

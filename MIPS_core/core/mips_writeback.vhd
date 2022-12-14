@@ -33,6 +33,9 @@ architecture mips_writeback_behavioral of mips_writeback is
 	signal cmp_tuser : alu_cmp_tuser_t;
 	signal cmp_result : std_logic;
 	signal mul_tuser : alu_mul_tuser_t;
+	
+	signal branch_pending : std_logic;
+	signal branch_pending_next : std_logic;
 begin
 	cmp_result <= alu_out_ports.cmp_out_tdata(0);
 	
@@ -41,7 +44,7 @@ begin
 	mul_tuser <= slv_to_mul_tuser(alu_out_ports.mul_out_tuser);
 	
 	register_port_in_a.address <= alu_out_ports.add_out_tuser(4 downto 0) when alu_out_ports.add_out_tvalid = '1' else alu_out_ports.sub_out_tuser(4 downto 0);
-	register_port_in_a.write_enable <= (alu_out_ports.add_out_tvalid and not add_tuser.load and not add_tuser.store and not add_tuser.branch) or alu_out_ports.sub_out_tvalid;
+	register_port_in_a.write_enable <= (alu_out_ports.add_out_tvalid and add_tuser.mov) or alu_out_ports.sub_out_tvalid;
 	register_port_in_a.write_data <= alu_out_ports.add_out_tdata(31 downto 0) when alu_out_ports.add_out_tvalid = '1' else alu_out_ports.sub_out_tdata(31 downto 0);
 	register_port_in_a.write_strobe <= x"F";
 	register_port_in_a.write_pending <= '0';
@@ -53,9 +56,10 @@ begin
 	register_port_in_c.write_pending <= '0';
 	
 	fetch_override_address <= alu_out_ports.add_out_tdata(31 downto 0);
-	fetch_override_address_valid <= ((cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch and add_tuser.branch) or add_tuser.jump) and alu_out_ports.add_out_tvalid;
+	fetch_override_address_valid <= (branch_pending or add_tuser.jump) and alu_out_ports.add_out_tvalid;
 	fetch_skip_jump <= not cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
 	fetch_execute_delay_slot <= (not cmp_tuser.likely or cmp_result) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
+	branch_pending_next <= (not (add_tuser.branch and alu_out_ports.add_out_tvalid) and branch_pending) or (cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch);
 	
 	-- no need to synchronize that, cause readreg will stall if hi/lo is pending
 	register_hilo_in.write_data <= alu_out_ports.div_out_tdata(31 downto 0) & alu_out_ports.div_out_tdata(63 downto 32) when alu_out_ports.div_out_tvalid = '1'
@@ -72,6 +76,7 @@ begin
 	process(clock)
 	begin
 		if rising_edge(clock) then
+			branch_pending <= branch_pending_next;
 		end if;
 	end process;
 	

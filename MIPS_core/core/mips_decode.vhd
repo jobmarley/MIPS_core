@@ -536,7 +536,7 @@ begin
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								operation_reg_next.op_link <= '1';
+								operation_reg_next.op_link_branch <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
 								register_c_reg_next <= "011111";
@@ -555,7 +555,7 @@ begin
 								operation_reg_next.op_branch_likely <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								operation_reg_next.op_link <= '1';
+								operation_reg_next.op_link_branch <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
 								register_c_reg_next <= "011111";
@@ -595,7 +595,7 @@ begin
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								operation_reg_next.op_link <= '1';
+								operation_reg_next.op_link_branch <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
 								register_c_reg_next <= "011111";
@@ -614,7 +614,7 @@ begin
 								operation_reg_next.op_branch_likely <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								operation_reg_next.op_link <= '1';
+								operation_reg_next.op_link_branch <= '1';
 								register_a_reg_next <= '0' & instruction_data_i.rs;
 								register_b_reg_next <= "000000";
 								register_c_reg_next <= "011111";

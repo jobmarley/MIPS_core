@@ -153,6 +153,8 @@ begin
 	 -- when op_cmp_gez is used, we transform the branch in jump when cmp is successfull
 	alu_add_tuser.branch <= operation_reg.op_branch when operation_reg.op_cmp_gez = '0' else not fast_cmp_result;
 	alu_add_tuser.jump <= operation_reg.op_jump when operation_reg.op_cmp_gez = '0' else fast_cmp_result;
+	-- thats ugly... write to register only if not anything else
+	alu_add_tuser.mov <= not operation_reg.op_jump and not operation_reg.op_branch and not store_reg and not load_reg;
 	
 	alu_in_ports.sub_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);
@@ -244,7 +246,7 @@ begin
 	override_address <= register_port_out_a.data;
 		
 	register_port_in_d.address <= register_c_reg(4 downto 0);
-	register_port_in_d.write_data <= link_address_reg when (operation_reg.op_link = '1' and fast_cmp_result = '1')
+	register_port_in_d.write_data <= link_address_reg when (operation_reg.op_link = '1' or (operation_reg.op_link_branch = '1' and fast_cmp_result = '1'))
 		else immediate_a_reg when operation_reg.op_immediate_a = '1'
 		else register_hilo_out.data(63 downto 32) when operation_reg.op_fromhilo = '1' and operation_reg.op_hi = '1'
 		else register_hilo_out.data(31 downto 0) when operation_reg.op_fromhilo = '1' and operation_reg.op_lo = '1'
