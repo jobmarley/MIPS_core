@@ -10,10 +10,10 @@ clang_path = r'C:\Program Files\LLVM\bin\clang++'
 lld_path = r'C:\Program Files\LLVM\bin\ld.lld'
 
 def random_register(count = 1):
-	return [random.randint(0, 31) for x in range(0, count)]
+	return random.sample([x for x in range(0, 32)], count)
 
 def random_register_non_zero(count = 1):
-	return [random.randint(1, 31) for x in range(0, count)]
+	return random.sample([x for x in range(1, 32)], count)
 
 def random_int(bitsize):
 	return random.randint(-(1 << (bitsize - 1)), (1 << (bitsize - 1)) - 1)
@@ -339,7 +339,6 @@ def count_leading_zero(x, size):
 		if (x >> size-1-i) & 1 == 1:
 			return i
 	return size
-
 
 def test_mfc0(builder, registers):
 	# just test with register cop0 4: TLB pointer
