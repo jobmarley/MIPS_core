@@ -195,6 +195,17 @@ begin
 		
 		delay_slot_executed_next <= delay_slot_executed;
 		
+		wait_jump_reg_next <= wait_jump_reg or wait_jump;
+		if override_address_valid = '1' then
+			override_address_valid_reg_next <= '1';
+			override_address_reg_next <= override_address;
+		end if;
+			
+		skip_jump_reg_next <= skip_jump_reg or skip_jump;
+		execute_delay_slot_reg_next <= execute_delay_slot_reg or execute_delay_slot;
+		
+		instruction_data_valid_reg_next <= instruction_data_valid_reg and not instruction_data_ready;
+		
 		if resetn = '0' then
 			current_address_next <= (others => '0');
 			instruction_data_reg_next <= (others => '0');
@@ -209,17 +220,6 @@ begin
 			execute_delay_slot_reg_next <= '0';
 			delay_slot_executed_next <= '0';
 		elsif enable = '1' then
-			
-			instruction_data_valid_reg_next <= instruction_data_valid_reg and not instruction_data_ready;
-			
-			wait_jump_reg_next <= wait_jump_reg or wait_jump;
-			if override_address_valid = '1' then
-				override_address_valid_reg_next <= '1';
-				override_address_reg_next <= override_address;
-			end if;
-			
-			skip_jump_reg_next <= skip_jump_reg or skip_jump;
-			execute_delay_slot_reg_next <= execute_delay_slot_reg or execute_delay_slot;
 			
 			case state is
 				when state_read_address =>
