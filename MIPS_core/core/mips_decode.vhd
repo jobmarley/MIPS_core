@@ -772,7 +772,7 @@ begin
 						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_a_reg_next <= instruction_data_i.immediate & x"0000";
 						operation_reg_next.op_immediate_a <= '1';
-						mov_strobe_reg_next <= "1100";
+						mov_strobe_reg_next <= "1111";
 					when instr_lw_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';

@@ -61,11 +61,22 @@ def to_unsigned(s, size):
   return s % (1 << size)
 
 class instruction_builder:
-	def __init__(self, asm_filepath, cmd_filepath):
+	def __init__(self, asm_filepath, cmd_filepath, registers):
 		self.test_commands = []
 		self.instructions = []
 		self.asm_filepath = asm_filepath
 		self.outpath = cmd_filepath
+		self.registers_initial = registers.copy()
+		self.registers = registers
+
+	def reset_registers(self):
+		for i in range(0, len(self.registers)):
+			if self.registers[i] != self.registers_initial[i]:
+				self.add_write_reg(i, self.registers_initial[i])
+				self.registers[i] = self.registers_initial[i]
+
+	def get_register(self, i):
+		return self.registers[i]
 
 	def add_instruction(self, asm):
 		self.test_commands.append('EXEC')
@@ -343,10 +354,11 @@ def test_mtc0(builder, registers):
 
 def generate_commands():
 	
-	builder = instruction_builder(instr_asm_filename, instr_cmd_filename)
+	registers = generate_register_values()
+
+	builder = instruction_builder(instr_asm_filename, instr_cmd_filename, registers)
 	
 	# initialize registers with random values
-	registers = generate_register_values()
 	registers[0] = 0
 	register_hilo = random_int(64)
 	for i in range(1, 64):
@@ -403,7 +415,7 @@ def generate_commands():
 	check_op_2reg_imm('slti', builder, registers, random_int(16), lambda x, y, z: 1 if unsigned_to_signed(x, 32) < y else 0)
 	# this is weird, operand is a signed 16bits, signed extended to 32 and compared to the other operand
 	check_op_2reg_imm('sltiu', builder, registers, random_int(16), lambda x, y, z: 1 if x < sign_extend(y, 16, 32) else 0)
-	check_op_1reg_imm('lui', builder, registers, random_uint(16), lambda y, z: (z & 0xFFFF) | (y << 16))
+	check_op_1reg_imm('lui', builder, registers, random_uint(16), lambda y, z: y << 16)
 	check_op_1reg_1nonrand('clo', builder, registers, invert(random_uint(random_uint(5)), 32), lambda y, z: count_leading_one(y, 32))
 	check_op_1reg_1nonrand('clz', builder, registers, random_uint(random_uint(5)), lambda y, z: count_leading_zero(y, 32))
 	
