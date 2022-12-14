@@ -4,6 +4,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 use std.textio.all;
 use IEEE.numeric_std.all;
 use work.mips_utils.all;
+use work.axi_helper.all;
+use work.test_utils.all;
 
 entity core_test is
   Port ( 
@@ -11,37 +13,37 @@ entity core_test is
 	clock : in std_ulogic;
 					
 	-- memory port a
-	--m_axi_mema_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	--m_axi_mema_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
-	--m_axi_mema_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	--m_axi_mema_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
-	--m_axi_mema_arlock : out STD_LOGIC;
-	--m_axi_mema_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	--m_axi_mema_arready : in STD_LOGIC;
-	--m_axi_mema_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	--m_axi_mema_arvalid : out STD_LOGIC;
-	--m_axi_mema_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	--m_axi_mema_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
-	--m_axi_mema_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	--m_axi_mema_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
-	--m_axi_mema_awlock : out STD_LOGIC;
-	--m_axi_mema_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	--m_axi_mema_awready : in STD_LOGIC;
-	--m_axi_mema_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
-	--m_axi_mema_awvalid : out STD_LOGIC;
-	--m_axi_mema_bready : out STD_LOGIC;
-	--m_axi_mema_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	--m_axi_mema_bvalid : in STD_LOGIC;
-	--m_axi_mema_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-	--m_axi_mema_rlast : in STD_LOGIC;
-	--m_axi_mema_rready : out STD_LOGIC;
-	--m_axi_mema_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-	--m_axi_mema_rvalid : in STD_LOGIC;
-	--m_axi_mema_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-	--m_axi_mema_wlast : out STD_LOGIC;
-	--m_axi_mema_wready : in STD_LOGIC;
-	--m_axi_mema_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-	--m_axi_mema_wvalid : out STD_LOGIC;
+	m_axi_mema_araddr : out std_logic_vector ( 31 downto 0 );
+	m_axi_mema_arburst : out std_logic_vector ( 1 downto 0 );
+	m_axi_mema_arcache : out std_logic_vector ( 3 downto 0 );
+	m_axi_mema_arlen : out std_logic_vector ( 7 downto 0 );
+	m_axi_mema_arlock : out std_logic;
+	m_axi_mema_arprot : out std_logic_vector ( 2 downto 0 );
+	m_axi_mema_arready : in std_logic;
+	m_axi_mema_arsize : out std_logic_vector ( 2 downto 0 );
+	m_axi_mema_arvalid : out std_logic;
+	m_axi_mema_awaddr : out std_logic_vector ( 31 downto 0 );
+	m_axi_mema_awburst : out std_logic_vector ( 1 downto 0 );
+	m_axi_mema_awcache : out std_logic_vector ( 3 downto 0 );
+	m_axi_mema_awlen : out std_logic_vector ( 7 downto 0 );
+	m_axi_mema_awlock : out std_logic;
+	m_axi_mema_awprot : out std_logic_vector ( 2 downto 0 );
+	m_axi_mema_awready : in std_logic;
+	m_axi_mema_awsize : out std_logic_vector ( 2 downto 0 );
+	m_axi_mema_awvalid : out std_logic;
+	m_axi_mema_bready : out std_logic;
+	m_axi_mema_bresp : in std_logic_vector ( 1 downto 0 );
+	m_axi_mema_bvalid : in std_logic;
+	m_axi_mema_rdata : in std_logic_vector ( 31 downto 0 );
+	m_axi_mema_rlast : in std_logic;
+	m_axi_mema_rready : out std_logic;
+	m_axi_mema_rresp : in std_logic_vector ( 1 downto 0 );
+	m_axi_mema_rvalid : in std_logic;
+	m_axi_mema_wdata : out std_logic_vector ( 31 downto 0 );
+	m_axi_mema_wlast : out std_logic;
+	m_axi_mema_wready : in std_logic;
+	m_axi_mema_wstrb : out std_logic_vector ( 3 downto 0 );
+	m_axi_mema_wvalid : out std_logic;
 	
 	-- memory port b
 	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -145,102 +147,6 @@ architecture core_test_behavioral of core_test is
 		stall : out std_logic
 		);
 	end component;
-
-	function char_count(s : STRING; c : CHARACTER) return NATURAL is
-		variable count : NATURAL := 0;
-	begin
-		for i in 1 to s'LENGTH loop
-			if s(i) = c then
-				count := count + 1;
-			end if;
-		end loop;
-		return count;
-	end function;
-	type string_ptr_t is access STRING;
-	type string_ptr_array_t is array(NATURAL range <>) of string_ptr_t; 
-	type string_ptr_array_ptr_t is access string_ptr_array_t;
-	
-	function index_of(s : STRING; c : CHARACTER; start : INTEGER) return INTEGER is
-	begin
-		for i in start to s'LENGTH-1 loop
-			if s(i) = c then
-				return i;
-			end if;
-		end loop;
-		return -1;
-	end function;
-		
-	type line_array_t is array(NATURAL RANGE <>) of LINE;
-	type line_array_ptr_t is access line_array_t;
-	procedure string_split(s : STRING; del : CHARACTER; parts : out line_array_ptr_t) is
-		variable count : NATURAL := char_count(s, del);
-		variable index : INTEGER := 1;
-		variable j : INTEGER := 1;
-	begin
-		parts := new line_array_t(0 to count);
-			
-		for i in 0 to count-1 loop
-			j := index_of(s, del, index);
-			parts(i) := new STRING'(s(index to j-1));
-			index := j+1;
-		end loop;
-		if index > s'HIGH then
-			parts(parts'HIGH) := new STRING'("");
-		else
-			parts(parts'HIGH) := new STRING'(s(index to s'HIGH));
-		end if;
-	end procedure;
-	
-	-- use unsigned because integer is only signed 32bits
-	-- if we have > 0x80000000 that fails
-	function string_to_integer(l : STRING; size : NATURAL := 32) return UNSIGNED is
-		variable index : INTEGER := l'LOW;
-		variable result : UNSIGNED(size-1 downto 0) := TO_UNSIGNED(0, size);
-		variable digit : INTEGER := 0;
-		variable tmp : UNSIGNED(size*2-1 downto 0);
-	begin
-		while index <= l'HIGH and l(index) = ' ' loop
-			index := index + 1;
-		end loop;
-		assert index < l'HIGH report "integer expected" severity ERROR;
-		while index <= l'HIGH loop
-			if CHARACTER'POS(l(index)) >= CHARACTER'POS('0') and CHARACTER'POS(l(index)) <= CHARACTER'POS('9') then
-				digit := CHARACTER'POS(l(index)) - CHARACTER'POS('0');
-			elsif CHARACTER'POS(l(index)) >= CHARACTER'POS('a') and CHARACTER'POS(l(index)) <= CHARACTER'POS('f') then
-				digit := CHARACTER'POS(l(index)) - CHARACTER'POS('a') + 10;
-			elsif CHARACTER'POS(l(index)) >= CHARACTER'POS('A') and CHARACTER'POS(l(index)) <= CHARACTER'POS('F') then
-				digit := CHARACTER'POS(l(index)) - CHARACTER'POS('A') + 10;
-			elsif l(index) = ' ' then
-				exit;
-			else
-				report "invalid character: " & CHARACTER'image(l(index)) severity ERROR;
-			end if;
-			tmp := result * 16;
-			result := tmp(size-1 downto 0) + TO_UNSIGNED(digit, size);
-			index := index + 1;
-		end loop;
-		return result;
-	end function;
-	
-	function hexchar(n : NATURAL) return CHARACTER is
-	begin
-		if n < 10 then
-			return CHARACTER'VAL(CHARACTER'POS('0') + n);
-		else
-			return CHARACTER'VAL(CHARACTER'POS('A') + (n mod 10));
-		end if;
-	end function;
-	
-	function hex(n : UNSIGNED; size : NATURAL := 32) return STRING is
-		variable s : STRING(1 to size / 4);
-		variable j : UNSIGNED(n'range) := n;
-	begin
-		for i in s'HIGH downto s'LOW loop
-			s(i) := hexchar(TO_INTEGER(j(3 downto 0)));
-			j := "0000" & j(j'HIGH downto j'LOW+4);
-		end loop;
-		return s;
-	end function;
 		
 	signal processor_enable : std_logic;
 	signal breakpoint : std_logic;
@@ -380,8 +286,44 @@ architecture core_test_behavioral of core_test is
 		wait for clock_period;
 		p.write_enable <= '0';
 	end procedure;
+	
+	signal axi4_mem_out : axi4_port_out_t;
+	signal axi4_mem_in : axi4_port_in_t;
 begin
+	
+	axi4_mem_in.arready <= m_axi_mema_arready;
+	axi4_mem_in.awready <= m_axi_mema_awready;
+	axi4_mem_in.bresp <= m_axi_mema_bresp;
+	axi4_mem_in.bvalid <= m_axi_mema_bvalid;
+	axi4_mem_in.rdata <= m_axi_mema_rdata;
+	axi4_mem_in.rlast <= m_axi_mema_rlast;
+	axi4_mem_in.rresp <= m_axi_mema_rresp;
+	axi4_mem_in.rvalid <= m_axi_mema_rvalid;
+	axi4_mem_in.wready <= m_axi_mema_wready;
 
+	m_axi_mema_araddr <= axi4_mem_out.araddr;
+	m_axi_mema_arburst <= axi4_mem_out.arburst;
+	m_axi_mema_arcache <= axi4_mem_out.arcache;
+	m_axi_mema_arlen <= axi4_mem_out.arlen;
+	m_axi_mema_arlock <= axi4_mem_out.arlock;
+	m_axi_mema_arprot <= axi4_mem_out.arprot;
+	m_axi_mema_arsize <= axi4_mem_out.arsize;
+	m_axi_mema_arvalid <= axi4_mem_out.arvalid;
+	m_axi_mema_awaddr <= axi4_mem_out.awaddr;
+	m_axi_mema_awburst <= axi4_mem_out.awburst;
+	m_axi_mema_awcache <= axi4_mem_out.awcache;
+	m_axi_mema_awlen <= axi4_mem_out.awlen;
+	m_axi_mema_awlock <= axi4_mem_out.awlock;
+	m_axi_mema_awprot <= axi4_mem_out.awprot;
+	m_axi_mema_awsize <= axi4_mem_out.awsize;
+	m_axi_mema_awvalid <= axi4_mem_out.awvalid;
+	m_axi_mema_bready <= axi4_mem_out.bready;
+	m_axi_mema_rready <= axi4_mem_out.rready;
+	m_axi_mema_wdata <= axi4_mem_out.wdata;
+	m_axi_mema_wlast <= axi4_mem_out.wlast;
+	m_axi_mema_wstrb <= axi4_mem_out.wstrb;
+	m_axi_mema_wvalid <= axi4_mem_out.wvalid;
+	
 	fetch_data_in.fetch_instruction_data_ready <= fetch_instruction_data_ready;
 	fetch_data_in.fetch_override_address <= fetch_override_address;
 	fetch_data_in.fetch_override_address_valid <= fetch_override_address_valid;
@@ -403,9 +345,9 @@ begin
 	
 	process
 		-- filepaths are relative to the core_test_proj.sim\sim_1\behav\xsim folder
-		file f : text open read_mode is "../../../../instruction_test_commands.txt";
+		file f : text open read_mode is "../../../../../instruction_test_commands.txt";
 		variable l : line;
-		file f2 : text open read_mode is "../../../../instruction_test_asm.asm";
+		file f2 : text open read_mode is "../../../../../instruction_test_asm.asm";
 		variable l2 : line;
 		
 		variable parts : line_array_ptr_t;
@@ -414,9 +356,15 @@ begin
 		variable expected_reg : std_logic_vector(5 downto 0);
 		variable expected_data : std_logic_vector(31 downto 0);
 		variable expected_data_hilo : std_logic_vector(63 downto 0);
+		variable ram_address : std_logic_vector(31 downto 0);
+		variable ram_data : std_logic_vector(31 downto 0);
+		variable ram_result : std_logic_vector(31 downto 0);
+		variable ram_resp : std_logic_vector(1 downto 0);
 		variable iline : NATURAL := 0;
 		variable success : BOOLEAN;
-	begin		
+	begin	
+		AXI4_idle(axi4_mem_out);
+		
 		instr_address := (others => '0');
 		fetch_data_out.fetch_instruction_data <= (others => '0');
 		fetch_data_out.fetch_error <= '0';
@@ -465,6 +413,16 @@ begin
 				itmp := string_to_integer(parts(2)(parts(2)'range));
 				expected_data := std_logic_vector(itmp);
 				write_register(expected_reg, expected_data, register_port_in_a);
+			elsif parts(0)(parts(0)'range) = "CHECK_RAM" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				ram_address := std_logic_vector(itmp);
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				expected_data := std_logic_vector(itmp);
+				-- wait for 20 clocks to make sure whatever previous operation is completed
+				wait for 20*clock_period;
+				AXI4_test_read(axi4_mem_out, axi4_mem_in, ram_address, AXI4_BURST_INCR, AXI4_BURST_SIZE_32, 1, clock_period*20, ram_result, ram_resp);
+				assert ram_resp = AXI_RESP_OKAY report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & AXI_resp_to_string(AXI_RESP_OKAY) & ", got " & AXI_resp_to_string(ram_resp) severity FAILURE;
+				assert expected_data = ram_result report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & hex(unsigned(expected_data), 32) & ", got " & hex(unsigned(ram_result), 32) severity FAILURE;
 			else
 				report "core_test invalid command " & parts(0)(parts(0)'range) & " on line " & INTEGER'image(iline) severity FAILURE;
 			end if;

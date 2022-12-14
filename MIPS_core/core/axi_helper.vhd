@@ -48,8 +48,8 @@ package axi_helper is
 		awsize :  STD_LOGIC_VECTOR ( 2 downto 0 );
 		awburst :  STD_LOGIC_VECTOR ( 1 downto 0 );
 		awvalid :  STD_LOGIC;
-		wdata :  STD_LOGIC_VECTOR ( 511 downto 0 );
-		wstrb :  STD_LOGIC_VECTOR ( 63 downto 0 );
+		wdata :  STD_LOGIC_VECTOR ( 31 downto 0 );
+		wstrb :  STD_LOGIC_VECTOR ( 3 downto 0 );
 		wlast :  STD_LOGIC;
 		wvalid :  STD_LOGIC;
 		bready :  STD_LOGIC;
@@ -76,7 +76,7 @@ package axi_helper is
 		bvalid :  STD_LOGIC;
 		arready :  STD_LOGIC;
 		rid :  STD_LOGIC_VECTOR ( 3 downto 0 );
-		rdata :  STD_LOGIC_VECTOR ( 511 downto 0 );
+		rdata :  STD_LOGIC_VECTOR ( 31 downto 0 );
 		rresp :  STD_LOGIC_VECTOR ( 1 downto 0 );
 		rlast :  STD_LOGIC;
 		rvalid :  STD_LOGIC;
@@ -86,6 +86,8 @@ package axi_helper is
 	constant AXI_RESP_EXOKAY : std_logic_vector(1 downto 0) := "01";
 	constant AXI_RESP_SLVERR : std_logic_vector(1 downto 0) := "10";
 	constant AXI_RESP_DECERR : std_logic_vector(1 downto 0) := "11";
+	
+	function AXI_resp_to_string(r : std_logic_vector) return STRING;
 	
 	type AXI_write_result_t is (AXI_write_result_pending, AXI_write_result_OK, AXI_write_result_ERR);
 	
@@ -153,6 +155,16 @@ package axi_helper is
 		signal pm : out axi4_port_out_t;
 		signal ps : in axi4_port_in_t;
 		variable result : out AXI_write_result_t);
+	procedure AXI4_test_read(
+		signal pm : out axi4_port_out_t;
+		signal ps : in axi4_port_in_t;
+		addr : std_logic_vector;
+		burst_type : std_logic_vector;
+		burst_size : std_logic_vector;
+		burst_len : NATURAL;
+		timeout : TIME;
+		variable result : out std_logic_vector;
+		variable resp : out std_logic_vector);
 
 	constant AXI4_BURST_FIXED : std_logic_vector(1 downto 0) := "00";
 	constant AXI4_BURST_INCR : std_logic_vector(1 downto 0) := "01";
@@ -166,6 +178,8 @@ package axi_helper is
 	constant AXI4_BURST_SIZE_32 : std_logic_vector(2 downto 0) := "101";
 	constant AXI4_BURST_SIZE_64 : std_logic_vector(2 downto 0) := "110";
 	constant AXI4_BURST_SIZE_128 : std_logic_vector(2 downto 0) := "111";
+	
+	function AXI4_burst_size_decode(size : std_logic_vector) return NATURAL;
 end axi_helper;
 
 package body axi_helper is
@@ -401,4 +415,76 @@ package body axi_helper is
 			result := AXI_write_result_pending;
 		end if;
 	end procedure;
+	
+	function AXI4_burst_size_decode(size : std_logic_vector) return NATURAL is
+	begin
+		return 2 ** TO_INTEGER(UNSIGNED(size));
+	end function;
+	
+	procedure AXI4_test_read(
+		signal pm : out axi4_port_out_t;
+		signal ps : in axi4_port_in_t;
+		addr : std_logic_vector;
+		burst_type : std_logic_vector;
+		burst_size : std_logic_vector;
+		burst_len : NATURAL;
+		timeout : TIME;
+		variable result : out std_logic_vector;
+		variable resp : out std_logic_vector) is
+		
+		alias data : std_logic_vector(result'LENGTH-1 downto 0) is result;
+		constant data_width : NATURAL := ps.rdata'LENGTH;
+		variable ofs : NATURAL := 0;
+	begin
+		assert AXI4_burst_size_decode(burst_size) <= ps.rdata'LENGTH report "burst size cannot be bigger then bus width" severity FAILURE;
+		assert AXI4_burst_size_decode(burst_size) = ps.rdata'LENGTH report "burst size /= bus width is not supported" severity FAILURE;
+		assert burst_type = AXI4_BURST_INCR report "only increment burst type supported" severity FAILURE;
+		
+		pm.araddr <= addr;
+		pm.arvalid <= '1';
+		pm.rready <= '0';
+		pm.arburst <= burst_type;
+		pm.arlen <= std_logic_vector(TO_UNSIGNED(burst_len-1, 8));
+		pm.arsize <= burst_size;
+		pm.arcache <= (others => '0');
+		pm.arid <= (others => '0');
+		pm.arlock <= '0';
+		pm.arprot <= (others => '0');
+		pm.arregion <= (others => '0');
+		
+		wait until ps.arready = '1' for timeout;
+		pm.arvalid <= '0';
+		assert ps.arready = '1' report "AXI4_test_read arready timed out" severity ERROR;
+	
+		pm.rready <= '1';
+		
+		for i in 0 to burst_len-1 loop
+			wait until ps.rvalid = '1' for timeout;
+			assert ps.rvalid = '1' report "AXI4_test_read rvalid timed out" severity ERROR;
+			data(ofs+data_width-1 downto ofs) := ps.rdata;
+			ofs := ofs + data_width;
+			if i = burst_len-1 then
+				assert ps.rlast = '1' report "AXI4_test_read rlast was not set properly" severity ERROR;
+				resp := ps.rresp;
+			end if;
+		end loop;
+		
+		pm.rready <= '0';
+	end procedure;
+	
+	function AXI_resp_to_string(r : std_logic_vector) return STRING is
+	begin
+		case r is
+			when AXI_RESP_OKAY =>
+				return "AXI_RESP_OKAY";
+			when AXI_RESP_EXOKAY =>
+				return "AXI_RESP_EXOKAY";
+			when AXI_RESP_DECERR =>
+				return "AXI_RESP_DECERR";
+			when AXI_RESP_SLVERR =>
+				return "AXI_RESP_SLVERR";
+			when others =>
+				report "AXI_resp_to_string unknown value" severity FAILURE;
+		end case;
+	end function;
 end axi_helper;

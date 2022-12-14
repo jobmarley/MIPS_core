@@ -45,14 +45,18 @@ def sign_extend(s, src_size, dst_size):
 
 # works on signed and unsigned
 def unsigned_to_signed(u, size):
-	if u & (1 << size - 1):
-		return u - (1 << size)
-	else:
-		return u
+    if u & (1 << size - 1):
+        return u - (1 << size)
+    else:
+        return u
+
+def invert(u, size):
+    u = to_unsigned(u, size)
+    return ((1 << size) - 1) ^ u
 
 # works on signed and unsigned
 def to_unsigned(s, size):
-	return s % (1 << size)
+  return s % (1 << size)
 
 class instruction_builder:
 	def __init__(self, asm_filepath, cmd_filepath):
@@ -71,11 +75,15 @@ class instruction_builder:
 	def add_check_hilo(self, value):
 		self.add_command('CHECK_HILO {:08X} {:08X}'.format((value >> 32) & 0xFFFFFFFF, value & 0xFFFFFFFF))
 		
+	def add_check_ram(self, address, value):
+		self.add_command('CHECK_RAM {:08X} {:08X}'.format(address & 0xFFFFFFFF, value & 0xFFFFFFFF))
+
 	def add_write_reg(self, reg, value):
 		self.add_command('WRITE_REG {:08X} {:08X}'.format(reg, value))
-
+		
 	def add_write_hilo(self, value):
 		self.add_command('WRITE_HILO {:08X} {:08X}'.format((value >> 32) & 0xFFFFFFFF, value & 0xFFFFFFFF))
+
 
 	def add_command(self, cmd):
 		self.test_commands.append(cmd)
@@ -179,7 +187,7 @@ def check_op_2reg_hilo2(instr, builder, registers, reghilo, f, syntax = '{} ${},
 
 # the registers values are given, this is to avoid corner cases with div by zero etc..
 def check_op_2reg_nonrand_hilo2(instr, builder, registers, r1, r2, reghilo, f, syntax = '{} ${}, ${}'):
-	r = random_register(2)
+	r = random_register_non_zero(2)
 	builder.add_write_reg(r[0], to_unsigned(r1, 32))
 	builder.add_write_reg(r[1], to_unsigned(r2, 32))
 	builder.add_instruction(syntax.format(instr, *r))
@@ -213,6 +221,30 @@ def check_op_ram(instr, alignment, builder, ram, registers, f):
 	builder.add_write_reg(*r, base)
 	check_op_1reg_imm(instr, builder, registers, offset, lambda y, z: f(base, y, z), '{{}} ${{}}, {{}}(${})'.format(*r))
 	builder.add_write_reg(*r, registers[r[0]])
+
+
+# check that
+# [ram] = f(value, address, oldvalue)
+def check_op_ram_store(instr, alignment, builder, ram, registers, f):
+	r = random_register_non_zero() + random_register()
+	base = random.randint(0, len(ram)*4-1);
+	#print('base: ' + str(base))
+	offset = random.randint(-base, len(ram)*4-1 - base)
+	##print('offset: ' + str(offset))
+	offset = offset - ((base + offset) % alignment)
+	###print('offset: ' + str(offset))
+	offset = clamp(offset, -0x8000, 0x7FFF)
+	#print('offset: ' + str(offset))
+	builder.add_write_reg(r[0], base)
+	
+	oldvalue = ram[(base + offset) // 4]
+	#print('oldvalue: {:08X}'.format(oldvalue))
+	value = f(registers[r[1]], base + offset, oldvalue)
+	value = to_unsigned(value, 32)
+	value = value & 0xFFFFFFFF
+	builder.add_instruction('{} ${}, {}(${})'.format(instr, r[1], offset, r[0]))
+	builder.add_check_ram((base + offset) // 4 * 4, value)
+	builder.add_write_reg(r[0], registers[r[0]])
 
 def write_memory_file(filepath, content):
 	print('write ram file {}'.format(filepath))
@@ -292,6 +324,10 @@ def generate_commands():
 	check_op_ram('lw', 4, builder, ram, registers, lambda x, y, z: get_ram(ram, x + y, 32))
 	check_op_ram('lwl', 1, builder, ram, registers, lambda x, y, z: (z & (0xFFFFFFFF >> ((x + y) % 4 + 1) * 8)) | (get_ram(ram, (x + y) // 4 * 4, 32) << (3 - (x + y) % 4) * 8))
 	check_op_ram('lwr', 1, builder, ram, registers, lambda x, y, z: (z & (0xFFFFFFFF << (4 - (x + y) % 4) * 8)) | (get_ram(ram, (x + y) // 4 * 4, 32) >> ((x + y) % 4) * 8))
+	
+	check_op_ram_store('sb', 1, builder, ram, registers, lambda value, addr, oldvalue: (oldvalue & invert(0xFF << addr % 4 * 8, 32)) | ((value & 0xFF) << addr % 4 * 8))
+	check_op_ram_store('sh', 2, builder, ram, registers, lambda value, addr, oldvalue: (oldvalue & invert(0xFFFF << addr % 4 * 8, 32)) | ((value & 0xFFFF) << addr % 4 * 8))
+	check_op_ram_store('sw', 4, builder, ram, registers, lambda value, addr, oldvalue: value)
 
 	builder.generate_cmd_file()
 	write_memory_file(instr_ram_filename, ram)
