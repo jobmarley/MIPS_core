@@ -253,7 +253,7 @@ begin
 	register_port_in_d.write_strobe <= mov_strobe_reg;
 	register_port_in_d.write_pending <= '0' when operation_reg.op_mov = '1'
 		else not store_reg;
-	register_port_in_d.write_enable <= not register_c_reg(5) and operation_valid_reg;
+	register_port_in_d.write_enable <= not register_c_reg(5) and operation_valid_reg and not stall_internal;
 	
 	cop0_reg_port_in_a.address <= register_a(4 downto 0);
 	cop0_reg_port_in_a.write_data <= (others => '0');
