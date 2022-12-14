@@ -473,8 +473,9 @@ package body axi_helper is
 	end procedure;
 	
 	function AXI_resp_to_string(r : std_logic_vector) return STRING is
+		alias rr : std_logic_vector(1 downto 0) is r;
 	begin
-		case r is
+		case rr is
 			when AXI_RESP_OKAY =>
 				return "AXI_RESP_OKAY";
 			when AXI_RESP_EXOKAY =>
