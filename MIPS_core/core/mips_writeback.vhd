@@ -146,10 +146,19 @@ begin
 					register_port_in_b.write_strobe <= x"F";
 				when "000000100" =>
 					register_port_in_b.address <= '0' & alu_out_ports.cmp_out_tuser(4 downto 0);
-					register_port_in_b.write_data <= x"0000000" & "000" & cmp_result;
+					if cmp_tuser.mov = '0' then
+						register_port_in_b.write_data <= x"0000000" & "000" & cmp_result;
+						register_port_in_b.write_strobe <= x"F";
+					else
+						register_port_in_b.write_data <= cmp_tuser.alternate_value;
+						if cmp_result = '0' then
+							register_port_in_b.write_strobe <= x"0";
+						else
+							register_port_in_b.write_strobe <= x"F";
+						end if;
+					end if;
 					register_port_in_b.write_enable <= '1';
 					register_port_in_b.write_pending <= '0';
-					register_port_in_b.write_strobe <= x"F";
 				when "000000010" =>
 					register_port_in_b.address <= '0' & alu_out_ports.clo_out_tuser(4 downto 0);
 					register_port_in_b.write_data <= alu_out_ports.clo_out_tdata;

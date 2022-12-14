@@ -224,6 +224,21 @@ def check_op_1reg_1nonrand(instr, builder, registers, v, f, syntax = '{} ${}, ${
 	builder.add_check_reg(r[0], e)
 	builder.add_write_reg(r[0], registers[r[0]])
 	builder.add_write_reg(r[1], registers[r[1]])
+	
+# [r2] = v
+# [rdest] = f([r1], [r2], [rdest])
+# [r2] = restore
+def check_op_2reg_1nonrand(instr, builder, registers, v, f, syntax = '{} ${}, ${}, ${}'):
+	r = random_register_non_zero(3)
+	builder.add_write_reg(r[2], to_unsigned(v, 32))
+	builder.add_instruction(syntax.format(instr, *r))
+	e = f(registers[r[1]], v, registers[r[0]])
+	e = to_unsigned(e, 32)
+	e = e & 0xFFFFFFFF
+	builder.add_check_reg(r[0], e)
+	builder.add_write_reg(r[0], registers[r[0]])
+	builder.add_write_reg(r[1], registers[r[1]])
+	builder.add_write_reg(r[2], registers[r[2]])
 
 # [rdest] = f([r1], v, [rdest])
 # write r with a random value before hand
@@ -347,7 +362,11 @@ def generate_commands():
 	# test with smaller divisor value (otherwise we always get result 0 or 1)
 	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(16), register_hilo, lambda x, y, z: correct_signed_div(x, y), '{} $0, ${}, ${}')
 	check_op_2reg_nonrand_hilo2('divu', builder, registers, random_uint(32), random_uint_nonzero(16), register_hilo, lambda x, y, z: (x % y, x // y), '{} $0, ${}, ${}')
-	
+	check_op_2reg_1nonrand('movn', builder, registers, 0, lambda x, y, z: x if y != 0 else z)
+	check_op_2reg_1nonrand('movn', builder, registers, random_uint_nonzero(32), lambda x, y, z: x if y != 0 else z)
+	check_op_2reg_1nonrand('movz', builder, registers, 0, lambda x, y, z: x if y == 0 else z)
+	check_op_2reg_1nonrand('movz', builder, registers, random_uint_nonzero(32), lambda x, y, z: x if y == 0 else z)
+
 	check_op_2reg_i16('addi', builder, registers, lambda x, y, z: x + y)
 	check_op_2reg_i16('sub', builder, registers, lambda x, y, z: x - y)
 	check_op_2reg_i16('subu', builder, registers, lambda x, y, z: x - sign_extend(y, 16, 32))

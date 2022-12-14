@@ -371,7 +371,26 @@ begin
 								mov_strobe_reg_next <= "1111";
 	
 							when instr_movn_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_cmp <= '1';
+								operation_reg_next.op_cmp_eq <= '1';
+								operation_reg_next.op_cmp_invert <= '1';
+								operation_reg_next.op_cmpmov <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_b_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
+								immediate_b_reg_next <= (others => '0');
+								operation_reg_next.op_immediate_b <= '1';
 							when instr_movz_opc.funct =>
+								operation_valid_reg_next <= '1';
+								operation_reg_next.op_cmp <= '1';
+								operation_reg_next.op_cmp_eq <= '1';
+								operation_reg_next.op_cmpmov <= '1';
+								register_a_reg_next <= '0' & instruction_data_r.rt;
+								register_b_reg_next <= '0' & instruction_data_r.rs;
+								register_c_reg_next <= '0' & instruction_data_r.rd;
+								immediate_b_reg_next <= (others => '0');
+								operation_reg_next.op_immediate_b <= '1';
 	
 							when instr_syscall_opc.funct =>
 							when instr_break_opc.funct =>

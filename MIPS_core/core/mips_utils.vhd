@@ -320,6 +320,7 @@ package mips_utils is
 		op_tohilo : std_logic;
 		op_clo : std_logic;
 		op_clz : std_logic;
+		op_cmpmov : std_logic;
 	end record;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
@@ -344,6 +345,8 @@ package mips_utils is
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
 	
 	type alu_cmp_tuser_t is record
+		alternate_value : std_logic_vector(31 downto 0);
+		mov : std_logic;
 		likely : std_logic;
 		branch : std_logic;
 		unsigned : std_logic;
@@ -353,7 +356,7 @@ package mips_utils is
 		invert : std_logic;
 		rd : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_cmp_tuser_length : NATURAL := 13;
+	constant alu_cmp_tuser_length : NATURAL := 46;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
@@ -613,6 +616,8 @@ package body mips_utils is
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t is
 		variable vresult : alu_cmp_tuser_t;
 	begin
+		vresult.alternate_value := data(45 downto 14);
+		vresult.mov := data(13);
 		vresult.likely := data(12);
 		vresult.branch := data(11);
 		vresult.unsigned := data(10);
@@ -626,6 +631,8 @@ package body mips_utils is
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
 		variable vresult : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	begin
+		vresult(45 downto 14) := tuser.alternate_value;
+		vresult(13) := tuser.mov;
 		vresult(12) := tuser.likely;
 		vresult(11) := tuser.branch;
 		vresult(10) := tuser.unsigned;
