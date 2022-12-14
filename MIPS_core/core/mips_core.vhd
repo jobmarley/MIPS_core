@@ -418,7 +418,7 @@ begin
 		stall => stall
 	);
 	mips_fetch_i0 : mips_fetch port map(
-		enable => not stall,
+		enable => processor_enable and not stall,
 		resetn => resetn,
 		clock => clock,
 	
