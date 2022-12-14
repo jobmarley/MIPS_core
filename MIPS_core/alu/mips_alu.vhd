@@ -251,7 +251,7 @@ architecture mips_alu_behavioral of mips_alu is
 				return i;
 			end if;
 		end loop;
-		return d'HIGH;
+		return d'LENGTH;
 	end function;
 	
 	function count_leading_zero(data : std_logic_vector) return NATURAL is
@@ -262,7 +262,7 @@ architecture mips_alu_behavioral of mips_alu is
 				return i;
 			end if;
 		end loop;
-		return d'HIGH;
+		return d'LENGTH;
 	end function;
 begin
 	cmp_tuser <= slv_to_cmp_tuser(in_ports.cmp_in_tuser);
