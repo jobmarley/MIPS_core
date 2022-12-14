@@ -45,6 +45,8 @@ def sign_extend(s, src_size, dst_size):
 
 # works on signed and unsigned
 def unsigned_to_signed(u, size):
+    if u < 0:
+        return u
     if u & (1 << size - 1):
         return u - (1 << size)
     else:
@@ -260,6 +262,23 @@ def clamp(x, a, b):
 def get_ram(ram, address, size):
 	return (ram[address // 4] >> ((address % 4) * 8)) & ((1 << size) - 1)
 
+
+# from xilinx ip doc div_gen:
+# Dividend = Quotient x Divisor + IntRmd (Equation 3-1)
+# For signed mode with integer remainder, the sign of the quotient and remainder correspond exactly to Equation 3-1.
+# Thus, 6/-4 = -1 REMD 2
+# whereas -6/4 = -1 REMD -2
+
+# python return a remainder always positive
+def correct_signed_div(x, y):
+    x = unsigned_to_signed(x, 32)
+    y = unsigned_to_signed(y, 32)
+    a, b = (x % y, x // y)
+    if b < 0:
+        b = b + 1
+        a = a - y
+    return a, b
+
 def generate_commands():
 	
 	builder = instruction_builder(instr_asm_filename, instr_cmd_filename)
@@ -297,10 +316,10 @@ def generate_commands():
 	check_op_2reg_hilo('multu', builder, registers, register_hilo, lambda x, y, z: x * y)
 	# llvm requires $0 as dest for normal div
 	# Otherwise it matches a pseudo instruction "$rs = div $rs, $rt" where result is a GPR
-	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(32), register_hilo, lambda x, y, z: (unsigned_to_signed(x, 32) % unsigned_to_signed(y, 32), unsigned_to_signed(x, 32) // unsigned_to_signed(y, 32)), '{} $0, ${}, ${}')
+	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(32), register_hilo, lambda x, y, z: correct_signed_div(x, y), '{} $0, ${}, ${}')
 	check_op_2reg_nonrand_hilo2('divu', builder, registers, random_uint(32), random_uint_nonzero(32), register_hilo, lambda x, y, z: (x % y, x // y), '{} $0, ${}, ${}')
 	# test with smaller divisor value (otherwise we always get result 0 or 1)
-	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(16), register_hilo, lambda x, y, z: (unsigned_to_signed(x, 32) % unsigned_to_signed(y, 32), unsigned_to_signed(x, 32) // unsigned_to_signed(y, 32)), '{} $0, ${}, ${}')
+	check_op_2reg_nonrand_hilo2('div', builder, registers, random_int(32), random_int_nonzero(16), register_hilo, lambda x, y, z: correct_signed_div(x, y), '{} $0, ${}, ${}')
 	check_op_2reg_nonrand_hilo2('divu', builder, registers, random_uint(32), random_uint_nonzero(16), register_hilo, lambda x, y, z: (x % y, x // y), '{} $0, ${}, ${}')
 	
 	check_op_2reg_i16('addi', builder, registers, lambda x, y, z: x + y)
@@ -328,7 +347,9 @@ def generate_commands():
 	check_op_ram_store('sb', 1, builder, ram, registers, lambda value, addr, oldvalue: (oldvalue & invert(0xFF << addr % 4 * 8, 32)) | ((value & 0xFF) << addr % 4 * 8))
 	check_op_ram_store('sh', 2, builder, ram, registers, lambda value, addr, oldvalue: (oldvalue & invert(0xFFFF << addr % 4 * 8, 32)) | ((value & 0xFFFF) << addr % 4 * 8))
 	check_op_ram_store('sw', 4, builder, ram, registers, lambda value, addr, oldvalue: value)
-
+	check_op_ram_store('swl', 1, builder, ram, registers, lambda value, addr, oldvalue: (oldvalue & (0xFFFFFFFF << (addr % 4 + 1) * 8)) | (value >> (3 - addr % 4) * 8))
+	check_op_ram_store('swr', 1, builder, ram, registers, lambda value, addr, oldvalue: (oldvalue & (0xFFFFFFFF >> (4 - addr % 4) * 8)) | (value << (addr % 4) * 8))
+	
 	builder.generate_cmd_file()
 	write_memory_file(instr_ram_filename, ram)
 		
