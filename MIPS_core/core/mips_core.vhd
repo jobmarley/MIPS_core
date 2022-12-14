@@ -127,6 +127,8 @@ architecture mips_core_behavioral of mips_core is
 	
 			register_port_in_a : out register_port_in_t;
 			register_port_out_a : in register_port_out_t;
+			cop0_reg_port_in_a : out cop0_register_port_in_t;
+			cop0_reg_port_out_a : in cop0_register_port_out_t;
 			
 			processor_enable : out std_logic;
 	
@@ -222,6 +224,12 @@ architecture mips_core_behavioral of mips_core is
 	
 		register_port_in_a : in register_port_in_t;
 		register_port_out_a : out register_port_out_t;
+	
+		register_hilo_in : in hilo_register_port_in_t;
+		register_hilo_out : out hilo_register_port_out_t;
+	
+		cop0_reg_port_in_a : in cop0_register_port_in_t;
+		cop0_reg_port_out_a : out cop0_register_port_out_t;
 		
 		-- memory port b
 		m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -279,6 +287,12 @@ architecture mips_core_behavioral of mips_core is
 	signal register_port_in_a : register_port_in_t;
 	signal register_port_out_a : register_port_out_t;
 	
+	signal register_hilo_in : hilo_register_port_in_t;
+	signal register_hilo_out : hilo_register_port_out_t;
+	
+	signal register_cop0_reg_port_in_a : cop0_register_port_in_t;
+	signal register_cop0_reg_port_out_a : cop0_register_port_out_t;
+	
 	signal stall : std_logic;
 	
 	-- fetch
@@ -307,6 +321,9 @@ begin
 		register_port_in_a => register_port_in_a,
 		register_port_out_a => register_port_out_a,
 			
+		cop0_reg_port_in_a => register_cop0_reg_port_in_a,
+		cop0_reg_port_out_a => register_cop0_reg_port_out_a,
+	
 		processor_enable => processor_enable,
 	
 		breakpoint => breakpoint,
@@ -345,6 +362,12 @@ begin
 		register_port_in_a => register_port_in_a,
 		register_port_out_a => register_port_out_a,
 		
+		register_hilo_in => register_hilo_in,
+		register_hilo_out => register_hilo_out,
+	
+		cop0_reg_port_in_a => register_cop0_reg_port_in_a,
+		cop0_reg_port_out_a => register_cop0_reg_port_out_a,
+	
 		-- memory => memory,
 		m_axi_memb_araddr => m_axi_memb_araddr,
 		m_axi_memb_arburst => m_axi_memb_arburst,

@@ -24,6 +24,8 @@ entity mips_debugger is
 	
 		register_port_in_a : out register_port_in_t;
 		register_port_out_a : in register_port_out_t;
+		cop0_reg_port_in_a : out cop0_register_port_in_t;
+		cop0_reg_port_out_a : in cop0_register_port_out_t;
 			
 		processor_enable : out std_logic;
 	
@@ -177,7 +179,8 @@ begin
 		breakpoint,
 		address_reg,
 		write_data_reg,
-		write_strobe_reg
+		write_strobe_reg,
+		cop0_reg_port_out_a
 		)
 	begin
 		s_axi_awready <= '0';
@@ -191,6 +194,11 @@ begin
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= x"F";
 		register_port_in_a.write_pending <= '0';
+		
+		cop0_reg_port_in_a.address <= (others => '0');
+		cop0_reg_port_in_a.write_data <= (others => '0');
+		cop0_reg_port_in_a.write_enable <= '0';
+		cop0_reg_port_in_a.write_strobe <= x"F";
 		
 		address_reg_next <= address_reg;
 		write_data_reg_next <= write_data_reg;
@@ -269,10 +277,18 @@ begin
 						end if ;
 					end if;
 				when debugger_state_read_reg =>
-					register_port_in_a.address <= address_reg;
+					if address_reg(5) = '0' then
+						register_port_in_a.address <= address_reg(4 downto 0);
+					else
+						cop0_reg_port_in_a.address <= address_reg(4 downto 0);
+					end if;
 					debugger_state_next <= debugger_state_read_reg2;
 				when debugger_state_read_reg2 =>
-					s_axi_rdata_reg_next <= register_port_out_a.data;
+					if address_reg(5) = '0' then
+						s_axi_rdata_reg_next <= register_port_out_a.data;
+					else
+						s_axi_rdata_reg_next <= cop0_reg_port_out_a.data;
+					end if;
 					s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 					debugger_state_next <= debugger_state_read_resp;
 				when debugger_state_read_resp =>
@@ -281,10 +297,17 @@ begin
 						debugger_state_next <= debugger_state_idle;
 					end if;
 				when debugger_state_write_reg =>
-					register_port_in_a.address <= address_reg; -- COP0
-					register_port_in_a.write_data <= write_data_reg;
-					register_port_in_a.write_strobe <= write_strobe_reg;
-					register_port_in_a.write_enable <= '1';
+					if address_reg(5) = '0' then
+						register_port_in_a.address <= address_reg(4 downto 0);
+						register_port_in_a.write_data <= write_data_reg;
+						register_port_in_a.write_strobe <= write_strobe_reg;
+						register_port_in_a.write_enable <= '1';
+					else
+						cop0_reg_port_in_a.address <= address_reg(4 downto 0);
+						cop0_reg_port_in_a.write_data <= write_data_reg;
+						cop0_reg_port_in_a.write_strobe <= write_strobe_reg;
+						cop0_reg_port_in_a.write_enable <= '1';
+					end if;
 					s_axi_bresp_reg_next <= AXI_RESP_OKAY;
 					debugger_state_next <= debugger_state_write_resp;
 				when debugger_state_write_resp =>
