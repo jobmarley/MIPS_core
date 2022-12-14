@@ -167,6 +167,7 @@ begin
 		panic <= '0';
 		wait_jump <= '0';
 		execute_delay_slot <= '0';
+		breakpoint <= '0';
 		
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
@@ -437,6 +438,7 @@ begin
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
 							when instr_sdbbp_opc.funct =>
+								breakpoint <= '1';
 							when others =>
 								panic <= '1';
 						end case;
