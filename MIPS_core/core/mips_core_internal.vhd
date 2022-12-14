@@ -425,6 +425,7 @@ begin
 	fetch_override_address_valid <= decode_override_address_valid or readreg_override_address_valid or writeback_override_address_valid;
 	fetch_execute_delay_slot <= decode_execute_delay_slot or readreg_execute_delay_slot or writeback_execute_delay_slot;
 	fetch_skip_jump <= readreg_skip_jump or writeback_skip_jump;
+	fetch_wait_jump <= decode_wait_jump;
 	
 	mips_readreg_i0 : mips_readreg port map(
 		enable => not readmem_stall,

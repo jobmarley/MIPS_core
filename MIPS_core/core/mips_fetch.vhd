@@ -87,9 +87,6 @@ architecture mips_fetch_behavioral of mips_fetch is
 	signal override_address_reg_next : std_logic_vector(31 downto 0);
 	signal override_address_valid_reg : std_logic;
 	signal override_address_valid_reg_next : std_logic;
-	
-	signal delay_slot_executed : std_logic;
-	signal delay_slot_executed_next : std_logic;
 		
 begin
 	instruction_address_plus_8 <= instruction_address_plus_8_reg;
@@ -114,8 +111,6 @@ begin
 			override_address_valid_reg <= override_address_valid_reg_next;
 			skip_jump_reg <= skip_jump_reg_next;
 			execute_delay_slot_reg <= execute_delay_slot_reg_next;
-			
-			delay_slot_executed <= delay_slot_executed_next;
 		end if;
 	end process;
 
@@ -147,8 +142,7 @@ begin
 		skip_jump,
 		skip_jump_reg,
 		execute_delay_slot,
-		execute_delay_slot_reg,
-		delay_slot_executed
+		execute_delay_slot_reg
 		)
 	begin
 		m_axi_mem_awaddr <= (others => '0');
@@ -192,9 +186,7 @@ begin
 		wait_jump_reg_next <= wait_jump_reg;
 		skip_jump_reg_next <= skip_jump_reg;
 		execute_delay_slot_reg_next <= execute_delay_slot_reg;
-		
-		delay_slot_executed_next <= delay_slot_executed;
-		
+				
 		wait_jump_reg_next <= wait_jump_reg or wait_jump;
 		if override_address_valid = '1' then
 			override_address_valid_reg_next <= '1';
@@ -218,7 +210,6 @@ begin
 			instruction_address_plus_4_reg_next <= (others => '0');
 			skip_jump_reg_next <= '0';
 			execute_delay_slot_reg_next <= '0';
-			delay_slot_executed_next <= '0';
 		elsif enable = '1' then
 			
 			case state is
@@ -237,13 +228,14 @@ begin
 					if instruction_data_valid_reg = '0' or instruction_data_ready = '1' then
 						m_axi_mem_rready <= '1';
 						if m_axi_mem_rvalid = '1' then
-							instruction_data_valid_reg_next <= '1';
 							instruction_data_reg_next <= m_axi_mem_rdata;
 							error <= m_axi_mem_rresp(1);
 							
 							if wait_jump_reg = '1' then
 								state_next <= state_wait_override;
 							else
+								-- if wait jump, we dont execute because we dont know if we should or not
+								instruction_data_valid_reg_next <= '1';
 								state_next <= state_read_address;
 							end if;
 							
@@ -252,22 +244,14 @@ begin
 				when state_wait_override =>
 					-- first we need to execute the delay slot
 					if execute_delay_slot_reg = '1' then
-						delay_slot_executed_next <= '1';
+						instruction_data_valid_reg_next <= '1';
 						execute_delay_slot_reg_next <= '0';
-						state_next <= state_read_address;
 					elsif skip_jump_reg = '1' then
-						-- if the delay slot was not executed, we have to skip it
-						-- with branch likely versions, we skip the delay slot if we dont branch
-						if delay_slot_executed = '1' then
-							current_address_next <= instruction_address_plus_8_reg;
-						end if;
-						delay_slot_executed_next <= '0';
 						override_address_valid_reg_next <= '0';
 						skip_jump_reg_next <= '0';
 						wait_jump_reg_next <= '0';
 						state_next <= state_read_address;
 					elsif override_address_valid_reg = '1' then
-						delay_slot_executed_next <= '0';
 						current_address_next <= override_address_reg;
 						override_address_valid_reg_next <= '0';
 						skip_jump_reg_next <= '0';
