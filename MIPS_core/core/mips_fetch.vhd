@@ -72,7 +72,7 @@ architecture mips_fetch_behavioral of mips_fetch is
 	signal instruction_data_valid_reg : std_logic;
 	signal instruction_data_valid_reg_next : std_logic;
 	
-	type state_t is (state_read_address, state_read_data, state_wait_override);
+	type state_t is (state_read_address, state_read_data, state_send_data, state_wait_override);
 	signal state : state_t;
 	signal state_next : state_t;
 	
@@ -210,7 +210,7 @@ begin
 			instruction_address_plus_4_reg_next <= (others => '0');
 			skip_jump_reg_next <= '0';
 			execute_delay_slot_reg_next <= '0';
-		elsif enable = '1' then
+		else
 			
 			case state is
 				when state_read_address =>
@@ -231,14 +231,20 @@ begin
 							instruction_data_reg_next <= m_axi_mem_rdata;
 							error <= m_axi_mem_rresp(1);
 							
-							if wait_jump_reg = '1' then
-								state_next <= state_wait_override;
-							else
-								-- if wait jump, we dont execute because we dont know if we should or not
-								instruction_data_valid_reg_next <= '1';
-								state_next <= state_read_address;
-							end if;
+							state_next <= state_send_data;
 							
+						end if;
+					end if;
+				
+				-- when enable is '0', execution will stop here
+				when state_send_data =>
+					if enable = '1' then
+						if wait_jump_reg = '1' then
+							state_next <= state_wait_override;
+						else
+							-- if wait jump, we dont execute because we dont know if we should or not
+							instruction_data_valid_reg_next <= '1';
+							state_next <= state_read_address;
 						end if;
 					end if;
 				when state_wait_override =>

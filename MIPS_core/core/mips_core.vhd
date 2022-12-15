@@ -156,6 +156,17 @@ architecture mips_core_behavioral of mips_core is
 			s_axi_arvalid : in STD_LOGIC;
 			s_axi_rready : in STD_LOGIC;
 	
+			-- fetch
+			fetch_instruction_address_plus_8 : in std_logic_vector(31 downto 0);
+			fetch_instruction_address_plus_4 : in std_logic_vector(31 downto 0);
+			fetch_instruction_address : in std_logic_vector(31 downto 0);
+		
+			fetch_override_address : out std_logic_vector(31 downto 0);
+			fetch_override_address_valid : out std_logic;
+			fetch_skip_jump : out std_logic;
+			fetch_wait_jump : out std_logic;
+			fetch_execute_delay_slot : out std_logic;
+	
 			debug : out std_logic_vector(7 downto 0)
 		);
 	end component;
@@ -282,6 +293,7 @@ architecture mips_core_behavioral of mips_core is
 		);
 	end component;
 	
+	-- debugger
 	signal processor_enable : std_logic;
 	signal breakpoint : std_logic;
 	signal register_port_in_a : register_port_in_t;
@@ -294,6 +306,21 @@ architecture mips_core_behavioral of mips_core is
 	signal register_cop0_reg_port_out_a : cop0_register_port_out_t;
 	
 	signal stall : std_logic;
+	
+	signal debugger_override_address : std_logic_vector(31 downto 0);
+	signal debugger_override_address_valid : std_logic;
+	signal debugger_skip_jump : std_logic;
+	signal debugger_wait_jump : std_logic;
+	signal debugger_execute_delay_slot : std_logic;
+	
+	-- internal
+	
+	signal internal_instruction_data_ready : std_logic;
+	signal internal_override_address : std_logic_vector(31 downto 0);
+	signal internal_override_address_valid : std_logic;
+	signal internal_skip_jump : std_logic;
+	signal internal_wait_jump : std_logic;
+	signal internal_execute_delay_slot : std_logic;
 	
 	-- fetch
 	signal fetch_instruction_address_plus_8 : std_logic_vector(31 downto 0);
@@ -311,6 +338,13 @@ architecture mips_core_behavioral of mips_core is
 				
 	signal fetch_error : std_logic;
 begin
+	fetch_instruction_data_ready <= internal_instruction_data_ready;
+		
+	fetch_override_address <= debugger_override_address when debugger_override_address_valid = '1' else internal_override_address;
+	fetch_override_address_valid <= debugger_override_address_valid or internal_override_address_valid;
+	fetch_execute_delay_slot <= debugger_execute_delay_slot or internal_execute_delay_slot;
+	fetch_skip_jump <= debugger_skip_jump or internal_skip_jump;
+	fetch_wait_jump <= debugger_wait_jump or internal_wait_jump;
 	
 	mips_debugger_i : mips_debugger port map(
 		resetn => resetn,
@@ -350,6 +384,16 @@ begin
 		s_axi_arvalid => s_axil_debug_arvalid,
 		s_axi_rready => s_axil_debug_rready,
 		
+		fetch_instruction_address_plus_8 => fetch_instruction_address_plus_8,
+		fetch_instruction_address_plus_4 => fetch_instruction_address_plus_4,
+		fetch_instruction_address => fetch_instruction_address,
+	
+		fetch_override_address => debugger_override_address,
+		fetch_override_address_valid => debugger_override_address_valid,
+		fetch_skip_jump => debugger_skip_jump,
+		fetch_wait_jump => debugger_wait_jump,
+		fetch_execute_delay_slot => debugger_execute_delay_slot,
+	
 		debug => LEDS
 	);
 	mips_core_internal_i : mips_core_internal port map(
@@ -407,13 +451,13 @@ begin
 		fetch_instruction_address => fetch_instruction_address,
 		fetch_instruction_data => fetch_instruction_data,
 		fetch_instruction_data_valid => fetch_instruction_data_valid,
-		fetch_instruction_data_ready => fetch_instruction_data_ready,
+		fetch_instruction_data_ready => internal_instruction_data_ready,
 		
-		fetch_override_address => fetch_override_address,
-		fetch_override_address_valid => fetch_override_address_valid,
-		fetch_skip_jump => fetch_skip_jump,
-		fetch_wait_jump => fetch_wait_jump,
-		fetch_execute_delay_slot => fetch_execute_delay_slot,
+		fetch_override_address => internal_override_address,
+		fetch_override_address_valid => internal_override_address_valid,
+		fetch_skip_jump => internal_skip_jump,
+		fetch_wait_jump => internal_wait_jump,
+		fetch_execute_delay_slot => internal_execute_delay_slot,
 	
 		stall => stall
 	);
