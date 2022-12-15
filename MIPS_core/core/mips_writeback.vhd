@@ -169,33 +169,7 @@ begin
 			register_hilo_in_reg_next.write_strobe <= "11";
 		end if;
 	end process;
-	
-	-- or xor nor shl shr cmp clo clz
-	process (
-		resetn,
-		alu_out_ports,
-		if resetn = '0' then
-		else
-			-- no need to synchronize that, cause readreg will stall if hi/lo is pending
-			if alu_out_ports.div_out_tvalid = '1' then
-				register_hilo_in_reg_next.write_data <= alu_out_ports.div_out_tdata(31 downto 0) & alu_out_ports.div_out_tdata(63 downto 32);
-			elsif alu_out_ports.divu_out_tvalid = '1' then
-				register_hilo_in_reg_next.write_data <= alu_out_ports.divu_out_tdata(31 downto 0) & alu_out_ports.divu_out_tdata(63 downto 32);
-			elsif alu_out_ports.mul_out_tvalid = '1' then
-				register_hilo_in_reg_next.write_data <= alu_out_ports.mul_out_tdata;
-			else
-				register_hilo_in_reg_next.write_data <= alu_out_ports.multu_out_tdata;
-			end if;
-			
-			register_hilo_in_reg_next.write_enable <= (alu_out_ports.mul_out_tvalid and mul_tuser.use_hilo)
-				or alu_out_ports.multu_out_tvalid
-				or alu_out_ports.div_out_tvalid
-				or alu_out_ports.divu_out_tvalid;
-			register_hilo_in_reg_next.write_pending <= '0';
-			register_hilo_in_reg_next.write_strobe <= "11";
-		end if;
-	end process;
-	
+		
 	-- or xor nor shl shr cmp clo clz
 	process (
 		resetn,
