@@ -93,6 +93,11 @@ class instruction_builder:
 			
 	def force_reset_hilo(self):
 		self.write_hilo(self.hilo_initial)
+		
+	def set_register(self, i, v):
+		self.registers[i] = to_unsigned(v, 32)
+	def set_hilo(self, v):
+		self.hilo = to_unsigned(v, 64)
 
 	def get_register(self, i):
 		return self.registers[i]
@@ -247,9 +252,9 @@ def test_regs_imm(builder : instruction_builder, reg_values, imm_values, syntax,
 	r0 = random_register_non_zero()
 	regs = write_random_registers(builder, *reg_values)
 	builder.execute(syntax.format(*r0, *regs, *imm_values))
-	builder.check_reg(*r0, f(*reg_values, *imm_values, builder.get_register(*r0)))
-	builder.reset_registers()
-	builder.force_reset_registers(r0)
+	e = f(*reg_values, *imm_values, builder.get_register(*r0))
+	builder.check_reg(*r0, e)
+	builder.set_register(*r0, e)
 
 # execute syntax.format(regs..., imm_values...)
 # test [hilo] = f(reg_values..., imm_values..., [hilo])
@@ -260,8 +265,7 @@ def test_regs_imm_check_hilo(builder : instruction_builder, reg_values, imm_valu
 	if type(result) != int:
 		result = ((result[0] & 0xFFFFFFFF) << 32) | (result[1] & 0xFFFFFFFF);
 	builder.check_hilo(result)
-	builder.reset_registers()
-	builder.force_reset_hilo()
+	builder.set_hilo(result)
 
 def test_mfc0(builder : instruction_builder):
 	# just test with register cop0 4: TLB pointer
@@ -410,8 +414,9 @@ def test_srl_values(builder : instruction_builder, v1, v2):
 
 	r0, r1, r2 = random_register_non_zero() + write_random_registers(builder, v1, v2)
 	builder.execute('srl ${}, ${}, ${}'.format(r0, r1, r2))
-	builder.check_reg(r0, f(v1, v2, builder.get_register(r0)))
-	builder.reset_registers()
+	e = f(v1, v2, builder.get_register(r0))
+	builder.check_reg(r0, e)
+	builder.set_register(r0, e)
 
 def test_srl(builder : instruction_builder):
 	f = lambda x, y, z: (x >> (y & 0x1F)) & 0xFFFFFFFF
@@ -584,7 +589,6 @@ def test_regs_imm_check_ram(builder : instruction_builder, reg_values, imm_value
 	e = e & 0xFFFFFFFF
 	builder.check_ram(address // 4 * 4, e)
 	builder.ram[address // 4] = e
-	builder.reset_registers()
 
 def test_sb(builder : instruction_builder):
 	f = lambda value, base, ofs, addr, oldvalue: (oldvalue & invert(0xFF << addr % 4 * 8, 32)) | ((value & 0xFF) << addr % 4 * 8)
