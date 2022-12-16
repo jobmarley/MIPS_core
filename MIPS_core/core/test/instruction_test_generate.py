@@ -184,158 +184,7 @@ def generate_register_values():
 
 def generate_memory_values(count):
 	return [random_uint32() for i in range(0, count)]
-
-# execute instr with 3 random registers, and check result which must be equal to f([r1], [r2], [rdest])
-# then revert the register
-def check_op_3reg(instr, builder, registers, f):
-	r = random_register_non_zero() + random_register(2)
-	builder.execute('{} ${}, ${}, ${}'.format(instr, *r))
-	e = f(registers[r[1]], registers[r[2]], registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
 	
-def check_op_2reg(instr, builder, registers, f):
-	r = random_register_non_zero() + random_register()
-	builder.execute('{} ${}, ${}'.format(instr, *r))
-	e = f(registers[r[1]], registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
-
-# same as above but with random i16, f([r1], i16, [rdest])
-def check_op_2reg_i16(instr, builder, registers, f):
-	r = random_register_non_zero() + random_register(1)
-	v = random_int16()
-	builder.execute('{} ${}, ${}, {}'.format(instr, *r, v))
-	e = f(registers[r[1]], v, registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
-	
-# same as above but with given immediate, f([r1], imm, [rdest])
-def check_op_2reg_imm(instr, builder, registers, imm, f, syntax = '{} ${}, ${}, {}'):
-	r = random_register_non_zero() + random_register(1)
-	builder.execute(syntax.format(instr, *r, imm))
-	e = f(registers[r[1]], imm, registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
-	
-# same as check_op_3reg but target is hilo, [hilo] = f([r1], [r2], [hilo])
-def check_op_2reg_hilo(instr, builder, registers, reghilo, f, syntax = '{} ${}, ${}'):
-	r = random_register(2)
-	builder.execute(syntax.format(instr, *r))
-	e = f(registers[r[0]], registers[r[1]], reghilo)
-	e = to_unsigned(e, 64)
-	e = e & 0xFFFFFFFFFFFFFFFF
-	builder.check_hilo(e)
-	builder.write_hilo(reghilo)
-
-# same but result is a tuple (hi, lo)
-def check_op_2reg_hilo2(instr, builder, registers, reghilo, f, syntax = '{} ${}, ${}'):
-	r = random_register(2)
-	builder.execute(syntax.format(instr, *r))
-	e = f(registers[r[0]], registers[r[1]], reghilo)
-	e = to_unsigned(e[0], 32) & to_unsigned(e[1], 32)
-	e = e & 0xFFFFFFFFFFFFFFFF
-	builder.check_hilo(e)
-	builder.write_hilo(reghilo)
-
-# the registers values are given, this is to avoid corner cases with div by zero etc..
-def check_op_2reg_nonrand_hilo2(instr, builder, registers, r1, r2, reghilo, f, syntax = '{} ${}, ${}'):
-	r = random_register_non_zero(2)
-	builder.write_reg(r[0], to_unsigned(r1, 32))
-	builder.write_reg(r[1], to_unsigned(r2, 32))
-	builder.execute(syntax.format(instr, *r))
-	e = f(r1, r2, reghilo)
-	e = (to_unsigned(e[0], 32) << 32) | to_unsigned(e[1], 32)
-	e = e & 0xFFFFFFFFFFFFFFFF
-	builder.check_hilo(e)
-	builder.write_hilo(reghilo)
-	builder.write_reg(r[0], registers[r[0]])
-	builder.write_reg(r[1], registers[r[1]])
-
-# [rdest] = f(v, [rdest])
-def check_op_1reg_imm(instr, builder, registers, v, f, syntax = '{} ${}, {}'):
-	r = random_register_non_zero()
-	builder.execute(syntax.format(instr, *r, v))
-	e = f(v, registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
-	
-# [r1] = v
-# [rdest] = f(v, [rdest])
-# [r1] = restore
-def check_op_1reg_1nonrand(instr, builder, registers, v, f, syntax = '{} ${}, ${}'):
-	r = random_register_non_zero(2)
-	builder.write_reg(r[1], to_unsigned(v, 32))
-	builder.execute(syntax.format(instr, *r))
-	e = f(v, registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
-	builder.write_reg(r[1], registers[r[1]])
-	
-# [r2] = v
-# [rdest] = f([r1], [r2], [rdest])
-# [r2] = restore
-def check_op_2reg_1nonrand(instr, builder, registers, v, f, syntax = '{} ${}, ${}, ${}'):
-	r = random_register_non_zero(3)
-	builder.write_reg(r[2], to_unsigned(v, 32))
-	builder.execute(syntax.format(instr, *r))
-	e = f(registers[r[1]], v, registers[r[0]])
-	e = to_unsigned(e, 32)
-	e = e & 0xFFFFFFFF
-	builder.check_reg(r[0], e)
-	builder.write_reg(r[0], registers[r[0]])
-	builder.write_reg(r[1], registers[r[1]])
-	builder.write_reg(r[2], registers[r[2]])
-
-# [rdest] = f([r1], v, [rdest])
-# write r with a random value before hand
-# r and v are generated such as aligned([r1] + v) is a valid address
-def check_op_ram(instr, alignment, builder, ram, registers, f):
-	r = random_register_non_zero()
-	base = random.randint(0, len(ram)*4-1);
-	offset = random.randint(-base, len(ram)*4-1 - base)
-	offset = offset - ((base + offset) % alignment)
-	offset = clamp(offset, -0x8000, 0x7FFF)
-	builder.write_reg(*r, base)
-	check_op_1reg_imm(instr, builder, registers, offset, lambda y, z: f(base, y, z), '{{}} ${{}}, {{}}(${})'.format(*r))
-	builder.write_reg(*r, registers[r[0]])
-
-
-# check that
-# [ram] = f(value, address, oldvalue)
-def check_op_ram_store(instr, alignment, builder, ram, registers, f):
-	r = random_register_non_zero() + random_register()
-	base = random.randint(0, len(ram)*4-1);
-	#print('base: ' + str(base))
-	offset = random.randint(-base, len(ram)*4-1 - base)
-	##print('offset: ' + str(offset))
-	offset = offset - ((base + offset) % alignment)
-	###print('offset: ' + str(offset))
-	offset = clamp(offset, -0x8000, 0x7FFF)
-	#print('offset: ' + str(offset))
-	builder.write_reg(r[0], base)
-	
-	oldvalue = ram[(base + offset) // 4]
-	#print('oldvalue: {:08X}'.format(oldvalue))
-	value = f(registers[r[1]], base + offset, oldvalue)
-	value = to_unsigned(value, 32)
-	value = value & 0xFFFFFFFF
-	builder.execute('{} ${}, {}(${})'.format(instr, r[1], offset, r[0]))
-	builder.check_ram((base + offset) // 4 * 4, value)
-	builder.write_reg(r[0], registers[r[0]])
-
 def write_memory_file(filepath, content):
 	print('write ram file {}'.format(filepath))
 	with open(filepath, 'w') as f:
@@ -414,16 +263,16 @@ def test_regs_imm_check_hilo(builder : instruction_builder, reg_values, imm_valu
 	builder.reset_registers()
 	builder.force_reset_hilo()
 
-def test_mfc0(builder, registers):
+def test_mfc0(builder : instruction_builder):
 	# just test with register cop0 4: TLB pointer
-	check_op_1reg_imm('mfc0', builder, registers, 4, lambda y, z: registers[32 + y], '{} ${}, ${}')
+	test_regs_imm(builder, [], [], 'mfc0 ${}, $4', lambda z: builder.get_register(32 + 4))
 	
-def test_mtc0(builder, registers):
+def test_mtc0(builder : instruction_builder):
 	# just test with register cop0 4: TLB pointer
 	r = random_register_non_zero()
 	builder.execute('mtc0 ${}, $4'.format(*r))
-	builder.check_reg(32 + 4, registers[r[0]])
-	builder.write_reg(32 + 4, registers[32 + 4])
+	builder.check_reg(32 + 4, builder.get_register(r[0]))
+	builder.write_reg(32 + 4, builder.get_register(32 + 4))
 
 def write_random_registers(builder:instruction_builder, *values):
 	regs = random_register_non_zero(len(values))
@@ -819,8 +668,8 @@ def generate_commands():
 	test_movn(builder)
 	test_movz(builder)
 
-	test_mfc0(builder, registers)
-	test_mtc0(builder, registers)
+	test_mfc0(builder)
+	test_mtc0(builder)
 	
 	test_lui(builder)
 	
