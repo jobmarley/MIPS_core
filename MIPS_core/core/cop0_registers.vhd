@@ -54,7 +54,7 @@ begin
 			registers_next <= (others => (others => '0'));
 			port_out_data_reg_next <= (others => (others => '0'));
 		else	
-			registers_next(9) <= std_logic_vector(unsigned(registers(9)) + 1);
+			registers_next(COP0_REGISTER_COUNT) <= std_logic_vector(unsigned(registers(COP0_REGISTER_COUNT)) + 1);
 			
 			for i in port_count-1 downto 0 loop
 				vregister_index := TO_INTEGER(UNSIGNED(ports_in(i).address));
