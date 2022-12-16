@@ -731,48 +731,51 @@ def test_lwr(builder : instruction_builder):
 def test_regs_imm_check_ram(builder : instruction_builder, reg_values, imm_values, address, syntax, f):
 	regs = write_random_registers(builder, *reg_values)
 	builder.execute(syntax.format(*regs, *imm_values))
-	builder.check_ram(address, f(*regs, *imm_values))
+	e = f(*reg_values, *imm_values, address, builder.get_ram(address // 4 * 4, 32))
+	e = e & 0xFFFFFFFF
+	builder.check_ram(address // 4 * 4, e)
+	builder.ram[address // 4] = e
 	builder.reset_registers()
 
 def test_sb(builder : instruction_builder):
-	f = lambda value, addr, oldvalue: (oldvalue & invert(0xFF << addr % 4 * 8, 32)) | ((value & 0xFF) << addr % 4 * 8)
-	
+	f = lambda value, base, ofs, addr, oldvalue: (oldvalue & invert(0xFF << addr % 4 * 8, 32)) | ((value & 0xFF) << addr % 4 * 8)
+
 	base, ofs = builder.random_ram_address(4)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs, 'sb ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+1], base + ofs, 'sb ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs, 'sb ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs, 'sb ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs + 0, 'sb ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+1], base + ofs + 1, 'sb ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs + 2, 'sb ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs + 3, 'sb ${0}, {2}(${1})', f)
 	
 def test_sh(builder : instruction_builder):
-	f = lambda value, addr, oldvalue: (oldvalue & invert(0xFFFF << addr % 4 * 8, 32)) | ((value & 0xFFFF) << addr % 4 * 8)
-	
+	f = lambda value, base, ofs, addr, oldvalue: (oldvalue & invert(0xFFFF << addr % 4 * 8, 32)) | ((value & 0xFFFF) << addr % 4 * 8)
+
 	base, ofs = builder.random_ram_address(4)
 	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs, 'sh ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs, 'sh ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs + 2, 'sh ${0}, {2}(${1})', f)
 
 def test_sw(builder : instruction_builder):
-	f = lambda value, addr, oldvalue: value
-	
+	f = lambda value, base, ofs, addr, oldvalue: value
+
 	base, ofs = builder.random_ram_address(4)
 	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs, 'sw ${0}, {2}(${1})', f)
 
 def test_swl(builder : instruction_builder):
-	f = lambda value, addr, oldvalue: (oldvalue & (0xFFFFFFFF << (addr % 4 + 1) * 8)) | (value >> (3 - addr % 4) * 8)
-	
+	f = lambda value, base, ofs, addr, oldvalue: (oldvalue & (0xFFFFFFFF << (addr % 4 + 1) * 8)) | (value >> (3 - addr % 4) * 8)
+
 	base, ofs = builder.random_ram_address(4)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs, 'swl ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+1], base + ofs, 'swl ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs, 'swl ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs, 'swl ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs + 0, 'swl ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+1], base + ofs + 1, 'swl ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs + 2, 'swl ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs + 3, 'swl ${0}, {2}(${1})', f)
 
 def test_swr(builder : instruction_builder):
-	f = lambda value, addr, oldvalue: (oldvalue & (0xFFFFFFFF >> (4 - addr % 4) * 8)) | (value << (addr % 4) * 8)
-	
+	f = lambda value, base, ofs, addr, oldvalue: (oldvalue & (0xFFFFFFFF >> (4 - addr % 4) * 8)) | (value << (addr % 4) * 8)
+
 	base, ofs = builder.random_ram_address(4)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs, 'swr ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+1], base + ofs, 'swr ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs, 'swr ${0}, {2}(${1})', f)
-	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs, 'swr ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+0], base + ofs + 0, 'swr ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+1], base + ofs + 1, 'swr ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs + 2, 'swr ${0}, {2}(${1})', f)
+	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs + 3, 'swr ${0}, {2}(${1})', f)
 
 def generate_commands():
 	
@@ -780,6 +783,7 @@ def generate_commands():
 	registers[0] = 0
 	register_hilo = random_int(64)
 	ram = generate_memory_values(1024)
+	ram_initial = ram.copy()
 
 	builder = instruction_builder(instr_asm_filename, instr_cmd_filename, registers, register_hilo, ram)
 	
@@ -835,7 +839,7 @@ def generate_commands():
 	test_swr(builder)
 	
 	builder.generate_cmd_file()
-	write_memory_file(instr_ram_filename, ram)
+	write_memory_file(instr_ram_filename, ram_initial)
 		
 def clang_compile(filepath, outpath):
 	print('compiling {}...'.format(filepath, outpath))
