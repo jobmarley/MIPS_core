@@ -86,7 +86,13 @@ class instruction_builder:
 		if self.hilo != self.hilo_initial:
 			self.write_hilo(self.hilo_initial)
 			self.hilo = self.hilo_initial
-
+		
+	def force_reset_registers(self, regs):
+		for r in regs:
+			self.write_reg(r, self.registers_initial[r])
+			
+	def force_reset_hilo(self):
+		self.write_hilo(self.hilo_initial)
 
 	def get_register(self, i):
 		return self.registers[i]
@@ -394,6 +400,7 @@ def test_regs_imm(builder : instruction_builder, reg_values, imm_values, syntax,
 	builder.execute(syntax.format(*r0, *regs, *imm_values))
 	builder.check_reg(*r0, f(*reg_values, *imm_values, builder.get_register(*r0)))
 	builder.reset_registers()
+	builder.force_reset_registers(r0)
 
 # execute syntax.format(regs..., imm_values...)
 # test [hilo] = f(reg_values..., imm_values..., [hilo])
@@ -405,6 +412,7 @@ def test_regs_imm_check_hilo(builder : instruction_builder, reg_values, imm_valu
 		result = ((result[0] & 0xFFFFFFFF) << 32) | (result[1] & 0xFFFFFFFF);
 	builder.check_hilo(result)
 	builder.reset_registers()
+	builder.force_reset_hilo()
 
 def test_mfc0(builder, registers):
 	# just test with register cop0 4: TLB pointer
