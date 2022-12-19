@@ -350,7 +350,6 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	
 	signal register_write : std_logic;
 	signal register_address : std_logic_vector(5 downto 0);
-	signal processor_enable : std_logic;
 	
 	signal alu_in_ports : alu_in_ports_t;
 	signal alu_out_ports : alu_out_ports_t;

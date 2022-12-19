@@ -75,7 +75,6 @@ begin
 	fetch_override_address_valid_reg_next <= (branch_pending or add_tuser.jump) and alu_out_ports.add_out_tvalid;
 	fetch_skip_jump_reg_next <= not cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
 	fetch_execute_delay_slot_reg_next <= (not cmp_tuser.likely or cmp_result) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
-	branch_pending_next <= (not (add_tuser.branch and alu_out_ports.add_out_tvalid) and branch_pending) or (cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch);
 	
 	
 	process(clock)
@@ -176,7 +175,8 @@ begin
 		alu_out_ports,
 		add_tuser,
 		cmp_tuser,
-		cmp_result
+		cmp_result,
+		branch_pending
 	)
 		variable andorxornor : std_logic_vector(8 downto 0);
 	begin
@@ -197,7 +197,10 @@ begin
 			alu_out_ports.clo_out_tvalid &
 			alu_out_ports.clz_out_tvalid;
 		
+		branch_pending_next <= (not (add_tuser.branch and alu_out_ports.add_out_tvalid) and branch_pending) or (cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch);
+	
 		if resetn = '0' then
+			branch_pending_next <= '0';
 		else
 			
 			case (andorxornor) is
