@@ -413,7 +413,7 @@ begin
 						operation_reg_next.op_and <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
 						operation_reg_next.op_immediate_b <= '1';
 					when instr_mul_opc.opcode =>
 						case (instruction_data_r.funct) is
@@ -447,14 +447,14 @@ begin
 						operation_reg_next.op_or <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
 						operation_reg_next.op_immediate_b <= '1';
 					when instr_xori_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_xor <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
+						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
 						operation_reg_next.op_immediate_b <= '1';
 					when instr_slti_opc.opcode =>
 						operation_valid_reg_next <= '1';

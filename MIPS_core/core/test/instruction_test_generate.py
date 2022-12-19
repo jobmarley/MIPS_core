@@ -358,7 +358,7 @@ def test_and(builder : instruction_builder):
 	# u32 & iu16
 	s = combine_value_sets(uint32_value_set, uint16_value_set)
 	for x, y in s:
-		test_regs_imm(builder, [x], [y], 'andi ${}, ${}, {}', lambda x, y, z: x & sign_extend(y, 16, 32))
+		test_regs_imm(builder, [x], [y], 'andi ${}, ${}, {}', lambda x, y, z: x & y)
 
 def test_or(builder : instruction_builder):
 	# u32 | u32
@@ -369,7 +369,7 @@ def test_or(builder : instruction_builder):
 	# u32 | iu16
 	s = combine_value_sets(uint32_value_set, uint16_value_set)
 	for x, y in s:
-		test_regs_imm(builder, [x], [y], 'ori ${}, ${}, {}', lambda x, y, z: x | sign_extend(y, 16, 32))
+		test_regs_imm(builder, [x], [y], 'ori ${}, ${}, {}', lambda x, y, z: x | y)
 		
 def test_xor(builder : instruction_builder):
 	# u32 ^ u32
@@ -380,7 +380,7 @@ def test_xor(builder : instruction_builder):
 	# u32 ^ iu16
 	s = combine_value_sets(uint32_value_set, uint16_value_set)
 	for x, y in s:
-		test_regs_imm(builder, [x], [y], 'xori ${}, ${}, {}', lambda x, y, z: x ^ sign_extend(y, 16, 32))
+		test_regs_imm(builder, [x], [y], 'xori ${}, ${}, {}', lambda x, y, z: x ^ y)
 
 def test_nor(builder : instruction_builder):
 	f = lambda x, y, z: (x | y) ^ 0xFFFFFFFF
