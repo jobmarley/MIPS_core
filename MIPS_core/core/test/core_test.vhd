@@ -179,9 +179,7 @@ architecture core_test_behavioral of core_test is
 	signal stall : std_logic;
 	
 	constant clock_period : TIME := 10ns;
-	
-	shared variable instr_address : UNSIGNED(31 downto 0);
-	
+		
 	type fetch_data_in_t is record
 		fetch_instruction_data_ready : std_logic;
 		fetch_override_address : std_logic_vector(31 downto 0);
@@ -213,7 +211,6 @@ architecture core_test_behavioral of core_test is
 		end if;
 		assert fdi.fetch_instruction_data_ready = '1' report "send_instruction: decode ready timed out" severity FAILURE;
 		wait for clock_period;
-		instr_address := instr_address + 4;
 		fdo.fetch_instruction_data_valid <= '0';
 	end procedure;
 	
@@ -290,6 +287,60 @@ architecture core_test_behavioral of core_test is
 		end if;
 	end procedure;
 	
+	procedure check_branch(override_address : std_logic_vector; execute_delay_slot : std_logic; skip : std_logic; signal fdi : in fetch_data_in_t; signal fdi_reg : in fetch_data_in_t; signal fdo : out fetch_data_out_t; variable success : out BOOLEAN) is
+		variable result_skip : std_logic := fdi_reg.fetch_skip_jump;
+		variable result_execute_delay_slot : std_logic := fdi_reg.fetch_execute_delay_slot;
+		variable result_override_address : std_logic_vector(31 downto 0) := fdi_reg.fetch_override_address;
+		variable result_valid : std_logic := fdi_reg.fetch_override_address_valid;
+		variable timeout : NATURAL := 20;
+	begin
+		success := TRUE;
+		
+		if fdi_reg.fetch_wait_jump = '1' then
+			report "CHECK_BRANCH failed, wait_jump should be 1" severity ERROR;
+			success := FALSE;
+			return;
+		end if;
+		
+		while result_valid = '0' and result_skip = '0' loop
+			result_skip := result_skip or fdi.fetch_skip_jump;
+			result_execute_delay_slot := result_execute_delay_slot or fdi.fetch_execute_delay_slot;
+			if fdi.fetch_override_address_valid = '1' then
+				result_override_address := fdi.fetch_override_address;
+				result_valid := '1';
+			end if;
+			wait for clock_period;
+			timeout := timeout - 1;
+			if timeout = 0 then
+				report "CHECK_BRANCH timed out" severity ERROR;
+				success := FALSE;
+				return;
+			end if;
+		end loop;
+		
+		if result_skip /= skip then
+			report "CHECK_BRANCH failed, skip value wrong, expected " & logic_to_char(skip) & ", got " & logic_to_char(result_skip) severity ERROR;
+			success := FALSE;
+			return;
+		end if;
+		if result_execute_delay_slot /= execute_delay_slot then
+			report "CHECK_BRANCH failed, execute_delay_slot value wrong, expected " & logic_to_char(execute_delay_slot) & ", got " & logic_to_char(result_execute_delay_slot) severity ERROR;
+			success := FALSE;
+			return;
+		end if;
+		if result_valid = '0' and result_skip = '0' then
+			report "CHECK_BRANCH failed, didn't receive override address" severity ERROR;
+			success := FALSE;
+			return;
+		end if;
+		if result_valid /= '0' and result_override_address /= override_address then
+			report "CHECK_BRANCH failed, override_address value wrong, expected " & hex(unsigned(override_address), 32) & ", got " & hex(unsigned(result_override_address), 32) severity ERROR;
+			success := FALSE;
+			return;
+		end if;
+	
+	end procedure;
+	
 	procedure write_register(r : std_logic_vector; data : std_logic_vector; signal p : out register_port_in_t; signal pc0 : out cop0_register_port_in_t) is
 	begin
 		p.address <= r(4 downto 0);
@@ -320,7 +371,16 @@ architecture core_test_behavioral of core_test is
 	
 	signal axi4_mem_out : axi4_port_out_t;
 	signal axi4_mem_in : axi4_port_in_t;
-begin
+	
+	signal current_address : std_logic_vector(31 downto 0);
+	
+	signal fetch_data_in_reg : fetch_data_in_t;
+begin	
+	fetch_instruction_address <= current_address;
+	fetch_instruction_address_plus_4 <= std_logic_vector(unsigned(current_address) + 4);
+	fetch_instruction_address_plus_8 <= std_logic_vector(unsigned(current_address) + 8);
+	
+	processor_enable <= resetn;
 	
 	axi4_mem_in.arready <= m_axi_mema_arready;
 	axi4_mem_in.awready <= m_axi_mema_awready;
@@ -363,17 +423,16 @@ begin
 	fetch_data_in.fetch_wait_jump <= fetch_wait_jump;
 	fetch_data_in.stall <= stall;
 	
-	fetch_instruction_address_plus_8 <= fetch_data_out.fetch_instruction_address_plus_8;
-	fetch_instruction_address_plus_4 <= fetch_data_out.fetch_instruction_address_plus_4;
-	fetch_instruction_address <= fetch_data_out.fetch_instruction_address;
 	fetch_instruction_data <= fetch_data_out.fetch_instruction_data;
 	fetch_instruction_data_valid <= fetch_data_out.fetch_instruction_data_valid;
 	fetch_error <= fetch_data_out.fetch_error;
 	
-	fetch_data_out.fetch_instruction_address_plus_8 <= std_logic_vector(instr_address + 8);
-	fetch_data_out.fetch_instruction_address_plus_4 <= std_logic_vector(instr_address + 4);
-	fetch_data_out.fetch_instruction_address <= std_logic_vector(instr_address);
-	
+	process(clock)
+	begin
+		if rising_edge(clock) then
+			fetch_data_in_reg <= fetch_data_in;
+		end if;
+	end process;
 	process
 		-- filepaths are relative to the core_test_proj.sim\sim_1\behav\xsim folder
 		file f : text open read_mode is "../../../../../instruction_test_commands.txt";
@@ -393,10 +452,12 @@ begin
 		variable ram_resp : std_logic_vector(1 downto 0);
 		variable iline : NATURAL := 0;
 		variable success : BOOLEAN;
+		variable expected_branch_address : std_logic_vector(31 downto 0);
+		variable expected_skip : std_logic;
+		variable expected_delay_slot : std_logic;
 	begin	
 		AXI4_idle(axi4_mem_out);
 		
-		instr_address := (others => '0');
 		fetch_data_out.fetch_instruction_data <= (others => '0');
 		fetch_data_out.fetch_error <= '0';
 		fetch_data_out.fetch_instruction_data_valid <= '0';
@@ -410,6 +471,8 @@ begin
 		cop0_reg_port_in_a.write_data <= (others => '0');
 		cop0_reg_port_in_a.write_enable <= '0';
 		cop0_reg_port_in_a.write_strobe <= x"F";
+		
+		current_address <= (others => '0');
 		wait until resetn = '1';
 		
 		while not endfile(f) loop
@@ -422,6 +485,8 @@ begin
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				instr_data := std_logic_vector(itmp);
 				send_instruction(instr_data, fetch_data_in, fetch_data_out);
+				READLINE(f2,l2);
+			elsif parts(0)(parts(0)'range) = "SKIP_ASM_LINE" then
 				READLINE(f2,l2);
 			elsif parts(0)(parts(0)'range) = "CHECK_HILO" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
@@ -449,6 +514,9 @@ begin
 				itmp := string_to_integer(parts(2)(parts(2)'range));
 				expected_data := std_logic_vector(itmp);
 				write_register(expected_reg, expected_data, register_port_in_a, cop0_reg_port_in_a);
+			elsif  parts(0)(parts(0)'range) = "WRITE_PC" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				current_address <= std_logic_vector(itmp);
 			elsif parts(0)(parts(0)'range) = "CHECK_RAM" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				ram_address := std_logic_vector(itmp);
@@ -459,6 +527,23 @@ begin
 				AXI4_test_read(axi4_mem_out, axi4_mem_in, ram_address, AXI4_BURST_INCR, AXI4_BURST_SIZE_32, 1, clock_period*20, ram_result, ram_resp);
 				assert ram_resp = AXI_RESP_OKAY report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & AXI_resp_to_string(AXI_RESP_OKAY) & ", got " & AXI_resp_to_string(ram_resp) severity FAILURE;
 				assert expected_data = ram_result report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & hex(unsigned(expected_data), 32) & ", got " & hex(unsigned(ram_result), 32) severity FAILURE;
+			elsif parts(0)(parts(0)'range) = "CHECK_BRANCH" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				expected_branch_address := std_logic_vector(itmp);
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				if itmp = 0 then
+					expected_skip := '0';
+				else
+					expected_skip := '1';
+				end if;
+				itmp := string_to_integer(parts(3)(parts(3)'range));
+				if itmp = 0 then
+					expected_delay_slot := '0';
+				else
+					expected_delay_slot := '1';
+				end if;
+				check_branch(expected_branch_address, expected_delay_slot, expected_skip, fetch_data_in, fetch_data_in_reg, fetch_data_out, success);
+				assert success report "CHECK_BRANCH failed for instruction " & l2(l2'range) severity FAILURE;
 			else
 				report "core_test invalid command " & parts(0)(parts(0)'range) & " on line " & INTEGER'image(iline) severity FAILURE;
 			end if;

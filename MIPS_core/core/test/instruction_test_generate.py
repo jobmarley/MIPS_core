@@ -1,4 +1,5 @@
 import os
+from pickle import TRUE
 import random
 import subprocess
 import math
@@ -77,6 +78,7 @@ class instruction_builder:
 		self.hilo_initial = hilo
 		self.hilo = hilo
 		self.ram = ram
+		self.instruction_bin_ofs = 0
 
 	def reset_registers(self):
 		for i in range(0, len(self.registers)):
@@ -118,11 +120,22 @@ class instruction_builder:
 
 	def execute(self, asm):
 		self.test_commands.append('EXEC')
-		self.instructions.append(asm)
+		self.instructions.append((self.instruction_bin_ofs , asm))
+		self.instruction_bin_ofs = self.instruction_bin_ofs + 4
 		
 	def check_reg(self, reg, value):
 		value = to_unsigned(value, 32)
 		self.add_command('CHECK_REG {:08X} {:08X}'.format(reg, value))
+
+	def check_branch(self, address, skip, execute_delay_slot):
+		address = to_unsigned(address, 32)
+		self.add_command('CHECK_BRANCH {:08X} {:08X} {:08X}'.format(address, skip, execute_delay_slot))
+		
+	def skip_bin_instruction(self):
+		self.instruction_bin_ofs = self.instruction_bin_ofs + 4
+
+	def skip_asm_line(self):
+		self.add_command('SKIP_ASM_LINE');
 
 	def check_hilo(self, value):
 		value = to_unsigned(value, 64)
@@ -131,6 +144,10 @@ class instruction_builder:
 	def check_ram(self, address, value):
 		value = to_unsigned(value, 32)
 		self.add_command('CHECK_RAM {:08X} {:08X}'.format(address & 0xFFFFFFFF, value & 0xFFFFFFFF))
+		
+	def write_pc(self, value):
+		value = to_unsigned(value, 32)
+		self.add_command('WRITE_PC {:08X}'.format(value))
 
 	def write_reg(self, reg, value):
 		value = to_unsigned(value, 32)
@@ -148,14 +165,15 @@ class instruction_builder:
 	def write_asm_file(self):
 		print('write asm file {}'.format(self.asm_filepath))
 		with open(self.asm_filepath, 'w', encoding='ascii') as f:
-			for x in self.instructions:
-				f.write(x + '\n')
+			for ofs, instr in self.instructions:
+				f.write(instr + '\n')
 			f.flush()
 
 	def read_instruction_binary(self, filepath):
 		l = []
 		with open(filepath, 'rb') as f:
-			for i in range(0, len(self.instructions)):
+			for ofs, instr in self.instructions:
+				f.seek(ofs)
 				l.append(int.from_bytes(f.read(4), 'little'))
 		return l;
 
@@ -167,7 +185,7 @@ class instruction_builder:
 			i = 0
 			for c in self.test_commands:
 				if c == 'EXEC':
-					f.write('# {}'.format(self.instructions[i]) + '\n')
+					f.write('# {}'.format(self.instructions[i][1]) + '\n')
 					f.write('EXEC {:08X}'.format(instr_bin[i]) + '\n')
 					i = i + 1
 				else:
@@ -255,6 +273,40 @@ def test_regs_imm(builder : instruction_builder, reg_values, imm_values, syntax,
 	e = f(*reg_values, *imm_values, builder.get_register(*r0))
 	builder.check_reg(*r0, e)
 	builder.set_register(*r0, e)
+
+# execute syntax.format(regs..., imm_values...)
+# check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
+# if jump == False, we dont branch
+def test_regs_imm_branch(builder : instruction_builder, current_address, reg_values, imm_values, syntax, f):
+	regs = write_random_registers(builder, *reg_values)
+	builder.write_pc(current_address)
+	builder.execute(syntax.format(*regs, *imm_values))
+	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
+	builder.check_branch(addr, not jump, execute_delay_slot)
+
+# check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
+def test_regs_imm_branch_link(builder : instruction_builder, current_address, reg_values, imm_values, syntax, f):
+	regs = write_random_registers(builder, *reg_values)
+	builder.write_pc(current_address)
+	builder.execute(syntax.format(*regs, *imm_values))
+	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
+	builder.check_branch(addr, not jump, execute_delay_slot)
+	if jump:
+		builder.check_reg(31, current_address + 8)
+		builder.set_register(31, current_address + 8)
+	# should add a check that the register didnt change
+	#else:
+		#builder.check_reg(31, builder.get_register(31))
+
+# check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
+def test_regs_imm_branch_link_r(builder : instruction_builder, current_address, reg_values, imm_values, syntax, f):
+	regs = write_random_registers(builder, 0, *reg_values)
+	builder.write_pc(current_address)
+	builder.execute(syntax.format(*regs, *imm_values))
+	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
+	builder.check_branch(addr, not jump, execute_delay_slot)
+	builder.check_reg(regs[0], current_address + 8)
+	builder.set_register(regs[0], current_address + 8)
 
 # execute syntax.format(regs..., imm_values...)
 # test [hilo] = f(reg_values..., imm_values..., [hilo])
@@ -630,6 +682,204 @@ def test_swr(builder : instruction_builder):
 	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+2], base + ofs + 2, 'swr ${0}, {2}(${1})', f)
 	test_regs_imm_check_ram(builder, [random_uint(32), base], [ofs+3], base + ofs + 3, 'swr ${0}, {2}(${1})', f)
 
+def test_j(builder : instruction_builder):
+	f = lambda ofs, current_addr: ((current_addr & 0xF0000000) | ofs, True, True)
+	
+	# the address in asm is absolute
+	# we wont reach 1 << 26 addressing, so higher bits would be 0
+	# but if we did, that means jumping to below (eg. from FF000000 to 00000000) that would fail, or generate pseudo instructions I think
+	# in the test, we would get the higher bits of current_address
+	ofs = random_uint(26) << 2
+	current_address = random_uint(30) << 2
+	test_regs_imm_branch(builder, current_address, [], [ofs], 'j {}', f)
+	builder.skip_bin_instruction()
+
+def test_jal(builder : instruction_builder):
+	f = lambda ofs, current_addr: ((current_addr & 0xF0000000) | ofs, True, True)
+
+	ofs = random_uint(26) << 2
+	current_address = random_uint(30) << 2
+	test_regs_imm_branch_link(builder, current_address, [], [ofs], 'jal {}', f)
+	builder.skip_bin_instruction()
+	
+def test_jr(builder : instruction_builder):
+	f = lambda r, current_addr: (r, True, True)
+	
+	ofs = random_uint(30) << 2
+	current_address = random_uint(30) << 2
+	test_regs_imm_branch(builder, current_address, [ofs], [], 'jr ${}', f)
+	builder.skip_bin_instruction()
+	
+def test_jalr(builder : instruction_builder):
+	f = lambda r, current_addr: (r, True, True)
+	
+	ofs = random_uint(30) << 2
+	current_address = random_uint(30) << 2
+	test_regs_imm_branch_link_r(builder, current_address, [ofs], [], 'jalr ${}, ${}', f)
+	builder.skip_bin_instruction()
+
+def test_beq(builder : instruction_builder):
+	f = lambda r1, r2, ofs, current_addr: (current_addr + ofs, r1 == r2, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x, y in combine_value_sets(int16_value_set, int16_value_set):
+		test_regs_imm_branch(builder, current_address, [x, y], [ofs], 'beq ${}, ${}, .+{}', f)
+		builder.skip_bin_instruction()
+		
+def test_beql(builder : instruction_builder):
+	# delay slot only if branch is taken
+	f = lambda r1, r2, ofs, current_addr: (current_addr + ofs, r1 == r2, r1 == r2)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x, y in combine_value_sets(int16_value_set, int16_value_set):
+		test_regs_imm_branch(builder, current_address, [x, y], [ofs], 'beql ${}, ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bne(builder : instruction_builder):
+	f = lambda r1, r2, ofs, current_addr: (current_addr + ofs, r1 != r2, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x, y in combine_value_sets(int16_value_set, int16_value_set):
+		test_regs_imm_branch(builder, current_address, [x, y], [ofs], 'bne ${}, ${}, .+{}', f)
+		builder.skip_bin_instruction()
+		
+def test_bnel(builder : instruction_builder):
+	# delay slot only if branch is taken
+	f = lambda r1, r2, ofs, current_addr: (current_addr + ofs, r1 != r2, r1 != r2)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x, y in combine_value_sets(int16_value_set, int16_value_set):
+		test_regs_imm_branch(builder, current_address, [x, y], [ofs], 'bnel ${}, ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bgez(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 >= 0, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'bgez ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bgezl(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 >= 0, r1 >= 0)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'bgezl ${}, .+{}', f)
+		builder.skip_bin_instruction()
+		
+def test_bgezal(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 >= 0, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch_link(builder, current_address, [x], [ofs], 'bgezal ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bgezall(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 >= 0, r1 >= 0)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch_link(builder, current_address, [x], [ofs], 'bgezall ${}, .+{}', f)
+		builder.skip_bin_instruction()
+		
+def test_bgtz(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 > 0, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'bgtz ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bgtzl(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 > 0, r1 > 0)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'bgtzl ${}, .+{}', f)
+		builder.skip_bin_instruction()
+		
+def test_blez(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 <= 0, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'blez ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_blezl(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 <= 0, r1 <= 0)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'blezl ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bltz(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 < 0, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'bltz ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bltzl(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 < 0, r1 < 0)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch(builder, current_address, [x], [ofs], 'bltzl ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bltzal(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 < 0, True)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch_link(builder, current_address, [x], [ofs], 'bltzal ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
+def test_bltzall(builder : instruction_builder):
+	f = lambda r1, ofs, current_addr: (current_addr + ofs, r1 < 0, r1 < 0)
+
+	ofs = random_int(16) << 2
+	current_address = random.randint(max(-ofs, 0), min(0x800000000 - 4 - ofs, 0x800000000 - 4))
+	current_address = current_address // 4 * 4
+	for x in int16_value_set:
+		test_regs_imm_branch_link(builder, current_address, [x], [ofs], 'bltzall ${}, .+{}', f)
+		builder.skip_bin_instruction()
+
 def generate_commands():
 	
 	registers = generate_register_values()
@@ -691,6 +941,27 @@ def generate_commands():
 	test_swl(builder)
 	test_swr(builder)
 	
+	test_j(builder)
+	test_jal(builder)
+	test_jalr(builder)
+	test_jr(builder)
+	test_beq(builder)
+	test_beql(builder)
+	test_bne(builder)
+	test_bnel(builder)
+	test_bgez(builder)
+	test_bgezl(builder)
+	test_bgezal(builder)
+	test_bgezall(builder)
+	test_bgtz(builder)
+	test_bgtzl(builder)
+	test_blez(builder)
+	test_blezl(builder)
+	test_bltz(builder)
+	test_bltzl(builder)
+	test_bltzal(builder)
+	test_bltzall(builder)
+
 	builder.generate_cmd_file()
 	write_memory_file(instr_ram_filename, ram_initial)
 		
