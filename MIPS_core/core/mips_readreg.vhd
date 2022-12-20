@@ -123,7 +123,7 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal stall_internal : std_logic;
 	signal fast_cmp_result : std_logic;
 begin
-	fast_cmp_result <= (register_port_out_a.data(31) xor operation_reg.op_cmp_invert);
+	fast_cmp_result <= (not register_port_out_a.data(31) xor operation_reg.op_cmp_invert);
 	execute_delay_slot <= operation_valid_reg and operation_reg.op_cmp_gez and fast_cmp_result and operation_reg.op_branch_likely;
 	skip_jump <= operation_valid_reg and operation_reg.op_cmp_gez and not fast_cmp_result;
 	
