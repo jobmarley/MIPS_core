@@ -609,7 +609,6 @@ begin
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_add <= '1';
 								operation_reg_next.op_cmp_gez <= '1';
-								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_branch_likely <= '1';
 								operation_reg_next.op_mov <= '1';
