@@ -658,7 +658,7 @@ begin
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
 						operation_reg_next.op_cmp <= '1';
-						operation_reg_next.op_cmp_eq <= '1';
+						operation_reg_next.op_cmp_le <= '1';
 						operation_reg_next.op_branch <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_b_reg_next <= "000000";
@@ -671,7 +671,7 @@ begin
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
 						operation_reg_next.op_cmp <= '1';
-						operation_reg_next.op_cmp_eq <= '1';
+						operation_reg_next.op_cmp_le <= '1';
 						operation_reg_next.op_branch <= '1';
 						operation_reg_next.op_branch_likely <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
