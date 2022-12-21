@@ -205,7 +205,6 @@ begin
 		register_port_in_a.write_enable <= '0';
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= x"F";
-		register_port_in_a.write_pending <= '0';
 		
 		cop0_reg_port_in_a.address <= (others => '0');
 		cop0_reg_port_in_a.write_data <= (others => '0');

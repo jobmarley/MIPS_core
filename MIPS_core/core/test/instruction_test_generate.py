@@ -79,6 +79,11 @@ class instruction_builder:
 		self.hilo = hilo
 		self.ram = ram
 		self.instruction_bin_ofs = 0
+		
+	def begin(self):
+		self.add_command('BEGIN')
+	def end(self):
+		self.add_command('END')
 
 	def reset_registers(self):
 		for i in range(0, len(self.registers)):
@@ -269,10 +274,12 @@ def combine_value_sets(s1, s2):
 def test_regs_imm(builder : instruction_builder, reg_values, imm_values, syntax, f):
 	r0 = random_register_non_zero()
 	regs = write_random_registers(builder, *reg_values)
+	builder.begin()
 	builder.execute(syntax.format(*r0, *regs, *imm_values))
 	e = f(*reg_values, *imm_values, builder.get_register(*r0))
 	builder.check_reg(*r0, e)
 	builder.set_register(*r0, e)
+	builder.end()
 
 # execute syntax.format(regs..., imm_values...)
 # check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
@@ -280,44 +287,49 @@ def test_regs_imm(builder : instruction_builder, reg_values, imm_values, syntax,
 def test_regs_imm_branch(builder : instruction_builder, current_address, reg_values, imm_values, syntax, f):
 	regs = write_random_registers(builder, *reg_values)
 	builder.write_pc(current_address)
+	builder.begin()
 	builder.execute(syntax.format(*regs, *imm_values))
 	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
 	builder.check_branch(addr, not jump, execute_delay_slot)
+	builder.end()
 
 # check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
 def test_regs_imm_branch_link(builder : instruction_builder, current_address, reg_values, imm_values, syntax, f):
 	regs = write_random_registers(builder, *reg_values)
 	builder.write_pc(current_address)
+	builder.begin()
 	builder.execute(syntax.format(*regs, *imm_values))
 	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
 	builder.check_branch(addr, not jump, execute_delay_slot)
 	if jump:
 		builder.check_reg(31, current_address + 8)
 		builder.set_register(31, current_address + 8)
-	# should add a check that the register didnt change
-	#else:
-		#builder.check_reg(31, builder.get_register(31))
+	builder.end()
 
 # check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
 def test_regs_imm_branch_link_r(builder : instruction_builder, current_address, reg_values, imm_values, syntax, f):
 	regs = write_random_registers(builder, 0, *reg_values)
 	builder.write_pc(current_address)
+	builder.begin()
 	builder.execute(syntax.format(*regs, *imm_values))
 	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
 	builder.check_branch(addr, not jump, execute_delay_slot)
 	builder.check_reg(regs[0], current_address + 8)
 	builder.set_register(regs[0], current_address + 8)
+	builder.end()
 
 # execute syntax.format(regs..., imm_values...)
 # test [hilo] = f(reg_values..., imm_values..., [hilo])
 def test_regs_imm_check_hilo(builder : instruction_builder, reg_values, imm_values, syntax, f):
 	regs = write_random_registers(builder, *reg_values)
+	builder.begin()
 	builder.execute(syntax.format(*regs, *imm_values))
 	result = f(*reg_values, *imm_values, builder.get_hilo())
 	if type(result) != int:
 		result = ((result[0] & 0xFFFFFFFF) << 32) | (result[1] & 0xFFFFFFFF);
 	builder.check_hilo(result)
 	builder.set_hilo(result)
+	builder.end()
 
 def test_mfc0(builder : instruction_builder):
 	# just test with register cop0 4: TLB pointer
@@ -326,9 +338,11 @@ def test_mfc0(builder : instruction_builder):
 def test_mtc0(builder : instruction_builder):
 	# just test with register cop0 4: TLB pointer
 	r = random_register_non_zero()
+	builder.begin()
 	builder.execute('mtc0 ${}, $4'.format(*r))
 	builder.check_reg(32 + 4, builder.get_register(r[0]))
 	builder.write_reg(32 + 4, builder.get_register(32 + 4))
+	builder.end()
 
 def write_random_registers(builder:instruction_builder, *values):
 	regs = random_register_non_zero(len(values))
@@ -460,16 +474,7 @@ def test_sll(builder : instruction_builder):
 	s = combine_value_sets(uint32_value_set, _0_31_value_set)
 	for x, y in s:
 		test_regs_imm(builder, [x], [y], 'sll ${}, ${}, {}', f)
-
-def test_srl_values(builder : instruction_builder, v1, v2):
-	f = lambda x, y, z: (x >> (y & 0x1F)) & 0xFFFFFFFF
-
-	r0, r1, r2 = random_register_non_zero() + write_random_registers(builder, v1, v2)
-	builder.execute('srl ${}, ${}, ${}'.format(r0, r1, r2))
-	e = f(v1, v2, builder.get_register(r0))
-	builder.check_reg(r0, e)
-	builder.set_register(r0, e)
-
+		
 def test_srl(builder : instruction_builder):
 	f = lambda x, y, z: (x >> (y & 0x1F)) & 0xFFFFFFFF
 	
@@ -636,11 +641,13 @@ def test_lwr(builder : instruction_builder):
 # test [ram] = f(reg_values..., imm_values..., [ram])
 def test_regs_imm_check_ram(builder : instruction_builder, reg_values, imm_values, address, syntax, f):
 	regs = write_random_registers(builder, *reg_values)
+	builder.begin()
 	builder.execute(syntax.format(*regs, *imm_values))
 	e = f(*reg_values, *imm_values, address, builder.get_ram(address // 4 * 4, 32))
 	e = e & 0xFFFFFFFF
 	builder.check_ram(address // 4 * 4, e)
 	builder.ram[address // 4] = e
+	builder.end()
 
 def test_sb(builder : instruction_builder):
 	f = lambda value, base, ofs, addr, oldvalue: (oldvalue & invert(0xFF << addr % 4 * 8, 32)) | ((value & 0xFF) << addr % 4 * 8)
@@ -897,9 +904,9 @@ def generate_commands():
 		
 
 	# register 0 should be unwritable
-	regs = random_register(2)
-	builder.execute('add $0, ${}, ${}'.format(*regs))
-	builder.check_reg(0, 0)
+	#regs = random_register(2)
+	#builder.execute('add $0, ${}, ${}'.format(*regs))
+	#builder.check_reg(0, 0)
 	
 	test_add(builder)
 	test_sub(builder)

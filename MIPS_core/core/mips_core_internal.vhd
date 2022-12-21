@@ -34,6 +34,8 @@ entity mips_core_internal is
 	cop0_reg_port_in_a : in cop0_register_port_in_t;
 	cop0_reg_port_out_a : out cop0_register_port_out_t;
 	
+	registers_written : out registers_pending_t;
+	
 	-- memory port b
 	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
 	m_axi_memb_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -131,6 +133,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		register_port_in_a : out register_port_in_t;
 		register_port_out_a : in register_port_out_t;
 	
+		registers_pending_reset_in_a : out registers_pending_t;
+	
 		stall : out std_logic;
 		error : out std_logic
 		);
@@ -161,7 +165,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 			port_out : out register_port_out_array_t(port_type1_count-1 downto 0);
 	
 			hilo_in : in hilo_register_port_in_array_t(port_hilo_in_count-1 downto 0);
-			hilo_out : out hilo_register_port_out_array_t(port_hilo_out_count-1 downto 0)
+			hilo_out : out hilo_register_port_out_array_t(port_hilo_out_count-1 downto 0);
+	
+			registers_written : out registers_pending_t
 		);
 	end component;
 
@@ -194,6 +200,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		register_port_in_c : out register_port_in_t;
 		register_port_out_c : in register_port_out_t;
 		register_hilo_in : out hilo_register_port_in_t;
+	
+		registers_pending_reset_in_a : out registers_pending_t;
 	
 		-- fetch
 		fetch_override_address : out std_logic_vector(31 downto 0);
@@ -335,6 +343,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		cop0_reg_port_in_b : out cop0_register_port_in_t;
 		cop0_reg_port_out_b : in cop0_register_port_out_t;
 	
+		registers_pending_reset_in_a : in registers_pending_t;
+		registers_pending_reset_in_b : in registers_pending_t;
+	
 		-- alu
 		alu_in_ports : out alu_in_ports_t;
 	
@@ -370,6 +381,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal cop0_ports_in : cop0_register_port_in_array_t(cop0_port_count-1 downto 0);
 	signal cop0_ports_out : cop0_register_port_out_array_t(cop0_port_count-1 downto 0);
 	
+	signal registers_registers_written : registers_pending_t;
+	
 	-- decode	
 	signal decode_register_a : std_logic_vector(5 downto 0);
 	signal decode_register_b : std_logic_vector(5 downto 0);
@@ -401,12 +414,17 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal readreg_execute_delay_slot : std_logic;
 	signal readreg_skip_jump : std_logic;
 	
+	signal readreg_registers_pending_reset_in_a : registers_pending_t;
+	signal readreg_registers_pending_reset_in_b : registers_pending_t;
+	
 	-- writeback
 	signal writeback_override_address : std_logic_vector(31 downto 0);
 	signal writeback_override_address_valid : std_logic;
 	signal writeback_skip_jump : std_logic;
 	signal writeback_execute_delay_slot : std_logic;
 begin
+	registers_written <= registers_registers_written;
+	
 	stall <= readreg_stall or readmem_stall;
 	breakpoint <= decode_breakpoint;
 	
@@ -458,6 +476,9 @@ begin
 		cop0_reg_port_out_a => cop0_ports_out(0),
 		cop0_reg_port_in_b => cop0_ports_in(2),
 		cop0_reg_port_out_b => cop0_ports_out(2),
+	
+		registers_pending_reset_in_a => readreg_registers_pending_reset_in_a,
+		registers_pending_reset_in_b => readreg_registers_pending_reset_in_b,
 	
 		-- alu
 		alu_in_ports => alu_in_ports,
@@ -526,6 +547,8 @@ begin
 	
 		register_hilo_in => register_hilo_in_internal(0),
 	
+		registers_pending_reset_in_a => readreg_registers_pending_reset_in_a,
+	
 		-- fetch
 		fetch_override_address => writeback_override_address,
 		fetch_override_address_valid => writeback_override_address_valid,
@@ -546,7 +569,9 @@ begin
 			port_out => register_port_out,
 	
 			hilo_in => register_hilo_in_internal,
-			hilo_out => register_hilo_out_internal
+			hilo_out => register_hilo_out_internal,
+	
+			registers_written => registers_registers_written
 		);
 	
 	cop0_registers_i0 : cop0_registers 
@@ -604,6 +629,8 @@ begin
 		-- registers
 		register_port_in_a => register_port_in(0),
 		register_port_out_a => register_port_out(0),
+	
+		registers_pending_reset_in_a => readreg_registers_pending_reset_in_b,
 	
 		stall => readmem_stall,
 		error => readmem_error

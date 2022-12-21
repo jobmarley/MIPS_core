@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 use work.mips_utils.all;
 use work.axi_helper.all;
 
@@ -48,6 +49,8 @@ entity mips_readmem is
 	register_port_in_a : out register_port_in_t;
 	register_port_out_a : in register_port_out_t;
 	
+	registers_pending_reset_in_a : out registers_pending_t;
+	
 	stall : out std_logic;
 	error : out std_logic
 	);
@@ -90,7 +93,12 @@ architecture mips_readmem_behavioral of mips_readmem is
 	end function;
 	
 	signal ready : std_logic;
+	
+	signal registers_pending_reset_in_a_reg : registers_pending_t;
+	signal registers_pending_reset_in_a_reg_next : registers_pending_t;
 begin
+	registers_pending_reset_in_a <= registers_pending_reset_in_a_reg;
+	
 	stall <= not ready and add_out_tvalid and (add_tuser.load or add_tuser.store);
 	
 	add_tuser <= slv_to_add_out_tuser(add_out_tuser);
@@ -103,6 +111,8 @@ begin
 			tuser_reg <= tuser_reg_next;
 			read_data <= read_data_next;
 			read_data_valid <= read_data_valid_next;
+			
+			registers_pending_reset_in_a_reg <= registers_pending_reset_in_a_reg_next;
 		end if;
 	end process;
 	
@@ -136,7 +146,8 @@ begin
 		register_port_in_a.write_enable <= read_data_valid;
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= "0000";
-		register_port_in_a.write_pending <= '0';
+		
+		registers_pending_reset_in_a_reg_next.gp_registers(TO_INTEGER(unsigned(tuser_reg.rt(4 downto 0)))) <= read_data_valid;
 		
 		m_axi_mem_awaddr <= (others => '0');
 		m_axi_mem_awprot <= (others => '0');
@@ -173,6 +184,10 @@ begin
 						
 		address_reg_next <= address_reg;
 		state_next <= state;
+		
+		registers_pending_reset_in_a_reg_next.gp_registers <= (others => '0');
+		registers_pending_reset_in_a_reg_next.hi <= '0';
+		registers_pending_reset_in_a_reg_next.lo <= '0';
 		
 		if resetn = '0' then
 			state_next <= state_read_address;

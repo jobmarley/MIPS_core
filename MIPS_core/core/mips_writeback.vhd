@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 use work.mips_utils.all;
 
 entity mips_writeback is
@@ -19,6 +20,8 @@ entity mips_writeback is
 	register_port_out_c : in register_port_out_t;
 	
 	register_hilo_in : out hilo_register_port_in_t;
+	
+	registers_pending_reset_in_a : out registers_pending_t;
 	
 	-- fetch
 	fetch_override_address : out std_logic_vector(31 downto 0);
@@ -54,7 +57,19 @@ architecture mips_writeback_behavioral of mips_writeback is
 	signal fetch_skip_jump_reg_next : std_logic;
 	signal fetch_execute_delay_slot_reg : std_logic;
 	signal fetch_execute_delay_slot_reg_next : std_logic;
+	
+	signal add_sub_mul_pending_reset : std_logic_vector(31 downto 0);
+	signal and_or_xor_pending_reset : std_logic_vector(31 downto 0);
+	signal div_mult_pending_reset : std_logic_vector(1 downto 0);
+	
+	signal registers_pending_reset_in_a_reg : registers_pending_t;
+	signal registers_pending_reset_in_a_reg_next : registers_pending_t;
 begin
+	registers_pending_reset_in_a <= registers_pending_reset_in_a_reg;
+	registers_pending_reset_in_a_reg_next.gp_registers <= add_sub_mul_pending_reset or and_or_xor_pending_reset;
+	registers_pending_reset_in_a_reg_next.hi <= div_mult_pending_reset(1);
+	registers_pending_reset_in_a_reg_next.lo <= div_mult_pending_reset(0);
+	
 	register_port_in_a <= register_port_in_a_reg;
 	register_port_in_b <= register_port_in_b_reg;
 	register_port_in_c <= register_port_in_c_reg;
@@ -90,6 +105,8 @@ begin
 			fetch_override_address_valid_reg <= fetch_override_address_valid_reg_next;
 			fetch_skip_jump_reg <= fetch_skip_jump_reg_next;
 			fetch_execute_delay_slot_reg <= fetch_execute_delay_slot_reg_next;
+			
+			registers_pending_reset_in_a_reg <= registers_pending_reset_in_a_reg_next;
 		end if;
 	end process;
 	
@@ -105,13 +122,13 @@ begin
 		register_port_in_a_reg_next.write_enable <= '0';
 		register_port_in_a_reg_next.write_data <= (others => '0');
 		register_port_in_a_reg_next.write_strobe <= x"F";
-		register_port_in_a_reg_next.write_pending <= '0';
 	
 		register_port_in_c_reg_next.address <= (others => '0');
 		register_port_in_c_reg_next.write_enable <= '0';
 		register_port_in_c_reg_next.write_data <= (others => '0');
 		register_port_in_c_reg_next.write_strobe <= x"F";
-		register_port_in_c_reg_next.write_pending <= '0';
+		
+		add_sub_mul_pending_reset <= (others => '0');
 		
 		if resetn = '0' then
 		else
@@ -124,13 +141,15 @@ begin
 			end if;
 			register_port_in_a_reg_next.write_enable <= (alu_out_ports.add_out_tvalid and add_tuser.mov) or alu_out_ports.sub_out_tvalid;
 			register_port_in_a_reg_next.write_strobe <= x"F";
-			register_port_in_a_reg_next.write_pending <= '0';
-	
+			
 			register_port_in_c_reg_next.address <= alu_out_ports.mul_out_tuser(4 downto 0);
 			register_port_in_c_reg_next.write_enable <= not mul_tuser.use_hilo and alu_out_ports.mul_out_tvalid;
 			register_port_in_c_reg_next.write_data <= alu_out_ports.mul_out_tdata(31 downto 0);
 			register_port_in_c_reg_next.write_strobe <= x"F";
-			register_port_in_c_reg_next.write_pending <= '0';
+			
+			add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.add_out_tuser(4 downto 0)))) <= alu_out_ports.add_out_tvalid and add_tuser.mov;
+			add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.sub_out_tuser(4 downto 0)))) <= alu_out_ports.sub_out_tvalid;
+			add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.mul_out_tuser(4 downto 0)))) <= not mul_tuser.use_hilo and alu_out_ports.mul_out_tvalid;
 		end if;
 	end process;
 	
@@ -144,8 +163,8 @@ begin
 		-- no need to synchronize that, cause readreg will stall if hi/lo is pending
 		register_hilo_in_reg_next.write_data <= (others => '0');
 		register_hilo_in_reg_next.write_enable <= '0';
-		register_hilo_in_reg_next.write_pending <= '0';
 		register_hilo_in_reg_next.write_strobe <= "11";
+		div_mult_pending_reset <= "00";
 		
 		if resetn = '0' then
 		else
@@ -160,12 +179,16 @@ begin
 				register_hilo_in_reg_next.write_data <= alu_out_ports.multu_out_tdata;
 			end if;
 			
-			register_hilo_in_reg_next.write_enable <= (alu_out_ports.mul_out_tvalid and mul_tuser.use_hilo)
-				or alu_out_ports.multu_out_tvalid
-				or alu_out_ports.div_out_tvalid
-				or alu_out_ports.divu_out_tvalid;
-			register_hilo_in_reg_next.write_pending <= '0';
 			register_hilo_in_reg_next.write_strobe <= "11";
+			
+			if (alu_out_ports.mul_out_tvalid = '1' and mul_tuser.use_hilo = '1')
+				or alu_out_ports.multu_out_tvalid = '1'
+				or alu_out_ports.div_out_tvalid = '1'
+				or alu_out_ports.divu_out_tvalid = '1' then
+				
+				register_hilo_in_reg_next.write_enable <= '1';
+				div_mult_pending_reset <= "11";
+			end if;
 		end if;
 	end process;
 		
@@ -184,8 +207,9 @@ begin
 		register_port_in_b_reg_next.address <= (others => '0');
 		register_port_in_b_reg_next.write_data <= (others => '0');
 		register_port_in_b_reg_next.write_enable <= '0';
-		register_port_in_b_reg_next.write_pending <= '0';
 		register_port_in_b_reg_next.write_strobe <= x"0";
+		
+		and_or_xor_pending_reset <= (others => '0');
 		
 		andorxornor := alu_out_ports.and_out_tvalid &
 			alu_out_ports.or_out_tvalid &
@@ -198,7 +222,7 @@ begin
 			alu_out_ports.clz_out_tvalid;
 		
 		branch_pending_next <= (not (add_tuser.branch and alu_out_ports.add_out_tvalid) and branch_pending) or (cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch);
-	
+		
 		if resetn = '0' then
 			branch_pending_next <= '0';
 		else
@@ -208,38 +232,38 @@ begin
 					register_port_in_b_reg_next.address <= alu_out_ports.and_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.and_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.and_out_tuser(4 downto 0)))) <= '1';
 				when "010000000" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.or_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.or_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.or_out_tuser(4 downto 0)))) <= '1';
 				when "001000000" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.xor_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.xor_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.xor_out_tuser(4 downto 0)))) <= '1';
 				when "000100000" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.nor_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.nor_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.nor_out_tuser(4 downto 0)))) <= '1';
 				when "000010000" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.shl_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.shl_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.shl_out_tuser(4 downto 0)))) <= '1';
 				when "000001000" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.shr_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.shr_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.shr_out_tuser(4 downto 0)))) <= '1';
 				when "000000100" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.cmp_out_tuser(4 downto 0);
 					if cmp_tuser.mov = '0' then
@@ -254,19 +278,19 @@ begin
 						end if;
 					end if;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.cmp_out_tuser(4 downto 0)))) <= '1';
 				when "000000010" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.clo_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.clo_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.clo_out_tuser(4 downto 0)))) <= '1';
 				when "000000001" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.clz_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.clz_out_tdata;
 					register_port_in_b_reg_next.write_enable <= '1';
-					register_port_in_b_reg_next.write_pending <= '0';
 					register_port_in_b_reg_next.write_strobe <= x"F";
+					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.clz_out_tuser(4 downto 0)))) <= '1';
 				when others =>
 			end case;
 		end if;

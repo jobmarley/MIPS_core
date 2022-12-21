@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 use work.mips_utils.all;
 
 entity mips_readreg is
@@ -37,6 +38,9 @@ entity mips_readreg is
 	cop0_reg_port_in_b : out cop0_register_port_in_t;
 	cop0_reg_port_out_b : in cop0_register_port_out_t;
 	
+	registers_pending_reset_in_a : in registers_pending_t;
+	registers_pending_reset_in_b : in registers_pending_t;
+	
 	-- alu
 	alu_in_ports : out alu_in_ports_t;
 	
@@ -71,9 +75,12 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal memop_type_reg : std_logic_vector(2 downto 0);
 	signal memop_type_reg_next : std_logic_vector(2 downto 0);
 	
-	signal register_a_pending_bypass : std_logic;
-	signal register_b_pending_bypass : std_logic;
-	signal register_c_pending_bypass : std_logic;
+	signal register_a_pending : std_logic;
+	signal register_a_pending_next : std_logic;
+	signal register_b_pending : std_logic;
+	signal register_b_pending_next : std_logic;
+	signal register_c_pending : std_logic;
+	signal register_c_pending_next : std_logic;
 	
 	signal register_a_written : std_logic;
 	signal register_a_written_next : std_logic;
@@ -99,18 +106,7 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal alu_add_tuser : alu_add_out_tuser_t;
 	signal alu_cmp_tuser : alu_cmp_tuser_t;
 	signal alu_mul_tuser : alu_mul_tuser_t;
-	
-	function reorder(b : std_logic_vector; a : std_logic_vector; r : std_logic) return std_logic_vector is
-		ALIAS d1 : std_logic_vector(a'length-1 DOWNTO 0) is a;
-		ALIAS d2 : std_logic_vector(b'length-1 DOWNTO 0) is b;
-	begin
-		if r = '1' then
-			return d1 & d2;
-		else
-			return d2 & d1;
-		end if;
-	end function;
-	
+		
 	function select_operand(a : std_logic_vector; b : std_logic_vector; s : std_logic) return std_logic_vector is
 	begin
 		if s = '1' then
@@ -122,18 +118,78 @@ architecture mips_readreg_behavioral of mips_readreg is
 	
 	signal stall_internal : std_logic;
 	signal fast_cmp_result : std_logic;
+	
+	signal registers_pending_reg : registers_pending_t;
+	signal registers_pending_reg_next : registers_pending_t;
+	
+	signal registers_pending_set : registers_pending_t;
 begin
+	registers_pending_reg_next.gp_registers <= (registers_pending_reg.gp_registers and not (registers_pending_reset_in_a.gp_registers or registers_pending_reset_in_b.gp_registers)) or registers_pending_set.gp_registers;
+	registers_pending_reg_next.hi <= (registers_pending_reg.hi and not (registers_pending_reset_in_a.hi or registers_pending_reset_in_b.hi)) or registers_pending_set.hi;
+	registers_pending_reg_next.lo <= (registers_pending_reg.lo and not (registers_pending_reset_in_a.lo or registers_pending_reset_in_b.lo)) or registers_pending_set.lo;
+	
+	registers_pending_set.gp_registers <= (TO_INTEGER(unsigned(register_c_reg(4 downto 0))) => operation_reg.op_reg_c_set_pending, others => '0');
+	registers_pending_set.hi <= operation_reg.op_hi and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
+	registers_pending_set.lo <= operation_reg.op_lo and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
+	
+	process(
+		resetn,
+		stall_internal,
+		operation,
+		operation_reg,
+		registers_pending_reg,
+		register_a,
+		register_a_reg,
+		register_b,
+		register_b_reg,
+		register_c,
+		register_c_reg
+		)
+	begin
+		register_a_pending_next <= '0';
+		register_b_pending_next <= '0';
+		register_c_pending_next <= '0';
+		
+		if resetn = '0' then
+		else
+			if stall_internal = '1' then
+				if operation_reg.op_immediate_a = '1' then
+					register_a_pending_next <= '0';
+				else
+					register_a_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_a_reg(4 downto 0))));
+				end if;
+				
+				if operation_reg.op_immediate_b = '1' then
+					register_b_pending_next <= '0';
+				else
+					register_b_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_b_reg(4 downto 0))));
+				end if;
+				
+				register_c_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_c_reg(4 downto 0))));
+			else
+				if operation.op_immediate_a = '1' then
+					register_a_pending_next <= '0';
+				else
+					register_a_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_a(4 downto 0))));
+				end if;
+				
+				if operation.op_immediate_b = '1' then
+					register_b_pending_next <= '0';
+				else
+					register_b_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_b(4 downto 0))));
+				end if;
+				
+				register_c_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_c(4 downto 0))));
+			end if;
+		end if;
+	end process;
+	
 	fast_cmp_result <= (not register_port_out_a.data(31) xor operation_reg.op_cmp_invert);
 	execute_delay_slot <= operation_valid_reg and operation_reg.op_cmp_gez and fast_cmp_result and operation_reg.op_branch_likely;
 	skip_jump <= operation_valid_reg and operation_reg.op_cmp_gez and not fast_cmp_result;
 	
 	stall <= stall_internal;
 	
-	register_a_pending_bypass <= register_hilo_out.pending when operation_reg.op_fromhilo = '1'
-		else register_a_written or register_port_out_a.pending;
-	register_b_pending_bypass <= register_b_written or register_port_out_b.pending;
-	register_c_pending_bypass <= register_hilo_out.pending when operation_reg.op_tohilo = '1'
-		else register_c_written or register_port_out_c.pending;
 	
 	-- /!\ when branch, add operands are always immediates, because registers are used by cmp
 	alu_in_ports.add_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b or operation_reg.op_branch) &
@@ -214,8 +270,8 @@ begin
 	alu_in_ports.shr_in_tuser <= operation_reg.op_sra & register_c_reg;
 	
 	-- when branch, cmp always use registers
-	alu_in_ports.cmp_in_tdata <= reorder(select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b and not operation_reg.op_branch),
-		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a and not operation_reg.op_branch), operation_reg.op_reorder);
+	alu_in_ports.cmp_in_tdata <= select_operand(register_port_out_b.data, immediate_b_reg, operation_reg.op_immediate_b and not operation_reg.op_branch) &
+		select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a and not operation_reg.op_branch);
 	alu_in_ports.cmp_in_tvalid <= operation_reg.op_cmp and not stall_internal;
 	alu_in_ports.cmp_in_tuser <= cmp_tuser_to_slv(alu_cmp_tuser);
 	alu_cmp_tuser.eq <= operation_reg.op_cmp_eq;
@@ -239,7 +295,6 @@ begin
 	
 	register_hilo_in.write_data <= register_port_out_a.data & register_port_out_a.data;
 	register_hilo_in.write_strobe <= operation_reg.op_hi & operation_reg.op_lo;
-	register_hilo_in.write_pending <= '0';
 	register_hilo_in.write_enable <= operation_reg.op_tohilo and not stall_internal;
 	
 	override_address_valid <= '0';
@@ -253,9 +308,7 @@ begin
 		else cop0_reg_port_out_a.data when register_a_reg(5) = '1'
 		else register_port_out_a.data;
 	register_port_in_d.write_strobe <= mov_strobe_reg;
-	register_port_in_d.write_pending <= '0' when operation_reg.op_mov = '1'
-		else not store_reg;
-	register_port_in_d.write_enable <= not register_c_reg(5) and operation_valid_reg and not stall_internal;
+	register_port_in_d.write_enable <= not register_c_reg(5) and operation_reg.op_mov and operation_valid_reg and not stall_internal;
 	
 	cop0_reg_port_in_a.address <= register_a(4 downto 0);
 	cop0_reg_port_in_a.write_data <= (others => '0');
@@ -290,6 +343,12 @@ begin
 			register_a_written <= register_a_written_next;
 			register_b_written <= register_b_written_next;
 			register_c_written <= register_c_written_next;
+			
+			registers_pending_reg <= registers_pending_reg_next;
+			
+			register_a_pending <= register_a_pending_next;
+			register_b_pending <= register_b_pending_next;
+			register_c_pending <= register_c_pending_next;
 		end if;
 	end process;
 	
@@ -318,9 +377,9 @@ begin
 		immediate_b,
 		immediate_b_reg,
 	
-		register_a_pending_bypass,
-		register_b_pending_bypass,
-		register_c_pending_bypass,
+		register_a_pending,
+		register_b_pending,
+		register_c_pending,
 		
 		register_port_out_a,
 		
@@ -331,7 +390,8 @@ begin
 		link_address_reg,
 		fast_cmp_result,
 		mov_strobe,
-		mov_strobe_reg
+		mov_strobe_reg,
+		registers_pending_reg
 	)
         variable instruction_data_r : instruction_r_t;
         variable instruction_data_i : instruction_i_t;
@@ -341,17 +401,14 @@ begin
 		register_port_in_a.write_enable <= '0';
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= (others => '0');
-		register_port_in_a.write_pending <= '0';
 		register_port_in_b.address <= register_b(4 downto 0);
 		register_port_in_b.write_enable <= '0';
 		register_port_in_b.write_data <= (others => '0');
 		register_port_in_b.write_strobe <= (others => '0');
-		register_port_in_b.write_pending <= '0';
 		register_port_in_c.address <= register_c(4 downto 0);
 		register_port_in_c.write_enable <= '0';
 		register_port_in_c.write_data <= (others => '0');
 		register_port_in_c.write_strobe <= (others => '0');
-		register_port_in_c.write_pending <= '0';
 		
 		register_a_reg_next <= register_a_reg;
 		register_b_reg_next <= register_b_reg;
@@ -374,6 +431,8 @@ begin
 		register_c_written_next <= '0';
 		
 		stall_internal <= '0';
+		
+		registers_pending_reg_next <= registers_pending_reg;
 				
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
@@ -388,15 +447,19 @@ begin
 			memop_type_reg_next <= (others => '0');
 			link_address_reg_next <= (others => '0');
 			mov_strobe_reg_next <= (others => '0');
+			
+			registers_pending_reg_next.gp_registers <= (others => '0');
+			registers_pending_reg_next.hi <= '0';
+			registers_pending_reg_next.lo <= '0';
 		elsif enable = '1' then
 			target_register_address_next <= (others => '0');
 			target_register_pending_next <= '0';
 			
 			-- if registers are unused, they must be set to $0 (never pending)
 			if operation_valid_reg = '1' and 
-				(register_a_pending_bypass = '1' or
-				register_b_pending_bypass = '1' or
-				register_c_pending_bypass = '1') then
+				(register_a_pending = '1' or
+				register_b_pending = '1' or
+				register_c_pending = '1') then
 				
 				stall_internal <= '1';
 				register_port_in_a.address <= register_a_reg(4 downto 0);

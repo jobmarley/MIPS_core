@@ -131,25 +131,27 @@ package mips_utils is
 		write_enable : std_logic;
 		write_data : std_logic_vector(31 downto 0);
 		write_strobe : std_logic_vector(3 downto 0);
-		write_pending : std_logic;
 	end record;
 	type register_port_out_t is record
 		data : std_logic_vector(31 downto 0);
-		pending : std_logic;
 	end record;
 	type register_port_in_array_t is array(NATURAL RANGE <>) of register_port_in_t;
 	type register_port_out_array_t is array(NATURAL RANGE <>) of register_port_out_t;
+	
+	type registers_pending_t is record
+		gp_registers : std_logic_vector(31 downto 0);
+		hi : std_logic;
+		lo : std_logic;
+	end record;
 	
 	
 	type hilo_register_port_in_t is record
 		write_enable : std_logic;
 		write_data : std_logic_vector(63 downto 0);
 		write_strobe : std_logic_vector(1 downto 0);
-		write_pending : std_logic;
 	end record;
 	type hilo_register_port_out_t is record
 		data : std_logic_vector(63 downto 0);
-		pending : std_logic;
 	end record;
 	type hilo_register_port_in_array_t is array(NATURAL RANGE <>) of hilo_register_port_in_t;
 	type hilo_register_port_out_array_t is array(NATURAL RANGE <>) of hilo_register_port_out_t;
@@ -322,7 +324,6 @@ package mips_utils is
 		op_cmp_ge : std_logic;
 		op_cmp_gez : std_logic;			-- fast cmp, result is known in readreg
 		op_cmp_invert : std_logic;		-- invert result of cmp
-		op_reorder : std_logic;			-- swap alu operands
 		op_unsigned : std_logic;
 		op_link : std_logic;			-- link_address is used for the mov
 		op_link_branch : std_logic;	
@@ -335,6 +336,7 @@ package mips_utils is
 		op_clo : std_logic;
 		op_clz : std_logic;
 		op_cmpmov : std_logic;
+		op_reg_c_set_pending : std_logic;
 	end record;
 	
 	constant memory_op_type_word : std_logic_vector(2 downto 0) := "000";
