@@ -124,9 +124,6 @@ architecture mips_readreg_behavioral of mips_readreg is
 	
 	signal registers_pending_set : registers_pending_t;
 begin
-	registers_pending_reg_next.gp_registers <= (registers_pending_reg.gp_registers and not (registers_pending_reset_in_a.gp_registers or registers_pending_reset_in_b.gp_registers)) or registers_pending_set.gp_registers;
-	registers_pending_reg_next.hi <= (registers_pending_reg.hi and not (registers_pending_reset_in_a.hi or registers_pending_reset_in_b.hi)) or registers_pending_set.hi;
-	registers_pending_reg_next.lo <= (registers_pending_reg.lo and not (registers_pending_reset_in_a.lo or registers_pending_reset_in_b.lo)) or registers_pending_set.lo;
 	
 	registers_pending_set.gp_registers <= (TO_INTEGER(unsigned(register_c_reg(4 downto 0))) => operation_reg.op_reg_c_set_pending, others => '0');
 	registers_pending_set.hi <= operation_reg.op_hi and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
@@ -391,7 +388,11 @@ begin
 		fast_cmp_result,
 		mov_strobe,
 		mov_strobe_reg,
-		registers_pending_reg
+		registers_pending_reg,
+		
+		registers_pending_reset_in_a,
+		registers_pending_reset_in_b,
+		registers_pending_set
 	)
         variable instruction_data_r : instruction_r_t;
         variable instruction_data_i : instruction_i_t;
@@ -432,7 +433,10 @@ begin
 		
 		stall_internal <= '0';
 		
-		registers_pending_reg_next <= registers_pending_reg;
+		registers_pending_reg_next.gp_registers <= (registers_pending_reg.gp_registers and not (registers_pending_reset_in_a.gp_registers or registers_pending_reset_in_b.gp_registers)) or registers_pending_set.gp_registers;
+		registers_pending_reg_next.gp_registers(0) <= '0';
+		registers_pending_reg_next.hi <= (registers_pending_reg.hi and not (registers_pending_reset_in_a.hi or registers_pending_reset_in_b.hi)) or registers_pending_set.hi;
+		registers_pending_reg_next.lo <= (registers_pending_reg.lo and not (registers_pending_reset_in_a.lo or registers_pending_reset_in_b.lo)) or registers_pending_set.lo;
 				
 		if resetn = '0' then
 			register_a_reg_next <= (others => '0');
