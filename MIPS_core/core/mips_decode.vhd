@@ -316,6 +316,7 @@ begin
 								operation_reg_next.op_cmp <= '1';
 								operation_reg_next.op_cmp_ge <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
+								operation_reg_next.op_cmpmov <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -326,6 +327,7 @@ begin
 								operation_reg_next.op_cmp_ge <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_unsigned <= '1';
+								operation_reg_next.op_cmpmov <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -386,7 +388,7 @@ begin
 								operation_reg_next.op_cmp <= '1';
 								operation_reg_next.op_cmp_eq <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
-								operation_reg_next.op_cmpmov <= '1';
+								operation_reg_next.op_cmpmov_alternate <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rt;
 								register_b_reg_next <= '0' & instruction_data_r.rs;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -397,7 +399,7 @@ begin
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_cmp <= '1';
 								operation_reg_next.op_cmp_eq <= '1';
-								operation_reg_next.op_cmpmov <= '1';
+								operation_reg_next.op_cmpmov_alternate <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rt;
 								register_b_reg_next <= '0' & instruction_data_r.rs;
 								register_c_reg_next <= '0' & instruction_data_r.rd;
@@ -480,6 +482,7 @@ begin
 						operation_reg_next.op_cmp <= '1';
 						operation_reg_next.op_cmp_ge <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
+						operation_reg_next.op_cmpmov <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
@@ -491,6 +494,7 @@ begin
 						operation_reg_next.op_cmp_ge <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_unsigned <= '1';
+						operation_reg_next.op_cmpmov <= '1';
 						register_a_reg_next <= '0' & instruction_data_i.rs;
 						register_c_reg_next <= '0' & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
@@ -794,7 +798,6 @@ begin
 						operation_reg_next.op_mov <= '1';
 						register_a_reg_next <= '0' & "00000";
 						register_c_reg_next <= '0' & instruction_data_i.rt;
-						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_a_reg_next <= instruction_data_i.immediate & x"0000";
 						operation_reg_next.op_immediate_a <= '1';
 						mov_strobe_reg_next <= "1111";

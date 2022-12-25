@@ -242,7 +242,8 @@ architecture mips_core_behavioral of mips_core is
 		cop0_reg_port_in_a : in cop0_register_port_in_t;
 		cop0_reg_port_out_a : out cop0_register_port_out_t;
 		
-		registers_written : out registers_pending_t;
+		debug_registers_written : out registers_pending_t;
+		debug_registers_values : out registers_values_t;
 	
 		-- memory port b
 		m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );

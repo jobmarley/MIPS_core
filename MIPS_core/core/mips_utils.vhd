@@ -144,6 +144,11 @@ package mips_utils is
 		lo : std_logic;
 	end record;
 	
+	type registers_values_t is record
+		gp_registers : slv32_array_t(31 downto 0);
+		hi : slv32_t;
+		lo : slv32_t;
+	end record;
 	
 	type hilo_register_port_in_t is record
 		write_enable : std_logic;
@@ -335,7 +340,8 @@ package mips_utils is
 		op_tohilo : std_logic;
 		op_clo : std_logic;
 		op_clz : std_logic;
-		op_cmpmov : std_logic;
+		op_cmpmov : std_logic;				-- move the result of cmp to dest
+		op_cmpmov_alternate : std_logic;	-- used for movn/z, the value moved to dest is register b
 		op_reg_c_set_pending : std_logic;
 	end record;
 	
@@ -362,6 +368,7 @@ package mips_utils is
 	function add_out_tuser_to_slv(tuser : alu_add_out_tuser_t) return std_logic_vector;
 	
 	type alu_cmp_tuser_t is record
+		mov_alternate : std_logic;							-- used for movn/z, instead of moving the cmp result, we move alternate_value
 		alternate_value : std_logic_vector(31 downto 0);
 		mov : std_logic;
 		likely : std_logic;
@@ -373,7 +380,7 @@ package mips_utils is
 		invert : std_logic;
 		rd : std_logic_vector(5 downto 0);
 	end record;
-	constant alu_cmp_tuser_length : NATURAL := 46;
+	constant alu_cmp_tuser_length : NATURAL := 47;
 	
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t;
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector;
@@ -635,6 +642,7 @@ package body mips_utils is
 	function slv_to_cmp_tuser(data : std_logic_vector) return alu_cmp_tuser_t is
 		variable vresult : alu_cmp_tuser_t;
 	begin
+		vresult.mov_alternate := data(46);
 		vresult.alternate_value := data(45 downto 14);
 		vresult.mov := data(13);
 		vresult.likely := data(12);
@@ -650,6 +658,7 @@ package body mips_utils is
 	function cmp_tuser_to_slv(tuser : alu_cmp_tuser_t) return std_logic_vector is
 		variable vresult : std_logic_vector(alu_cmp_tuser_length-1 downto 0);
 	begin
+		vresult(46) := tuser.mov_alternate;
 		vresult(45 downto 14) := tuser.alternate_value;
 		vresult(13) := tuser.mov;
 		vresult(12) := tuser.likely;

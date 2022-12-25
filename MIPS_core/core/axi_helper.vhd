@@ -454,17 +454,17 @@ package body axi_helper is
 		
 		wait until ps.arready = '1' for timeout;
 		pm.arvalid <= '0';
-		assert ps.arready = '1' report "AXI4_test_read arready timed out" severity ERROR;
+		assert ps.arready = '1' report "AXI4_test_read arready timed out" severity FAILURE;
 	
 		pm.rready <= '1';
 		
 		for i in 0 to burst_len-1 loop
 			wait until ps.rvalid = '1' for timeout;
-			assert ps.rvalid = '1' report "AXI4_test_read rvalid timed out" severity ERROR;
+			assert ps.rvalid = '1' report "AXI4_test_read rvalid timed out" severity FAILURE;
 			data(ofs+data_width-1 downto ofs) := ps.rdata;
 			ofs := ofs + data_width;
 			if i = burst_len-1 then
-				assert ps.rlast = '1' report "AXI4_test_read rlast was not set properly" severity ERROR;
+				assert ps.rlast = '1' report "AXI4_test_read rlast was not set properly" severity FAILURE;
 				resp := ps.rresp;
 			end if;
 		end loop;

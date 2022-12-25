@@ -10,6 +10,8 @@ instr_ram_filename = 'instruction_ram.coe'
 clang_path = r'C:\Program Files\LLVM\bin\clang++'
 lld_path = r'C:\Program Files\LLVM\bin\ld.lld'
 
+WAIT_CYCLE_COUNT = 40
+
 def random_register(count = 1):
 	return random.sample([x for x in range(0, 32)], count)
 
@@ -80,6 +82,8 @@ class instruction_builder:
 		self.ram = ram
 		self.instruction_bin_ofs = 0
 		
+	def wait(self, cycle_count):
+		self.add_command('WAIT {:08X}'.format(cycle_count))
 	def begin(self):
 		self.add_command('BEGIN')
 	def end(self):
@@ -275,9 +279,9 @@ def test_regs_imm(builder : instruction_builder, reg_values, imm_values, syntax,
 	r0 = random_register_non_zero()
 	regs = write_random_registers(builder, *reg_values)
 	builder.begin()
-	builder.execute(syntax.format(*r0, *regs, *imm_values))
 	e = f(*reg_values, *imm_values, builder.get_register(*r0))
 	builder.check_reg(*r0, e)
+	builder.execute(syntax.format(*r0, *regs, *imm_values))
 	builder.set_register(*r0, e)
 	builder.end()
 
@@ -288,9 +292,9 @@ def test_regs_imm_branch(builder : instruction_builder, current_address, reg_val
 	regs = write_random_registers(builder, *reg_values)
 	builder.write_pc(current_address)
 	builder.begin()
-	builder.execute(syntax.format(*regs, *imm_values))
 	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
 	builder.check_branch(addr, not jump, execute_delay_slot)
+	builder.execute(syntax.format(*regs, *imm_values))
 	builder.end()
 
 # check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
@@ -298,12 +302,14 @@ def test_regs_imm_branch_link(builder : instruction_builder, current_address, re
 	regs = write_random_registers(builder, *reg_values)
 	builder.write_pc(current_address)
 	builder.begin()
-	builder.execute(syntax.format(*regs, *imm_values))
+	
 	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
 	builder.check_branch(addr, not jump, execute_delay_slot)
 	if jump:
 		builder.check_reg(31, current_address + 8)
 		builder.set_register(31, current_address + 8)
+
+	builder.execute(syntax.format(*regs, *imm_values))
 	builder.end()
 
 # check if branch is correctly executed, f should return (address, jump, execute_delay_slot)
@@ -311,10 +317,10 @@ def test_regs_imm_branch_link_r(builder : instruction_builder, current_address, 
 	regs = write_random_registers(builder, 0, *reg_values)
 	builder.write_pc(current_address)
 	builder.begin()
-	builder.execute(syntax.format(*regs, *imm_values))
 	addr, jump, execute_delay_slot = f(*reg_values, *imm_values, current_address)
 	builder.check_branch(addr, not jump, execute_delay_slot)
 	builder.check_reg(regs[0], current_address + 8)
+	builder.execute(syntax.format(*regs, *imm_values))
 	builder.set_register(regs[0], current_address + 8)
 	builder.end()
 
@@ -323,11 +329,13 @@ def test_regs_imm_branch_link_r(builder : instruction_builder, current_address, 
 def test_regs_imm_check_hilo(builder : instruction_builder, reg_values, imm_values, syntax, f):
 	regs = write_random_registers(builder, *reg_values)
 	builder.begin()
-	builder.execute(syntax.format(*regs, *imm_values))
+	
 	result = f(*reg_values, *imm_values, builder.get_hilo())
 	if type(result) != int:
 		result = ((result[0] & 0xFFFFFFFF) << 32) | (result[1] & 0xFFFFFFFF);
 	builder.check_hilo(result)
+
+	builder.execute(syntax.format(*regs, *imm_values))
 	builder.set_hilo(result)
 	builder.end()
 
@@ -340,6 +348,7 @@ def test_mtc0(builder : instruction_builder):
 	r = random_register_non_zero()
 	builder.begin()
 	builder.execute('mtc0 ${}, $4'.format(*r))
+	builder.wait(WAIT_CYCLE_COUNT)
 	builder.check_reg(32 + 4, builder.get_register(r[0]))
 	builder.write_reg(32 + 4, builder.get_register(32 + 4))
 	builder.end()
@@ -645,6 +654,7 @@ def test_regs_imm_check_ram(builder : instruction_builder, reg_values, imm_value
 	builder.execute(syntax.format(*regs, *imm_values))
 	e = f(*reg_values, *imm_values, address, builder.get_ram(address // 4 * 4, 32))
 	e = e & 0xFFFFFFFF
+	builder.wait(WAIT_CYCLE_COUNT)
 	builder.check_ram(address // 4 * 4, e)
 	builder.ram[address // 4] = e
 	builder.end()
@@ -929,8 +939,8 @@ def generate_commands():
 	test_movn(builder)
 	test_movz(builder)
 
-	test_mfc0(builder)
-	test_mtc0(builder)
+	#test_mfc0(builder)
+	#test_mtc0(builder)
 	
 	test_lui(builder)
 	

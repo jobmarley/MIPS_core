@@ -19,7 +19,8 @@ entity mips_registers is
 		hilo_in : in hilo_register_port_in_array_t(port_hilo_in_count-1 downto 0);
 		hilo_out : out hilo_register_port_out_array_t(port_hilo_out_count-1 downto 0);
 	
-		registers_written : out registers_pending_t
+		debug_registers_written : out registers_pending_t;
+		debug_registers_values : out registers_values_t
 	);
 end mips_registers;
 
@@ -34,6 +35,11 @@ architecture mips_registers_behavioral of mips_registers is
 	signal hilo_reg : std_logic_vector(63 downto 0);
 	signal hilo_reg_next : std_logic_vector(63 downto 0);
 begin
+	
+	debug_registers_values.gp_registers <= registers;
+	debug_registers_values.hi <= hilo_reg(63 downto 32);
+	debug_registers_values.lo <= hilo_reg(31 downto 0);
+	
 	process(clock)
 	begin
 		if rising_edge(clock) then
@@ -74,7 +80,7 @@ begin
 		port_out_data_reg_next <= port_out_data_reg;
 		hilo_reg_next <= hilo_reg;
 		
-		registers_written <= (gp_registers => (others => '0'), others => '0');
+		debug_registers_written <= (gp_registers => (others => '0'), others => '0');
 		
 		if resetn = '0' then
 			registers_next <= (others => (others => '0'));
@@ -86,11 +92,11 @@ begin
 				if hilo_in(i).write_enable = '1' then
 					if hilo_in(i).write_strobe(0) = '1' then
 						hilo_reg_next(31 downto 0) <= hilo_in(i).write_data(31 downto 0);
-						registers_written.hi <= '1';
+						debug_registers_written.hi <= '1';
 					end if;
 					if hilo_in(i).write_strobe(1) = '1' then
 						hilo_reg_next(63 downto 32) <= hilo_in(i).write_data(63 downto 32);
-						registers_written.lo <= '1';
+						debug_registers_written.lo <= '1';
 					end if;
 				end if;
 			end loop;
@@ -99,7 +105,7 @@ begin
 				vregister_index := TO_INTEGER(UNSIGNED(port_in(i).address));
 				port_out_data_reg_next(i) <= registers(vregister_index);
 				if port_in(i).write_enable = '1' then
-					registers_written.gp_registers(TO_INTEGER(unsigned(port_in(i).address))) <= '1';
+					debug_registers_written.gp_registers(TO_INTEGER(unsigned(port_in(i).address))) <= '1';
 					for j in 3 downto 0 loop
 						if port_in(i).write_strobe(j) = '1' then
 							registers_next(vregister_index)(j * 8 + 7 downto j * 8) <= port_in(i).write_data(j * 8 + 7 downto j * 8);

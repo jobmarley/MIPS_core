@@ -280,6 +280,7 @@ begin
 	alu_cmp_tuser.branch <= operation_reg.op_branch;
 	alu_cmp_tuser.likely <= operation_reg.op_branch_likely;
 	alu_cmp_tuser.alternate_value <= register_port_out_b.data;
+	alu_cmp_tuser.mov_alternate <= operation_reg.op_cmpmov_alternate;
 	alu_cmp_tuser.mov <= operation_reg.op_cmpmov;
 	
 	alu_in_ports.clo_in_tdata <= select_operand(register_port_out_a.data, immediate_a_reg, operation_reg.op_immediate_a);

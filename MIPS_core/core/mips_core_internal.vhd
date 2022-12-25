@@ -34,7 +34,8 @@ entity mips_core_internal is
 	cop0_reg_port_in_a : in cop0_register_port_in_t;
 	cop0_reg_port_out_a : out cop0_register_port_out_t;
 	
-	registers_written : out registers_pending_t;
+	debug_registers_written : out registers_pending_t;
+	debug_registers_values : out registers_values_t;
 	
 	-- memory port b
 	m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -167,7 +168,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 			hilo_in : in hilo_register_port_in_array_t(port_hilo_in_count-1 downto 0);
 			hilo_out : out hilo_register_port_out_array_t(port_hilo_out_count-1 downto 0);
 	
-			registers_written : out registers_pending_t
+			debug_registers_written : out registers_pending_t;
+			debug_registers_values : out registers_values_t
 		);
 	end component;
 
@@ -381,7 +383,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal cop0_ports_in : cop0_register_port_in_array_t(cop0_port_count-1 downto 0);
 	signal cop0_ports_out : cop0_register_port_out_array_t(cop0_port_count-1 downto 0);
 	
-	signal registers_registers_written : registers_pending_t;
+	signal registers_debug_registers_written : registers_pending_t;
+	signal registers_debug_registers_values : registers_values_t;
 	
 	-- decode	
 	signal decode_register_a : std_logic_vector(5 downto 0);
@@ -423,7 +426,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal writeback_skip_jump : std_logic;
 	signal writeback_execute_delay_slot : std_logic;
 begin
-	registers_written <= registers_registers_written;
+	debug_registers_written <= registers_debug_registers_written;
+	debug_registers_values <= registers_debug_registers_values;
 	
 	stall <= readreg_stall or readmem_stall;
 	breakpoint <= decode_breakpoint;
@@ -571,7 +575,8 @@ begin
 			hilo_in => register_hilo_in_internal,
 			hilo_out => register_hilo_out_internal,
 	
-			registers_written => registers_registers_written
+			debug_registers_written => registers_debug_registers_written,
+			debug_registers_values => registers_debug_registers_values
 		);
 	
 	cop0_registers_i0 : cop0_registers 

@@ -100,7 +100,8 @@ architecture core_test_behavioral of core_test is
 		cop0_reg_port_in_a : in cop0_register_port_in_t;
 		cop0_reg_port_out_a : out cop0_register_port_out_t;
 	
-		registers_written : out registers_pending_t;
+		debug_registers_written : out registers_pending_t;
+		debug_registers_values : out registers_values_t;
 	
 		-- memory port b
 		m_axi_memb_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -164,7 +165,8 @@ architecture core_test_behavioral of core_test is
 	signal cop0_reg_port_in_a : cop0_register_port_in_t;
 	signal cop0_reg_port_out_a : cop0_register_port_out_t;
 	
-	signal registers_written : registers_pending_t;
+	signal debug_registers_written : registers_pending_t;
+	signal debug_registers_values : registers_values_t;
 	
 	-- fetch
 	signal fetch_instruction_address_plus_8 : std_logic_vector(31 downto 0);
@@ -216,9 +218,6 @@ architecture core_test_behavioral of core_test is
 		assert fdi.fetch_instruction_data_ready = '1' report "send_instruction: decode ready timed out" severity FAILURE;
 		wait for clock_period;
 		fdo.fetch_instruction_data_valid <= '0';
-		
-		-- wait for all operations to finish
-		wait for 20*clock_period;
 	end procedure;
 	
 	procedure check_register_value(r : std_logic_vector; data : std_logic_vector;
@@ -232,12 +231,14 @@ architecture core_test_behavioral of core_test is
 			pin.address <= r(4 downto 0);
 			pin.write_enable <= '0';
 			wait for clock_period;
+			wait for clock_period;
 			
 			assert pout.data = data report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(unsigned(data)) & ", got " & hex(unsigned(pout.data)) severity FAILURE;
 			reg_mask.gp_registers(TO_INTEGER(unsigned(r(4 downto 0)))) := '1';
 		else
 			pc0in.address <= r(4 downto 0);
 			pc0in.write_enable <= '0';
+			wait for clock_period;
 			wait for clock_period;
 			
 			assert pc0out.data = data report "check_register_value failed for register $" & INTEGER'image(TO_INTEGER(unsigned(r))) & ", expected " & hex(unsigned(data)) & ", got " & hex(unsigned(pc0out.data)) severity FAILURE;
@@ -262,62 +263,13 @@ architecture core_test_behavioral of core_test is
 		override_address : std_logic_vector;
 		execute_delay_slot : std_logic;
 		skip : std_logic;
-		signal fdi : in fetch_data_in_t;
-		signal fdi_reg : in fetch_data_in_t;
-		signal fdo : out fetch_data_out_t;
-		variable success : out BOOLEAN) is
-		
-		variable result_skip : std_logic := fdi_reg.fetch_skip_jump;
-		variable result_execute_delay_slot : std_logic := fdi_reg.fetch_execute_delay_slot;
-		variable result_override_address : std_logic_vector(31 downto 0) := fdi_reg.fetch_override_address;
-		variable result_valid : std_logic := fdi_reg.fetch_override_address_valid;
-		variable timeout : NATURAL := 20;
+		signal bcd : in fetch_data_in_t) is
 	begin
-		success := TRUE;
-		
-		if fdi_reg.fetch_wait_jump = '1' then
-			report "CHECK_BRANCH failed, wait_jump should be 1" severity ERROR;
-			success := FALSE;
-			return;
-		end if;
-		
-		while result_valid = '0' and result_skip = '0' loop
-			result_skip := result_skip or fdi.fetch_skip_jump;
-			result_execute_delay_slot := result_execute_delay_slot or fdi.fetch_execute_delay_slot;
-			if fdi.fetch_override_address_valid = '1' then
-				result_override_address := fdi.fetch_override_address;
-				result_valid := '1';
-			end if;
-			wait for clock_period;
-			timeout := timeout - 1;
-			if timeout = 0 then
-				report "CHECK_BRANCH timed out" severity ERROR;
-				success := FALSE;
-				return;
-			end if;
-		end loop;
-		
-		if result_skip /= skip then
-			report "CHECK_BRANCH failed, skip value wrong, expected " & logic_to_char(skip) & ", got " & logic_to_char(result_skip) severity ERROR;
-			success := FALSE;
-			return;
-		end if;
-		if result_execute_delay_slot /= execute_delay_slot then
-			report "CHECK_BRANCH failed, execute_delay_slot value wrong, expected " & logic_to_char(execute_delay_slot) & ", got " & logic_to_char(result_execute_delay_slot) severity ERROR;
-			success := FALSE;
-			return;
-		end if;
-		if result_valid = '0' and result_skip = '0' then
-			report "CHECK_BRANCH failed, didn't receive override address" severity ERROR;
-			success := FALSE;
-			return;
-		end if;
-		if result_valid /= '0' and result_override_address /= override_address then
-			report "CHECK_BRANCH failed, override_address value wrong, expected " & hex(unsigned(override_address), 32) & ", got " & hex(unsigned(result_override_address), 32) severity ERROR;
-			success := FALSE;
-			return;
-		end if;
-	
+		assert bcd.fetch_wait_jump = '1' report "CHECK_BRANCH failed, wait_jump was not set in first cycle" severity FAILURE;
+		assert bcd.fetch_skip_jump = skip report "CHECK_BRANCH failed, skip value wrong, expected " & logic_to_char(skip) & ", got " & logic_to_char(bcd.fetch_skip_jump) severity FAILURE;
+		assert bcd.fetch_execute_delay_slot = execute_delay_slot report "CHECK_BRANCH failed, execute_delay_slot value wrong, expected " & logic_to_char(execute_delay_slot) & ", got " & logic_to_char(bcd.fetch_execute_delay_slot) severity FAILURE;
+		assert bcd.fetch_override_address_valid = '1' or bcd.fetch_skip_jump = '1' report "CHECK_BRANCH failed, didn't receive skip/override address" severity FAILURE;
+		assert bcd.fetch_override_address_valid = '0' or bcd.fetch_override_address = override_address report "CHECK_BRANCH failed, override_address value wrong, expected " & hex(unsigned(override_address), 32) & ", got " & hex(unsigned(bcd.fetch_override_address), 32) severity FAILURE;	
 	end procedure;
 	
 	procedure write_register(r : std_logic_vector; data : std_logic_vector; signal p : out register_port_in_t; signal pc0 : out cop0_register_port_in_t) is
@@ -357,13 +309,9 @@ architecture core_test_behavioral of core_test is
 	signal registers_check_on : std_logic;
 	
 	
-	signal branch_checker_fetch_override_address : std_logic_vector(31 downto 0);
-	signal branch_checker_fetch_override_address_valid : std_logic;
-	signal branch_checker_fetch_skip_jump : std_logic;
-	signal branch_checker_fetch_wait_jump : std_logic;
-	signal branch_checker_fetch_execute_delay_slot : std_logic;
-	
+	signal branch_checker_data : fetch_data_in_t;
 	signal branch_checker_on : std_logic;
+	signal expected_branch_data : fetch_data_in_t;
 	
 	procedure validate_written_registers(
 		mask : registers_pending_t;
@@ -372,7 +320,7 @@ architecture core_test_behavioral of core_test is
 	begin		
 		for i in mask.gp_registers'range loop
 			if mask.gp_registers(i) = '1' and registers_written.gp_registers(i) /= '1' then
-				report "register " & INTEGER'image(i) & " was reset but not written" severity FAILURE;
+				report "register " & INTEGER'image(i) & " was not written" severity FAILURE;
 			end if;
 			if mask.gp_registers(i) = '0' and registers_written.gp_registers(i) = '1' then
 				report "register " & INTEGER'image(i) & " was written but shouldn't have been" severity FAILURE;
@@ -394,6 +342,22 @@ architecture core_test_behavioral of core_test is
 			report "register lo was written but shouldn't have been" severity FAILURE;
 		end if;
 	end procedure;
+			
+	procedure validate_branch(
+		expected : fetch_data_in_t;
+		result : fetch_data_in_t) is
+	begin
+		assert expected.fetch_execute_delay_slot = result.fetch_execute_delay_slot report "validate_branch failed, execute delay slot was expected and not set" severity FAILURE;
+		assert expected.fetch_skip_jump = result.fetch_skip_jump report "validate_branch failed, skip was expected and not set" severity FAILURE;
+		assert expected.fetch_wait_jump = result.fetch_wait_jump report "validate_branch failed, wait jump was expected and not set" severity FAILURE;
+		assert expected.fetch_override_address_valid = result.fetch_override_address_valid report "validate_branch failed, override valid was expected and not set" severity FAILURE;
+		if expected.fetch_override_address_valid = '1' then
+			assert expected.fetch_override_address = result.fetch_override_address report "validate_branch failed, address do not match" severity FAILURE;
+		end if;
+	end procedure;
+	
+	signal expected_register_write : registers_pending_t;
+	signal expected_register_values : registers_values_t;
 begin	
 	fetch_instruction_address <= current_address;
 	fetch_instruction_address_plus_4 <= std_logic_vector(unsigned(current_address) + 4);
@@ -446,6 +410,7 @@ begin
 	fetch_instruction_data_valid <= fetch_data_out.fetch_instruction_data_valid;
 	fetch_error <= fetch_data_out.fetch_error;
 	
+	
 	process(clock)
 	begin
 		if rising_edge(clock) then
@@ -462,15 +427,22 @@ begin
 				registers_check_reg.hi <= '0';
 				registers_check_reg.lo <= '0';
 			else
-				for i in registers_written.gp_registers'range loop
-					assert registers_check_reg.gp_registers(i) = '0' or registers_written.gp_registers(i) = '0' report "register written twice, reg " & INTEGER'image(i) severity FAILURE;
+				for i in debug_registers_written.gp_registers'range loop
+					assert registers_check_reg.gp_registers(i) = '0' or debug_registers_written.gp_registers(i) = '0' report "register written twice, reg " & INTEGER'image(i) severity FAILURE;
+					assert debug_registers_written.gp_registers(i) = '0' or expected_register_write.gp_registers(i) = '1' report "register " & INTEGER'image(i) & " written but shouldn't have been, reg " & INTEGER'image(i) severity FAILURE;
+					assert registers_check_reg.gp_registers(i) = '0' or debug_registers_values.gp_registers(i) = expected_register_values.gp_registers(i) report "register written but value is not good. expected " & hex(unsigned(expected_register_values.gp_registers(i)), 32) & ", got " & hex(unsigned(debug_registers_values.gp_registers(i)), 32) severity FAILURE;
 				end loop;
-				assert registers_check_reg.hi = '0' or registers_written.hi = '0' report "register hi written twice" severity FAILURE;
-				assert registers_check_reg.lo = '0' or registers_written.lo = '0' report "register lo written twice" severity FAILURE;
+				assert registers_check_reg.hi = '0' or debug_registers_written.hi = '0' report "register hi written twice" severity FAILURE;
+				assert debug_registers_written.hi = '0' or expected_register_write.hi = '1' report "register hi written but shouldn't have been" severity FAILURE;
+				assert registers_check_reg.hi = '0' or debug_registers_values.hi = expected_register_values.hi report "register hi written but value is not good. expected " & hex(unsigned(expected_register_values.hi), 32) & ", got " & hex(unsigned(debug_registers_values.hi), 32) severity FAILURE;
 				
-				registers_check_reg.gp_registers <= (registers_check_reg.gp_registers or registers_written.gp_registers);
-				registers_check_reg.hi <= (registers_check_reg.hi or registers_written.hi);
-				registers_check_reg.lo <= (registers_check_reg.lo or registers_written.lo);
+				assert registers_check_reg.lo = '0' or debug_registers_written.lo = '0' report "register lo written twice" severity FAILURE;
+				assert debug_registers_written.lo = '0' or expected_register_write.lo = '1' report "register lo written but shouldn't have been" severity FAILURE;
+				assert registers_check_reg.lo = '0' or debug_registers_values.lo = expected_register_values.lo report "register lo written but value is not good. expected " & hex(unsigned(expected_register_values.lo), 32) & ", got " & hex(unsigned(debug_registers_values.lo), 32) severity FAILURE;
+				
+				registers_check_reg.gp_registers <= (registers_check_reg.gp_registers or debug_registers_written.gp_registers);
+				registers_check_reg.hi <= (registers_check_reg.hi or debug_registers_written.hi);
+				registers_check_reg.lo <= (registers_check_reg.lo or debug_registers_written.lo);
 			end if;
 		end if;
 	end process;
@@ -480,24 +452,29 @@ begin
 	begin
 		if rising_edge(clock) then
 			if branch_checker_on = '0' then
-				branch_checker_fetch_override_address <= (others => '0');
-				branch_checker_fetch_override_address_valid <= '0';
-				branch_checker_fetch_skip_jump <= '0';
-				branch_checker_fetch_wait_jump <= '0';
-				branch_checker_fetch_execute_delay_slot <= '0';
+				branch_checker_data.fetch_override_address <= (others => '0');
+				branch_checker_data.fetch_override_address_valid <= '0';
+				branch_checker_data.fetch_skip_jump <= '0';
+				branch_checker_data.fetch_wait_jump <= '0';
+				branch_checker_data.fetch_execute_delay_slot <= '0';
 			else
 				if fetch_override_address_valid = '1' then
-					assert branch_checker_fetch_override_address_valid = '0' report "override address valid set twice" severity FAILURE;
-					branch_checker_fetch_override_address <= fetch_override_address;
-					branch_checker_fetch_override_address_valid <= '1';
+					assert expected_branch_data.fetch_override_address_valid = '1' report "override address valid but was not expected" severity FAILURE;
+					assert branch_checker_data.fetch_override_address_valid = '0' report "override address valid set twice" severity FAILURE;
+					assert expected_branch_data.fetch_override_address = fetch_override_address report "override address doesnt match. expected " & hex(unsigned(expected_branch_data.fetch_override_address), 32) & ", got " & hex(unsigned(fetch_override_address), 32) severity FAILURE;
+					branch_checker_data.fetch_override_address <= fetch_override_address;
+					branch_checker_data.fetch_override_address_valid <= '1';
 				end if;
-								
-				assert branch_checker_fetch_skip_jump = '0' or fetch_skip_jump = '0' report "skip jump set twice" severity FAILURE;
-				assert branch_checker_fetch_wait_jump = '0' or fetch_wait_jump = '0' report "wait jump set twice" severity FAILURE;
-				assert branch_checker_fetch_execute_delay_slot = '0' or fetch_execute_delay_slot = '0' report "execute delay slot set twice" severity FAILURE;
-				branch_checker_fetch_skip_jump <= fetch_skip_jump;
-				branch_checker_fetch_wait_jump <= fetch_wait_jump;
-				branch_checker_fetch_execute_delay_slot <= fetch_execute_delay_slot;
+				
+				assert branch_checker_data.fetch_skip_jump = '0' or fetch_skip_jump = '0' report "skip jump set twice" severity FAILURE;
+				assert fetch_skip_jump = '0' or expected_branch_data.fetch_skip_jump = '1' report "skip jump set but not expected" severity FAILURE;
+				assert branch_checker_data.fetch_wait_jump = '0' or fetch_wait_jump = '0' report "wait jump set twice" severity FAILURE;
+				assert fetch_wait_jump = '0' or expected_branch_data.fetch_wait_jump = '1' report "wait jump set but not expected" severity FAILURE;
+				assert branch_checker_data.fetch_execute_delay_slot = '0' or fetch_execute_delay_slot = '0' report "execute delay slot set twice" severity FAILURE;
+				assert fetch_execute_delay_slot = '0' or expected_branch_data.fetch_execute_delay_slot = '1' report "execute delay slot set but not expected" severity FAILURE;
+				branch_checker_data.fetch_skip_jump <= branch_checker_data.fetch_skip_jump or fetch_skip_jump;
+				branch_checker_data.fetch_wait_jump <= branch_checker_data.fetch_wait_jump or (fetch_instruction_data_valid and fetch_wait_jump);
+				branch_checker_data.fetch_execute_delay_slot <= branch_checker_data.fetch_execute_delay_slot or fetch_execute_delay_slot;
 			end if;
 		end if;
 	end process;
@@ -521,10 +498,7 @@ begin
 		variable ram_resp : std_logic_vector(1 downto 0);
 		variable iline : NATURAL := 0;
 		variable success : BOOLEAN;
-		variable expected_branch_address : std_logic_vector(31 downto 0);
-		variable expected_skip : std_logic;
-		variable expected_delay_slot : std_logic;
-		variable reg_mask : registers_pending_t;
+		variable ireg : INTEGER;
 	begin	
 		AXI4_idle(axi4_mem_out);
 		
@@ -543,8 +517,10 @@ begin
 		
 		current_address <= (others => '0');
 		
-		reg_mask := (gp_registers => (others => '0'), others => '0');
+		expected_register_values <= (gp_registers => (others => (others => '0')), others => (others => '0'));
+		expected_register_write <= (gp_registers => (others => '0'), others => '0');
 		registers_check_on <= '0';
+		expected_branch_data <= (fetch_override_address => (others => '0'), others => '0');
 		branch_checker_on <= '0';
 		wait until resetn = '1';
 		
@@ -558,8 +534,10 @@ begin
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				instr_data := std_logic_vector(itmp);
 				send_instruction(instr_data, fetch_data_in, fetch_data_out);
+				-- needs to be longer than longest operation aka div
+				--wait for 40*clock_period;
 				READLINE(f2,l2);
-				report "executing " & l2(l2'range) severity ERROR;
+				report "executing " & l2(l2'range);
 			elsif parts(0)(parts(0)'range) = "SKIP_ASM_LINE" then
 				READLINE(f2,l2);
 			elsif parts(0)(parts(0)'range) = "CHECK_HILO" then
@@ -567,7 +545,13 @@ begin
 				expected_data_hilo(63 downto 32) := std_logic_vector(itmp);
 				itmp := string_to_integer(parts(2)(parts(2)'range));
 				expected_data_hilo(31 downto 0) := std_logic_vector(itmp);
-				check_hilo_value(expected_data_hilo, register_hilo_in, register_hilo_out, reg_mask);
+			
+				assert expected_register_write.hi = '0' and expected_register_write.lo = '0' report "cannot check twice the same register (hilo)" severity FAILURE;
+				expected_register_write.hi <= '1';
+				expected_register_write.lo <= '1';
+				expected_register_values.hi <= expected_data_hilo(63 downto 32);
+				expected_register_values.lo <= expected_data_hilo(31 downto 0);
+			
 			elsif parts(0)(parts(0)'range) = "WRITE_HILO" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				expected_data_hilo(63 downto 32) := std_logic_vector(itmp);
@@ -575,11 +559,16 @@ begin
 				expected_data_hilo(31 downto 0) := std_logic_vector(itmp);
 				write_hilo(expected_data_hilo, register_hilo_in);
 			elsif parts(0)(parts(0)'range) = "CHECK_REG" then
-				itmp := string_to_integer(parts(1)(parts(1)'range));
+				ireg := TO_INTEGER(string_to_integer(parts(1)(parts(1)'range)));
 				expected_reg := std_logic_vector(itmp(5 downto 0));
 				itmp := string_to_integer(parts(2)(parts(2)'range));
 				expected_data := std_logic_vector(itmp);
-				check_register_value(expected_reg, expected_data, register_port_in_a, register_port_out_a, cop0_reg_port_in_a, cop0_reg_port_out_a, reg_mask);
+						
+				assert ireg >= 0 and ireg <= 31 report "CHECK_REG register must be between 0 and 31" severity FAILURE;
+				assert expected_register_write.gp_registers(ireg) = '0' report "cannot check twice the same register (" & INTEGER'image(ireg) & ")" severity FAILURE;
+				expected_register_write.gp_registers(ireg) <= '1';
+				expected_register_values.gp_registers(ireg) <= expected_data;
+			
 			elsif  parts(0)(parts(0)'range) = "WRITE_REG" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				expected_reg := std_logic_vector(itmp(5 downto 0));
@@ -589,41 +578,52 @@ begin
 			elsif  parts(0)(parts(0)'range) = "WRITE_PC" then
 				itmp := string_to_integer(parts(1)(parts(1)'range));
 				current_address <= std_logic_vector(itmp);
-			--elsif parts(0)(parts(0)'range) = "CHECK_RAM" then
-			--	itmp := string_to_integer(parts(1)(parts(1)'range));
-			--	ram_address := std_logic_vector(itmp);
-			--	itmp := string_to_integer(parts(2)(parts(2)'range));
-			--	expected_data := std_logic_vector(itmp);
-			--	-- wait for 20 clocks to make sure whatever previous operation is completed
-			--	wait for 20*clock_period;
-			--	AXI4_test_read(axi4_mem_out, axi4_mem_in, ram_address, AXI4_BURST_INCR, AXI4_BURST_SIZE_32, 1, clock_period*20, ram_result, ram_resp);
-			--	assert ram_resp = AXI_RESP_OKAY report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & AXI_resp_to_string(AXI_RESP_OKAY) & ", got " & AXI_resp_to_string(ram_resp) severity FAILURE;
-			--	assert expected_data = ram_result report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & hex(unsigned(expected_data), 32) & ", got " & hex(unsigned(ram_result), 32) severity FAILURE;
-			--elsif parts(0)(parts(0)'range) = "CHECK_BRANCH" then
-			--	itmp := string_to_integer(parts(1)(parts(1)'range));
-			--	expected_branch_address := std_logic_vector(itmp);
-			--	itmp := string_to_integer(parts(2)(parts(2)'range));
-			--	if itmp = 0 then
-			--		expected_skip := '0';
-			--	else
-			--		expected_skip := '1';
-			--	end if;
-			--	itmp := string_to_integer(parts(3)(parts(3)'range));
-			--	if itmp = 0 then
-			--		expected_delay_slot := '0';
-			--	else
-			--		expected_delay_slot := '1';
-			--	end if;
-			--	check_branch(expected_branch_address, expected_delay_slot, expected_skip, fetch_data_in, fetch_data_in_reg, fetch_data_out, success);
-			--	assert success report "CHECK_BRANCH failed for instruction " & l2(l2'range) severity FAILURE;
+			elsif parts(0)(parts(0)'range) = "CHECK_RAM" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				ram_address := std_logic_vector(itmp);
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				expected_data := std_logic_vector(itmp);
+				AXI4_test_read(axi4_mem_out, axi4_mem_in, ram_address, AXI4_BURST_INCR, AXI4_BURST_SIZE_32, 1, clock_period*20, ram_result, ram_resp);
+				assert ram_resp = AXI_RESP_OKAY report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & AXI_resp_to_string(AXI_RESP_OKAY) & ", got " & AXI_resp_to_string(ram_resp) severity FAILURE;
+				assert expected_data = ram_result report "CHECK_RAM failed for instruction " & l2(l2'range) & ", expected " & hex(unsigned(expected_data), 32) & ", got " & hex(unsigned(ram_result), 32) severity FAILURE;
+			elsif parts(0)(parts(0)'range) = "CHECK_BRANCH" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				expected_branch_data.fetch_override_address <= std_logic_vector(itmp);
+				itmp := string_to_integer(parts(2)(parts(2)'range));
+				if itmp = 0 then
+					expected_branch_data.fetch_skip_jump <= '0';
+					expected_branch_data.fetch_override_address_valid <= '1';
+				else
+					expected_branch_data.fetch_skip_jump <= '1';
+					expected_branch_data.fetch_override_address_valid <= '0';
+				end if;
+				itmp := string_to_integer(parts(3)(parts(3)'range));
+				if itmp = 0 then
+					expected_branch_data.fetch_execute_delay_slot <= '0';
+				else
+					expected_branch_data.fetch_execute_delay_slot <= '1';
+				end if;
+				expected_branch_data.fetch_wait_jump <= '1';
 			elsif parts(0)(parts(0)'range) = "BEGIN" then
+				wait for clock_period; -- make sure all writes are finished
 				registers_check_on <= '1';
 				branch_checker_on <= '1';
 			elsif parts(0)(parts(0)'range) = "END" then
-				validate_written_registers(reg_mask, registers_check_reg);
+				wait for 40*clock_period;
+				validate_written_registers(expected_register_write, registers_check_reg);
+				if branch_checker_on = '1' then
+					validate_branch(expected_branch_data, branch_checker_data);
+				end if;
 				registers_check_on <= '0';
 				branch_checker_on <= '0';
+				expected_register_write <= (gp_registers => (others => '0'), others => '0');
+				expected_branch_data <= (fetch_override_address => (others => '0'), others => '0');
+			
 				wait for clock_period;
+			
+			elsif parts(0)(parts(0)'range) = "WAIT" then
+				itmp := string_to_integer(parts(1)(parts(1)'range));
+				wait for TO_INTEGER(itmp)*clock_period;
 			else
 				report "core_test invalid command " & parts(0)(parts(0)'range) & " on line " & INTEGER'image(iline) severity FAILURE;
 			end if;
@@ -649,7 +649,8 @@ begin
 		cop0_reg_port_in_a => cop0_reg_port_in_a,
 		cop0_reg_port_out_a => cop0_reg_port_out_a,
 	
-		registers_written => registers_written,
+		debug_registers_written => debug_registers_written,
+		debug_registers_values => debug_registers_values,
 	
 		m_axi_memb_araddr => m_axi_memb_araddr,
 		m_axi_memb_arburst => m_axi_memb_arburst,

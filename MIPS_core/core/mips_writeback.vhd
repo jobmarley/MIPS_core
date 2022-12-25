@@ -266,19 +266,21 @@ begin
 					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.shr_out_tuser(4 downto 0)))) <= '1';
 				when "000000100" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.cmp_out_tuser(4 downto 0);
-					if cmp_tuser.mov = '0' then
+					if cmp_tuser.mov = '1' then
 						register_port_in_b_reg_next.write_data <= x"0000000" & "000" & cmp_result;
 						register_port_in_b_reg_next.write_strobe <= x"F";
-					else
+						register_port_in_b_reg_next.write_enable <= '1';
+						and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.cmp_out_tuser(4 downto 0)))) <= '1';
+					elsif cmp_tuser.mov_alternate = '1' then
 						register_port_in_b_reg_next.write_data <= cmp_tuser.alternate_value;
 						if cmp_result = '0' then
 							register_port_in_b_reg_next.write_strobe <= x"0";
 						else
 							register_port_in_b_reg_next.write_strobe <= x"F";
 						end if;
+						register_port_in_b_reg_next.write_enable <= '1';
+						and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.cmp_out_tuser(4 downto 0)))) <= '1';
 					end if;
-					register_port_in_b_reg_next.write_enable <= '1';
-					and_or_xor_pending_reset(TO_INTEGER(unsigned(alu_out_ports.cmp_out_tuser(4 downto 0)))) <= '1';
 				when "000000010" =>
 					register_port_in_b_reg_next.address <= alu_out_ports.clo_out_tuser(4 downto 0);
 					register_port_in_b_reg_next.write_data <= alu_out_ports.clo_out_tdata;
