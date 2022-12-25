@@ -75,10 +75,10 @@ begin
 	register_port_in_c <= register_port_in_c_reg;
 	register_hilo_in <= register_hilo_in_reg;
 	
-	fetch_override_address <= fetch_override_address_reg_next;
-	fetch_override_address_valid <= fetch_override_address_valid_reg_next;
-	fetch_skip_jump <= fetch_skip_jump_reg_next;
-	fetch_execute_delay_slot <= fetch_execute_delay_slot_reg_next;
+	fetch_override_address <= fetch_override_address_reg;
+	fetch_override_address_valid <= fetch_override_address_valid_reg;
+	fetch_skip_jump <= fetch_skip_jump_reg;
+	fetch_execute_delay_slot <= fetch_execute_delay_slot_reg;
 	
 	cmp_result <= alu_out_ports.cmp_out_tdata(0);
 	
@@ -89,7 +89,7 @@ begin
 	fetch_override_address_reg_next <= alu_out_ports.add_out_tdata(31 downto 0);
 	fetch_override_address_valid_reg_next <= (branch_pending or add_tuser.jump) and alu_out_ports.add_out_tvalid;
 	fetch_skip_jump_reg_next <= not cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
-	fetch_execute_delay_slot_reg_next <= (not cmp_tuser.likely or cmp_result) and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
+	fetch_execute_delay_slot_reg_next <= cmp_tuser.likely and cmp_result and alu_out_ports.cmp_out_tvalid and cmp_tuser.branch;
 	
 	
 	process(clock)
