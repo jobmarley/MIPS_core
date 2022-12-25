@@ -511,6 +511,7 @@ begin
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
+						execute_delay_slot <= '1';
 						wait_jump <= '1';
 					when instr_beql_opc.opcode =>
 						operation_valid_reg_next <= '1';
