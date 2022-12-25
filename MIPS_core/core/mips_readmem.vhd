@@ -146,9 +146,7 @@ begin
 		register_port_in_a.write_enable <= read_data_valid;
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= "0000";
-		
-		registers_pending_reset_in_a_reg_next.gp_registers(TO_INTEGER(unsigned(tuser_reg.rt(4 downto 0)))) <= read_data_valid;
-		
+				
 		m_axi_mem_awaddr <= (others => '0');
 		m_axi_mem_awprot <= (others => '0');
 		m_axi_mem_awvalid <= '0';
@@ -188,6 +186,8 @@ begin
 		registers_pending_reset_in_a_reg_next.gp_registers <= (others => '0');
 		registers_pending_reset_in_a_reg_next.hi <= '0';
 		registers_pending_reset_in_a_reg_next.lo <= '0';
+		
+		registers_pending_reset_in_a_reg_next.gp_registers(TO_INTEGER(unsigned(tuser_reg.rt(4 downto 0)))) <= read_data_valid;
 		
 		if resetn = '0' then
 			state_next <= state_read_address;
