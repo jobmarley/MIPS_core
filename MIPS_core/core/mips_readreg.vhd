@@ -125,10 +125,17 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal registers_pending_set : registers_pending_t;
 begin
 	
-	registers_pending_set.gp_registers <= (TO_INTEGER(unsigned(register_c_reg(4 downto 0))) => operation_reg.op_reg_c_set_pending, others => '0');
-	registers_pending_set.hi <= operation_reg.op_hi and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
-	registers_pending_set.lo <= operation_reg.op_lo and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
-	
+	process(
+		register_c_reg,
+		operation_reg
+		)
+	begin
+		registers_pending_set.gp_registers <= (others => '0');
+		registers_pending_set.gp_registers(TO_INTEGER(unsigned(register_c_reg(4 downto 0)))) <= operation_reg.op_reg_c_set_pending;
+		registers_pending_set.hi <= operation_reg.op_hi and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
+		registers_pending_set.lo <= operation_reg.op_lo and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
+	end process;
+		
 	process(
 		resetn,
 		stall_internal,
