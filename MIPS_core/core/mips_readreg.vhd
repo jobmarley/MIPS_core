@@ -306,7 +306,7 @@ begin
 		else cop0_reg_port_out_a.data when register_a_reg(5) = '1'
 		else register_port_out_a.data;
 	register_port_in_d.write_strobe <= mov_strobe_reg;
-	register_port_in_d.write_enable <= not register_c_reg(5) and operation_reg.op_mov and operation_valid_reg and not stall_internal;
+	register_port_in_d.write_enable <= (fast_cmp_result and operation_valid_reg and not stall_internal) when operation_reg.op_link_branch = '1' else (not register_c_reg(5) and operation_reg.op_mov and operation_valid_reg and not stall_internal);
 	
 	cop0_reg_port_in_a.address <= register_a(4 downto 0);
 	cop0_reg_port_in_a.write_data <= (others => '0');
