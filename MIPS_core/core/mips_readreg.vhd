@@ -81,19 +81,7 @@ architecture mips_readreg_behavioral of mips_readreg is
 	signal register_b_pending_next : std_logic;
 	signal register_c_pending : std_logic;
 	signal register_c_pending_next : std_logic;
-	
-	signal register_a_written : std_logic;
-	signal register_a_written_next : std_logic;
-	signal register_b_written : std_logic;
-	signal register_b_written_next : std_logic;
-	signal register_c_written : std_logic;
-	signal register_c_written_next : std_logic;
-	
-	signal target_register_address : std_logic_vector(5 downto 0);
-	signal target_register_address_next : std_logic_vector(5 downto 0);
-	signal target_register_pending : std_logic;
-	signal target_register_pending_next : std_logic;
-	
+			
 	signal immediate_a_reg : std_logic_vector(31 downto 0);
 	signal immediate_a_reg_next : std_logic_vector(31 downto 0);
 	signal immediate_b_reg : std_logic_vector(31 downto 0);
@@ -127,13 +115,16 @@ begin
 	
 	process(
 		register_c_reg,
-		operation_reg
+		operation_reg,
+		stall_internal
 		)
 	begin
+		-- pending must not be set when we stall. Otherwise we might deadlock
+		-- eg. we execute mthi, but a div is already pending. So we stall waiting for dest(hi) to be cleared. But it never happens since we set it pending during stall
 		registers_pending_set.gp_registers <= (others => '0');
-		registers_pending_set.gp_registers(TO_INTEGER(unsigned(register_c_reg(4 downto 0)))) <= operation_reg.op_reg_c_set_pending;
-		registers_pending_set.hi <= operation_reg.op_hi and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
-		registers_pending_set.lo <= operation_reg.op_lo and not operation_reg.op_tohilo and not operation_reg.op_fromhilo;
+		registers_pending_set.gp_registers(TO_INTEGER(unsigned(register_c_reg(4 downto 0)))) <= operation_reg.op_reg_c_set_pending and not stall_internal;
+		registers_pending_set.hi <= operation_reg.op_hi and operation_reg.op_tohilo and not operation_reg.op_mov and not stall_internal;
+		registers_pending_set.lo <= operation_reg.op_lo and operation_reg.op_tohilo and not operation_reg.op_mov  and not stall_internal;
 	end process;
 		
 	process(
@@ -147,43 +138,61 @@ begin
 		register_b,
 		register_b_reg,
 		register_c,
-		register_c_reg
+		register_c_reg,
+		registers_pending_set
 		)
+		variable ireg_a : NATURAL;
+		variable ireg_b : NATURAL;
+		variable ireg_c : NATURAL;
+		variable op : decode_operation_t;
 	begin
 		register_a_pending_next <= '0';
 		register_b_pending_next <= '0';
 		register_c_pending_next <= '0';
 		
-		if resetn = '0' then
+		if stall_internal = '1' then
+			ireg_a := TO_INTEGER(unsigned(register_a_reg(4 downto 0)));
+			ireg_b := TO_INTEGER(unsigned(register_b_reg(4 downto 0)));
+			ireg_c := TO_INTEGER(unsigned(register_c_reg(4 downto 0)));
+			op := operation_reg;
 		else
-			if stall_internal = '1' then
-				if operation_reg.op_immediate_a = '1' then
-					register_a_pending_next <= '0';
+			ireg_a := TO_INTEGER(unsigned(register_a(4 downto 0)));
+			ireg_b := TO_INTEGER(unsigned(register_b(4 downto 0)));
+			ireg_c := TO_INTEGER(unsigned(register_c(4 downto 0)));
+			op := operation;
+		end if;
+		
+		if resetn = '0' then
+			register_a_pending_next <= '0';
+			register_b_pending_next <= '0';
+			register_c_pending_next <= '0';
+		else
+			if op.op_fromhilo = '1' then
+				if op.op_hi = '1' then
+					register_a_pending_next <= registers_pending_reg.hi or registers_pending_set.hi;
 				else
-					register_a_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_a_reg(4 downto 0))));
+					register_a_pending_next <= registers_pending_reg.lo or registers_pending_set.lo;
 				end if;
-				
-				if operation_reg.op_immediate_b = '1' then
-					register_b_pending_next <= '0';
-				else
-					register_b_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_b_reg(4 downto 0))));
-				end if;
-				
-				register_c_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_c_reg(4 downto 0))));
+			elsif op.op_immediate_a = '1' then
+				register_a_pending_next <= '0';
 			else
-				if operation.op_immediate_a = '1' then
-					register_a_pending_next <= '0';
-				else
-					register_a_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_a(4 downto 0))));
-				end if;
+				register_a_pending_next <= registers_pending_reg.gp_registers(ireg_a) or registers_pending_set.gp_registers(ireg_a);
+			end if;
 				
-				if operation.op_immediate_b = '1' then
-					register_b_pending_next <= '0';
-				else
-					register_b_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_b(4 downto 0))));
-				end if;
+			if op.op_immediate_b = '1' then
+				register_b_pending_next <= '0';
+			else
+				register_b_pending_next <= registers_pending_reg.gp_registers(ireg_b) or registers_pending_set.gp_registers(ireg_b);
+			end if;
 				
-				register_c_pending_next <= registers_pending_reg.gp_registers(TO_INTEGER(unsigned(register_c(4 downto 0))));
+			if op.op_tohilo = '1' then
+				if op.op_hi = '1' then
+					register_c_pending_next <= (registers_pending_reg.hi and not op.op_mov) or registers_pending_set.hi;
+				else
+					register_c_pending_next <= (registers_pending_reg.lo and not op.op_mov) or registers_pending_set.lo;
+				end if;
+			else
+				register_c_pending_next <= registers_pending_reg.gp_registers(ireg_c) or registers_pending_set.gp_registers(ireg_c);
 			end if;
 		end if;
 	end process;
@@ -300,7 +309,7 @@ begin
 	
 	register_hilo_in.write_data <= register_port_out_a.data & register_port_out_a.data;
 	register_hilo_in.write_strobe <= operation_reg.op_hi & operation_reg.op_lo;
-	register_hilo_in.write_enable <= operation_reg.op_tohilo and not stall_internal;
+	register_hilo_in.write_enable <= operation_reg.op_tohilo and operation_reg.op_mov and not stall_internal;
 	
 	override_address_valid <= '0';
 	override_address <= register_port_out_a.data;
@@ -340,16 +349,11 @@ begin
 			load_reg <= load_reg_next;
 			store_reg <= store_reg_next;
 			memop_type_reg <= memop_type_reg_next;
-			target_register_address <= target_register_address_next;
-			target_register_pending <= target_register_pending_next;
 			link_address_reg <= link_address_reg_next;
 			mov_strobe_reg <= mov_strobe_reg_next;
-			
-			register_a_written <= register_a_written_next;
-			register_b_written <= register_b_written_next;
-			register_c_written <= register_c_written_next;
-			
+						
 			registers_pending_reg <= registers_pending_reg_next;
+			registers_pending_reg.gp_registers(0) <= '0';
 			
 			register_a_pending <= register_a_pending_next;
 			register_b_pending <= register_b_pending_next;
@@ -387,10 +391,7 @@ begin
 		register_c_pending,
 		
 		register_port_out_a,
-		
-		target_register_address,
-		target_register_pending,
-		
+				
 		link_address,
 		link_address_reg,
 		fast_cmp_result,
@@ -430,15 +431,9 @@ begin
 		immediate_a_reg_next <= immediate_a_reg;
 		immediate_b_reg_next <= immediate_b_reg;
 				
-		target_register_address_next <= target_register_address;
-		target_register_pending_next <= target_register_pending;
 		link_address_reg_next <= link_address_reg;
 		mov_strobe_reg_next <= mov_strobe_reg;
-		
-		register_a_written_next <= '0';
-		register_b_written_next <= '0';
-		register_c_written_next <= '0';
-		
+				
 		stall_internal <= '0';
 		
 		registers_pending_reg_next.gp_registers <= (registers_pending_reg.gp_registers and not (registers_pending_reset_in_a.gp_registers or registers_pending_reset_in_b.gp_registers)) or registers_pending_set.gp_registers;
@@ -464,8 +459,6 @@ begin
 			registers_pending_reg_next.hi <= '0';
 			registers_pending_reg_next.lo <= '0';
 		elsif enable = '1' then
-			target_register_address_next <= (others => '0');
-			target_register_pending_next <= '0';
 			
 			-- if registers are unused, they must be set to $0 (never pending)
 			if operation_valid_reg = '1' and 
@@ -491,24 +484,6 @@ begin
 				immediate_b_reg_next <= immediate_b;
 				link_address_reg_next <= link_address;
 				mov_strobe_reg_next <= mov_strobe;
-				
-				-- write register pending for target register
-				
-				target_register_address_next <= register_c_reg;
-				
-				-- register pending bypass, only when reg != $0
-				if register_c_reg /= "000000" then
-					if register_a = register_c_reg then
-						register_a_written_next <= operation_valid_reg;
-					end if;
-					if register_b = register_c_reg then
-						register_b_written_next <= operation_valid_reg;
-					end if;
-					if register_c = register_c_reg then
-						register_c_written_next <= operation_valid_reg;
-					end if;
-					target_register_pending_next <= operation_valid_reg;
-				end if;
 			end if;
 			
 			

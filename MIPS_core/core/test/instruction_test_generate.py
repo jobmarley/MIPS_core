@@ -897,6 +897,49 @@ def test_bltzall(builder : instruction_builder):
 		test_regs_imm_branch_link(builder, current_address, [x], [ofs], 'bltzall ${}, .+{}', f)
 		builder.skip_bin_instruction()
 
+def test_dependency(builder : instruction_builder):
+	# test div, mfhi
+	regs = random_register_non_zero(3)
+	v0 = random_uint(32)
+	v1 = random_uint(8)
+	builder.write_reg(regs[0], v0)
+	builder.write_reg(regs[1], v1)
+	builder.begin()
+	
+	result = correct_signed_div(v0, v1)
+	if type(result) != int:
+		result = ((result[0] & 0xFFFFFFFF) << 32) | (result[1] & 0xFFFFFFFF);
+	builder.check_hilo(result)
+	hi = result >> 32
+	builder.check_reg(regs[2], hi)
+
+	builder.execute('div $0, ${}, ${}'.format(*regs[:2]))
+	builder.execute('mfhi ${}'.format(regs[2]))
+	builder.set_hilo(result)
+	builder.set_register(regs[2], hi)
+	builder.end()
+
+	# test mul, add
+	regs = random_register_non_zero(5)
+	v0 = random_uint(32)
+	v1 = random_uint(32)
+	v2 = random_uint(32)
+	builder.write_reg(regs[0], v0)
+	builder.write_reg(regs[1], v1)
+	builder.write_reg(regs[2], v2)
+	builder.begin()
+	
+	mul_res = (v0 * v1) & 0xFFFFFFFF
+	builder.check_reg(regs[3], mul_res)
+	add_res = (mul_res + v2) & 0xFFFFFFFF
+	builder.check_reg(regs[4], add_res)
+
+	builder.execute('mul ${}, ${}, ${}'.format(regs[3], regs[0], regs[1]))
+	builder.execute('add ${}, ${}, ${}'.format(regs[4], regs[3], regs[2]))
+	builder.set_register(regs[3], mul_res)
+	builder.set_register(regs[4], add_res)
+	builder.end()
+
 def generate_commands():
 	
 	registers = generate_register_values()
@@ -978,6 +1021,8 @@ def generate_commands():
 	test_bltzl(builder)
 	test_bltzal(builder)
 	test_bltzall(builder)
+
+	test_dependency(builder)
 
 	builder.generate_cmd_file()
 	write_memory_file(instr_ram_filename, ram_initial)

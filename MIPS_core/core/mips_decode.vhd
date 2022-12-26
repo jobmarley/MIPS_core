@@ -209,6 +209,7 @@ begin
 								operation_reg_next.op_div <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
+								operation_reg_next.op_tohilo <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 							when instr_divu_opc.funct =>
@@ -217,6 +218,7 @@ begin
 								operation_reg_next.op_unsigned <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
+								operation_reg_next.op_tohilo <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 							when instr_mult_opc.funct =>
@@ -224,6 +226,7 @@ begin
 								operation_reg_next.op_mul <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
+								operation_reg_next.op_tohilo <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 							when instr_multu_opc.funct =>
@@ -232,6 +235,7 @@ begin
 								operation_reg_next.op_unsigned <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
+								operation_reg_next.op_tohilo <= '1';
 								register_a_reg_next <= '0' & instruction_data_r.rs;
 								register_b_reg_next <= '0' & instruction_data_r.rt;
 							-- -- noop is sll 0, 0, 0
