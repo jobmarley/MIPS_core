@@ -56,7 +56,6 @@
     <VHDLSource Include="core\mips_core.vhd" />
     <VHDLSource Include="core\mips_core_impl_simple.vhd" />
     <VHDLSource Include="core\mips_decode.vhd" />
-    <VHDLSource Include="core\mips_execution_unit.vhd" />
     <VHDLSource Include="core\mips_core_test.vhd" />
     <VHDLSource Include="core\mips_fetch.vhd" />
     <VHDLSource Include="core\mips_readmem.vhd" />
