@@ -915,6 +915,7 @@ def test_dependency(builder : instruction_builder):
 
 	builder.execute('div $0, ${}, ${}'.format(*regs[:2]))
 	builder.execute('mfhi ${}'.format(regs[2]))
+	builder.wait(30)
 	builder.set_hilo(result)
 	builder.set_register(regs[2], hi)
 	builder.end()
@@ -938,6 +939,22 @@ def test_dependency(builder : instruction_builder):
 	builder.execute('add ${}, ${}, ${}'.format(regs[4], regs[3], regs[2]))
 	builder.set_register(regs[3], mul_res)
 	builder.set_register(regs[4], add_res)
+	builder.end()
+
+	# test mfhi, mtlo
+	regs = random_register_non_zero(1)
+	v1 = random_uint(32)
+	v2 = random_uint(32)
+	builder.write_hilo((v1 << 32) | v2)
+	builder.begin()
+	
+	builder.check_reg(regs[0], v1)
+	builder.check_hilo((v1 << 32) | v1)
+
+	builder.execute('mfhi ${}'.format(regs[0]))
+	builder.execute('mtlo ${}'.format(regs[0]))
+	builder.set_register(regs[0], v1)
+	builder.set_hilo((v1 << 32) | v1)
 	builder.end()
 
 def generate_commands():
