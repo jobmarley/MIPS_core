@@ -92,11 +92,11 @@ begin
 				if hilo_in(i).write_enable = '1' then
 					if hilo_in(i).write_strobe(0) = '1' then
 						hilo_reg_next(31 downto 0) <= hilo_in(i).write_data(31 downto 0);
-						debug_registers_written.hi <= '1';
+						debug_registers_written.lo <= '1';
 					end if;
 					if hilo_in(i).write_strobe(1) = '1' then
 						hilo_reg_next(63 downto 32) <= hilo_in(i).write_data(63 downto 32);
-						debug_registers_written.lo <= '1';
+						debug_registers_written.hi <= '1';
 					end if;
 				end if;
 			end loop;
