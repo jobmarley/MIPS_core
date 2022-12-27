@@ -147,9 +147,15 @@ begin
 			register_port_in_c_reg_next.write_data <= alu_out_ports.mul_out_tdata(31 downto 0);
 			register_port_in_c_reg_next.write_strobe <= x"F";
 			
-			add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.add_out_tuser(4 downto 0)))) <= alu_out_ports.add_out_tvalid and add_tuser.mov;
-			add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.sub_out_tuser(4 downto 0)))) <= alu_out_ports.sub_out_tvalid;
-			add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.mul_out_tuser(4 downto 0)))) <= not mul_tuser.use_hilo and alu_out_ports.mul_out_tvalid;
+			if alu_out_ports.add_out_tvalid = '1' and add_tuser.mov = '1' then
+				add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.add_out_tuser(4 downto 0)))) <= '1';
+			end if;
+			if alu_out_ports.sub_out_tvalid = '1' then
+				add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.sub_out_tuser(4 downto 0)))) <= '1';
+			end if;
+			if alu_out_ports.mul_out_tvalid = '1' and mul_tuser.use_hilo = '0' then
+				add_sub_mul_pending_reset(TO_INTEGER(unsigned(alu_out_ports.mul_out_tuser(4 downto 0)))) <= '1';
+			end if;
 		end if;
 	end process;
 	
