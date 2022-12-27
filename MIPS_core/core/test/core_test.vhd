@@ -327,17 +327,10 @@ architecture core_test_behavioral of core_test is
 			end if;
 		end loop;
 		
-		
-		if mask.hi = '1' and registers_written.hi /= '1' then
-			report "register hi was reset but not written" severity FAILURE;
-		end if;
 		if mask.hi = '0' and registers_written.hi = '1' then
 			report "register hi was written but shouldn't have been" severity FAILURE;
 		end if;
 		
-		if mask.lo = '1' and registers_written.lo /= '1' then
-			report "register lo was reset but not written" severity FAILURE;
-		end if;
 		if mask.lo = '0' and registers_written.lo = '1' then
 			report "register lo was written but shouldn't have been" severity FAILURE;
 		end if;
