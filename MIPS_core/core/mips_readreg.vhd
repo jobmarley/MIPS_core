@@ -397,7 +397,7 @@ begin
 	register_port_in_d.address <= register_c_reg(4 downto 0);
 	register_port_in_d.write_data <= register_c_value;
 	register_port_in_d.write_strobe <= mov_strobe_reg;
-	register_port_in_d.write_enable <= (fast_cmp_result and operation_valid_reg and out_valid_reg) when operation_reg.op_link_branch = '1' else (not register_c_reg(5) and operation_reg.op_mov and operation_valid_reg and out_valid_reg);
+	register_port_in_d.write_enable <= (fast_cmp_result and operation_valid_reg and out_valid_reg) when operation_reg.op_link_branch = '1' else (not register_c_reg(5) and operation_reg.op_mov and not operation_reg.op_tohilo and operation_valid_reg and out_valid_reg);
 	
 	cop0_reg_port_in_a.address <= register_a(4 downto 0);
 	cop0_reg_port_in_a.write_data <= (others => '0');
