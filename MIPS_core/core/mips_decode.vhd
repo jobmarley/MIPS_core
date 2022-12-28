@@ -18,9 +18,9 @@ entity mips_decode is
 	instr_data_valid : in std_logic;
 	instr_data_ready : out std_logic;
 	
-	register_a : out std_logic_vector(5 downto 0);
-	register_b : out std_logic_vector(5 downto 0);
-	register_c : out std_logic_vector(5 downto 0);
+	register_a : out std_logic_vector(8 downto 0);
+	register_b : out std_logic_vector(8 downto 0);
+	register_c : out std_logic_vector(8 downto 0);
 	operation : out decode_operation_t;
 	operation_valid : out std_logic;
 	load : out std_logic;
@@ -193,16 +193,16 @@ begin
 							when instr_add_opc.funct | instr_addu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_add <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_and_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_and <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_div_opc.funct =>
 								operation_valid_reg_next <= '1';
@@ -210,8 +210,8 @@ begin
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
 								operation_reg_next.op_tohilo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
 							when instr_divu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_div <= '1';
@@ -219,16 +219,16 @@ begin
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
 								operation_reg_next.op_tohilo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
 							when instr_mult_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mul <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
 								operation_reg_next.op_tohilo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
 							when instr_multu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mul <= '1';
@@ -236,8 +236,8 @@ begin
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_lo <= '1';
 								operation_reg_next.op_tohilo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
 							-- -- noop is sll 0, 0, 0
 							--when instr_noop_opc.funct =>
 							--	operation_valid_reg_next <= '0';
@@ -245,75 +245,75 @@ begin
 								-- can be optimized. If one register is $0, then this is a mov
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_or <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_sll_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_sll <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								immediate_b_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								operation_reg_next.op_immediate_b <= '1';
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_sllv_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_sll <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_b_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_b_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_sra_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_sra <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								immediate_b_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								operation_reg_next.op_immediate_b <= '1';
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_srav_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_sra <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_b_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_b_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_srl_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_srl <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								immediate_b_reg_next <= x"000000" & "000" & instruction_data_r.shamt;
 								operation_reg_next.op_immediate_b <= '1';
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_srlv_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_srl <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_b_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_b_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_sub_opc.funct | instr_subu_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_sub <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_xor_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_xor <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_nor_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_nor <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_slt_opc.funct =>
 								operation_valid_reg_next <= '1';
@@ -321,9 +321,9 @@ begin
 								operation_reg_next.op_cmp_ge <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_cmpmov <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_sltu_opc.funct =>
 								operation_valid_reg_next <= '1';
@@ -332,9 +332,9 @@ begin
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_unsigned <= '1';
 								operation_reg_next.op_cmpmov <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_jalr_opc.funct =>
 								operation_valid_reg_next <= '1';
@@ -342,9 +342,9 @@ begin
 								operation_reg_next.op_jump <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= "000000";
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= (others => '0');
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								link_address_reg_next <= instr_address_plus_8;
 								operation_reg_next.op_link <= '1';
 								execute_delay_slot <= '1';
@@ -353,8 +353,8 @@ begin
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_add <= '1';
 								operation_reg_next.op_jump <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= "000000";
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= (others => '0');
 								execute_delay_slot <= '1';
 								wait_jump <= '1';
 							
@@ -363,28 +363,28 @@ begin
 								operation_reg_next.op_mov <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_fromhilo <= '1';
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								mov_strobe_reg_next <= "1111";
 							when instr_mflo_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mov <= '1';
 								operation_reg_next.op_lo <= '1';
 								operation_reg_next.op_fromhilo <= '1';
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								mov_strobe_reg_next <= "1111";
 							when instr_mthi_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mov <= '1';
 								operation_reg_next.op_hi <= '1';
 								operation_reg_next.op_tohilo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
 								mov_strobe_reg_next <= "1111";
 							when instr_mtlo_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mov <= '1';
 								operation_reg_next.op_lo <= '1';
 								operation_reg_next.op_tohilo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
 								mov_strobe_reg_next <= "1111";
 	
 							when instr_movn_opc.funct =>
@@ -393,9 +393,9 @@ begin
 								operation_reg_next.op_cmp_eq <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_cmpmov_alternate <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_b_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_b_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								immediate_b_reg_next <= (others => '0');
 								operation_reg_next.op_immediate_b <= '1';
 								operation_reg_next.op_reg_c_set_pending <= '1';
@@ -404,9 +404,9 @@ begin
 								operation_reg_next.op_cmp <= '1';
 								operation_reg_next.op_cmp_eq <= '1';
 								operation_reg_next.op_cmpmov_alternate <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_b_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_b_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								immediate_b_reg_next <= (others => '0');
 								operation_reg_next.op_immediate_b <= '1';
 								operation_reg_next.op_reg_c_set_pending <= '1';
@@ -422,16 +422,16 @@ begin
 					when instr_addi_opc.opcode | instr_addiu_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						operation_reg_next.op_reg_c_set_pending <= '1';
 					when instr_andi_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_and <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
 						operation_reg_next.op_immediate_b <= '1';
 						operation_reg_next.op_reg_c_set_pending <= '1';
@@ -440,9 +440,9 @@ begin
 							when instr_mul_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mul <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_b_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_b_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_madd_opc.funct =>
 							when instr_maddu_opc.funct =>
@@ -451,14 +451,14 @@ begin
 							when instr_clo_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_clo <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_clz_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_clz <= '1';
-								register_a_reg_next <= '0' & instruction_data_r.rs;
-								register_c_reg_next <= '0' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rs;
+								register_c_reg_next <= "0000" & instruction_data_r.rd;
 								operation_reg_next.op_reg_c_set_pending <= '1';
 							when instr_sdbbp_opc.funct =>
 								breakpoint <= '1';
@@ -468,16 +468,16 @@ begin
 					when instr_ori_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_or <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
 						operation_reg_next.op_immediate_b <= '1';
 						operation_reg_next.op_reg_c_set_pending <= '1';
 					when instr_xori_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_xor <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= x"0000" & instruction_data_i.immediate;
 						operation_reg_next.op_immediate_b <= '1';
 						operation_reg_next.op_reg_c_set_pending <= '1';
@@ -487,8 +487,8 @@ begin
 						operation_reg_next.op_cmp_ge <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_cmpmov <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						operation_reg_next.op_reg_c_set_pending <= '1';
@@ -499,8 +499,8 @@ begin
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_unsigned <= '1';
 						operation_reg_next.op_cmpmov <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						operation_reg_next.op_reg_c_set_pending <= '1';
@@ -510,8 +510,8 @@ begin
 						operation_reg_next.op_cmp <= '1';
 						operation_reg_next.op_cmp_eq <= '1';
 						operation_reg_next.op_branch <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -524,8 +524,8 @@ begin
 						operation_reg_next.op_cmp_eq <= '1';
 						operation_reg_next.op_branch <= '1';
 						operation_reg_next.op_branch_likely <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -538,8 +538,8 @@ begin
 								operation_reg_next.op_cmp_gez <= '1';
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_branch <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								immediate_b_reg_next <= instr_address_plus_4;
 								-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -552,8 +552,8 @@ begin
 								operation_reg_next.op_cmp_invert <= '1';
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_branch_likely <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								immediate_b_reg_next <= instr_address_plus_4;
 								-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -566,9 +566,9 @@ begin
 								operation_reg_next.op_branch <= '1';
 								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link_branch <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
-								register_c_reg_next <= "011111";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
+								register_c_reg_next <= "000011111";
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								-- do not set immediate_valid because we use ADD + CMP and OPERATION_INDEX_B takes care of that
 								immediate_b_reg_next <= instr_address_plus_4;
@@ -584,9 +584,9 @@ begin
 								operation_reg_next.op_branch_likely <= '1';
 								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link_branch <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
-								register_c_reg_next <= "011111";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
+								register_c_reg_next <= "000011111";
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								-- do not set immediate_valid because we use ADD + CMP and OPERATION_INDEX_B takes care of that
 								immediate_b_reg_next <= instr_address_plus_4;
@@ -597,8 +597,8 @@ begin
 								operation_reg_next.op_add <= '1';
 								operation_reg_next.op_cmp_gez <= '1';
 								operation_reg_next.op_branch <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								immediate_b_reg_next <= instr_address_plus_4;
 								-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -610,8 +610,8 @@ begin
 								operation_reg_next.op_cmp_gez <= '1';
 								operation_reg_next.op_branch <= '1';
 								operation_reg_next.op_branch_likely <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								immediate_b_reg_next <= instr_address_plus_4;
 								-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -623,9 +623,9 @@ begin
 								operation_reg_next.op_branch <= '1';
 								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link_branch <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
-								register_c_reg_next <= "011111";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
+								register_c_reg_next <= "000011111";
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								-- do not set immediate_valid because we use ADD + CMP and OPERATION_INDEX_B takes care of that
 								immediate_b_reg_next <= instr_address_plus_4;
@@ -640,9 +640,9 @@ begin
 								operation_reg_next.op_branch_likely <= '1';
 								mov_strobe_reg_next <= x"F";
 								operation_reg_next.op_link_branch <= '1';
-								register_a_reg_next <= '0' & instruction_data_i.rs;
-								register_b_reg_next <= "000000";
-								register_c_reg_next <= "011111";
+								register_a_reg_next <= "0000" & instruction_data_i.rs;
+								register_b_reg_next <= (others => '0');
+								register_c_reg_next <= "000011111";
 								immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 								-- do not set immediate_valid because we use ADD + CMP and OPERATION_INDEX_B takes care of that
 								immediate_b_reg_next <= instr_address_plus_4;
@@ -659,8 +659,8 @@ begin
 						operation_reg_next.op_cmp_le <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_branch <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= "000000";
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= (others => '0');
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -674,8 +674,8 @@ begin
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_branch <= '1';
 						operation_reg_next.op_branch_likely <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= "000000";
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= (others => '0');
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -686,8 +686,8 @@ begin
 						operation_reg_next.op_cmp <= '1';
 						operation_reg_next.op_cmp_le <= '1';
 						operation_reg_next.op_branch <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= "000000";
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= (others => '0');
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -700,8 +700,8 @@ begin
 						operation_reg_next.op_cmp_le <= '1';
 						operation_reg_next.op_branch <= '1';
 						operation_reg_next.op_branch_likely <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= "000000";
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= (others => '0');
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -713,8 +713,8 @@ begin
 						operation_reg_next.op_cmp_eq <= '1';
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_branch <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -728,8 +728,8 @@ begin
 						operation_reg_next.op_cmp_invert <= '1';
 						operation_reg_next.op_branch <= '1';
 						operation_reg_next.op_branch_likely <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_b_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_b_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_a_reg_next <= sign_extend(instruction_data_i.immediate & "00", 32);
 						immediate_b_reg_next <= instr_address_plus_4;
 						-- dont set immediate_a/b because branch forces immediates for add and regs for cmp
@@ -745,8 +745,8 @@ begin
 						override_address_valid_reg_next <= '1';
 						operation_reg_next.op_mov <= '1';
 						mov_strobe_reg_next <= x"F";
-						register_a_reg_next <= "000000";
-						register_c_reg_next <= "011111";
+						register_a_reg_next <= (others => '0');
+						register_c_reg_next <= "000011111";
 						immediate_a_reg_next <= instr_address_plus_8;
 						operation_reg_next.op_immediate_a <= '1';
 						execute_delay_slot <= '1';
@@ -755,8 +755,8 @@ begin
 					when instr_lb_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -766,8 +766,8 @@ begin
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
 						operation_reg_next.op_unsigned <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -776,8 +776,8 @@ begin
 					when instr_lh_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -787,8 +787,8 @@ begin
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
 						operation_reg_next.op_unsigned <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -797,16 +797,16 @@ begin
 					when instr_lui_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_mov <= '1';
-						register_a_reg_next <= '0' & "00000";
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & "00000";
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_a_reg_next <= instruction_data_i.immediate & x"0000";
 						operation_reg_next.op_immediate_a <= '1';
 						mov_strobe_reg_next <= "1111";
 					when instr_lw_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -815,8 +815,8 @@ begin
 					when instr_lwl_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -825,8 +825,8 @@ begin
 					when instr_lwr_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						operation_reg_next.op_reg_c_set_pending <= '1';
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
@@ -836,8 +836,8 @@ begin
 					when instr_sb_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						store_reg_next <= '1';
@@ -845,8 +845,8 @@ begin
 					when instr_sh_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						store_reg_next <= '1';
@@ -854,8 +854,8 @@ begin
 					when instr_sw_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						store_reg_next <= '1';
@@ -863,8 +863,8 @@ begin
 					when instr_swl_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						store_reg_next <= '1';
@@ -872,8 +872,8 @@ begin
 					when instr_swr_opc.opcode =>
 						operation_valid_reg_next <= '1';
 						operation_reg_next.op_add <= '1';
-						register_a_reg_next <= '0' & instruction_data_i.rs;
-						register_c_reg_next <= '0' & instruction_data_i.rt;
+						register_a_reg_next <= "0000" & instruction_data_i.rs;
+						register_c_reg_next <= "0000" & instruction_data_i.rt;
 						immediate_b_reg_next <= sign_extend(instruction_data_i.immediate, 32);
 						operation_reg_next.op_immediate_b <= '1';
 						store_reg_next <= '1';
@@ -892,14 +892,14 @@ begin
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								register_a_reg_next <= '1' & instruction_data_r.rd;
-								register_c_reg_next <= '0' & instruction_data_r.rt;
+								register_a_reg_next <= instruction_data_cop0.sel & "1" & instruction_data_r.rd;
+								register_c_reg_next <= "0000" & instruction_data_r.rt;
 							when instr_mtc0_opc.funct =>
 								operation_valid_reg_next <= '1';
 								operation_reg_next.op_mov <= '1';
 								mov_strobe_reg_next <= x"F";
-								register_a_reg_next <= '0' & instruction_data_r.rt;
-								register_c_reg_next <= '1' & instruction_data_r.rd;
+								register_a_reg_next <= "0000" & instruction_data_r.rt;
+								register_c_reg_next <= instruction_data_cop0.sel & "1" & instruction_data_r.rd;
 							--when instr_deret_opc.funct =>
 							--when instr_eret_opc.funct =>
 													

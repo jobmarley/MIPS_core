@@ -182,7 +182,8 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 			clock : in std_logic;
 	
 			ports_in : in cop0_register_port_in_array_t(port_count-1 downto 0);
-			ports_out : out cop0_register_port_out_array_t(port_count-1 downto 0)
+			ports_out : out cop0_register_port_out_array_t(port_count-1 downto 0);
+			perf_increment : in std_logic
 		);
 	end component;
 
@@ -281,9 +282,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		instr_data_valid : in std_logic;
 		instr_data_ready : out std_logic;
 	
-		register_a : out std_logic_vector(5 downto 0);
-		register_b : out std_logic_vector(5 downto 0);
-		register_c : out std_logic_vector(5 downto 0);
+		register_a : out std_logic_vector(8 downto 0);
+		register_b : out std_logic_vector(8 downto 0);
+		register_c : out std_logic_vector(8 downto 0);
 		operation : out decode_operation_t;
 		operation_valid : out std_logic;
 		load : out std_logic;
@@ -313,9 +314,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 		clock : in std_logic;
 	
 		-- decode
-		register_a : in std_logic_vector(5 downto 0);
-		register_b : in std_logic_vector(5 downto 0);
-		register_c : in std_logic_vector(5 downto 0);
+		register_a : in std_logic_vector(8 downto 0);
+		register_b : in std_logic_vector(8 downto 0);
+		register_c : in std_logic_vector(8 downto 0);
 		operation : in decode_operation_t;
 		operation_valid : in std_logic;
 		load : in std_logic;
@@ -386,10 +387,13 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal registers_debug_registers_written : registers_pending_t;
 	signal registers_debug_registers_values : registers_values_t;
 	
+	signal registers_perf_increment : std_logic;
+	
 	-- decode	
-	signal decode_register_a : std_logic_vector(5 downto 0);
-	signal decode_register_b : std_logic_vector(5 downto 0);
-	signal decode_register_c : std_logic_vector(5 downto 0);
+	signal decode_instruction_data_ready : std_logic;
+	signal decode_register_a : std_logic_vector(8 downto 0);
+	signal decode_register_b : std_logic_vector(8 downto 0);
+	signal decode_register_c : std_logic_vector(8 downto 0);
 	signal decode_immediate : std_logic_vector(31 downto 0);
 	signal decode_immediate_valid : std_logic;
 	signal decode_operation : decode_operation_t;
@@ -426,6 +430,9 @@ architecture mips_core_internal_behavioral of mips_core_internal is
 	signal writeback_skip_jump : std_logic;
 	signal writeback_execute_delay_slot : std_logic;
 begin
+	fetch_instruction_data_ready <= decode_instruction_data_ready;
+	registers_perf_increment <= fetch_instruction_data_valid and decode_instruction_data_ready;
+	
 	debug_registers_written <= registers_debug_registers_written;
 	debug_registers_values <= registers_debug_registers_values;
 	
@@ -509,7 +516,7 @@ begin
 		instr_address => fetch_instruction_address,
 		instr_data => fetch_instruction_data,
 		instr_data_valid => fetch_instruction_data_valid,
-		instr_data_ready => fetch_instruction_data_ready,
+		instr_data_ready => decode_instruction_data_ready,
 	
 		register_a => decode_register_a,
 		register_b => decode_register_b,
@@ -588,7 +595,9 @@ begin
 			clock => clock,
 	
 			ports_in => cop0_ports_in,
-			ports_out => cop0_ports_out
+			ports_out => cop0_ports_out,
+	
+			perf_increment => registers_perf_increment
 		);
 	
 	mips_readmem_i0 : mips_readmem port map(

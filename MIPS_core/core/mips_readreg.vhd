@@ -10,9 +10,9 @@ entity mips_readreg is
 	clock : in std_logic;
 	
 	-- decode
-	register_a : in std_logic_vector(5 downto 0);
-	register_b : in std_logic_vector(5 downto 0);
-	register_c : in std_logic_vector(5 downto 0);
+	register_a : in std_logic_vector(8 downto 0);
+	register_b : in std_logic_vector(8 downto 0);
+	register_c : in std_logic_vector(8 downto 0);
 	operation : in decode_operation_t;
 	operation_valid : in std_logic;
 	load : in std_logic;
@@ -58,12 +58,12 @@ entity mips_readreg is
 end mips_readreg;
 
 architecture mips_readreg_behavioral of mips_readreg is
-	signal register_a_reg : std_logic_vector(5 downto 0);
-	signal register_a_reg_next : std_logic_vector(5 downto 0);
-	signal register_b_reg : std_logic_vector(5 downto 0);
-	signal register_b_reg_next : std_logic_vector(5 downto 0);
-	signal register_c_reg : std_logic_vector(5 downto 0);
-	signal register_c_reg_next : std_logic_vector(5 downto 0);
+	signal register_a_reg : std_logic_vector(register_a'range);
+	signal register_a_reg_next : std_logic_vector(register_a'range);
+	signal register_b_reg : std_logic_vector(register_b'range);
+	signal register_b_reg_next : std_logic_vector(register_b'range);
+	signal register_c_reg : std_logic_vector(register_c'range);
+	signal register_c_reg_next : std_logic_vector(register_c'range);
 	signal operation_reg : decode_operation_t;
 	signal operation_reg_next : decode_operation_t;
 	signal operation_valid_reg : std_logic;
@@ -298,7 +298,7 @@ begin
 	alu_add_tuser.store <= store_reg;
 	alu_add_tuser.store_data <= register_port_out_c.data;
 	alu_add_tuser.load <= load_reg;
-	alu_add_tuser.rt <= register_c_reg;
+	alu_add_tuser.rt <= register_c_reg(5 downto 0);
 	 -- when op_cmp_gez is used, we transform the branch in jump when cmp is successfull
 	alu_add_tuser.branch <= operation_reg.op_branch when operation_reg.op_cmp_gez = '0' else not fast_cmp_result;
 	alu_add_tuser.jump <= operation_reg.op_jump when operation_reg.op_cmp_gez = '0' else fast_cmp_result;
@@ -308,59 +308,59 @@ begin
 	alu_in_ports.sub_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.sub_in_tvalid <= operation_reg.op_sub and out_valid_reg;
-	alu_in_ports.sub_in_tuser <= register_c_reg;
+	alu_in_ports.sub_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.mul_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.mul_in_tvalid <= operation_reg.op_mul and not operation_reg.op_unsigned and out_valid_reg;
 	alu_in_ports.mul_in_tuser <= mul_tuser_to_slv(alu_mul_tuser);
-	alu_mul_tuser.rd <= register_c_reg;
+	alu_mul_tuser.rd <= register_c_reg(5 downto 0);
 	alu_mul_tuser.use_hilo <= operation_reg.op_hi or operation_reg.op_lo;
 	
 	alu_in_ports.multu_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.multu_in_tvalid <= operation_reg.op_mul and operation_reg.op_unsigned and out_valid_reg;
-	alu_in_ports.multu_in_tuser <= register_c_reg;
+	alu_in_ports.multu_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.div_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.div_in_tvalid <= operation_reg.op_div and not operation_reg.op_unsigned and out_valid_reg;
-	alu_in_ports.div_in_tuser <= register_c_reg;
+	alu_in_ports.div_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.divu_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.divu_in_tvalid <= operation_reg.op_div and operation_reg.op_unsigned and out_valid_reg;
-	alu_in_ports.divu_in_tuser <= register_c_reg;
+	alu_in_ports.divu_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.and_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.and_in_tvalid <= operation_reg.op_and and out_valid_reg;
-	alu_in_ports.and_in_tuser <= register_c_reg;
+	alu_in_ports.and_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.or_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.or_in_tvalid <= operation_reg.op_or and out_valid_reg;
-	alu_in_ports.or_in_tuser <= register_c_reg;
+	alu_in_ports.or_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.xor_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.xor_in_tvalid <= operation_reg.op_xor and out_valid_reg;
-	alu_in_ports.xor_in_tuser <= register_c_reg;
+	alu_in_ports.xor_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.nor_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.nor_in_tvalid <= operation_reg.op_nor and out_valid_reg;
-	alu_in_ports.nor_in_tuser <= register_c_reg;
+	alu_in_ports.nor_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.shl_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b)(4 downto 0) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.shl_in_tvalid <= operation_reg.op_sll and out_valid_reg;
-	alu_in_ports.shl_in_tuser <= register_c_reg;
+	alu_in_ports.shl_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.shr_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b)(4 downto 0) &
 		select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.shr_in_tvalid <= (operation_reg.op_srl or operation_reg.op_sra) and out_valid_reg;
-	alu_in_ports.shr_in_tuser <= operation_reg.op_sra & register_c_reg;
+	alu_in_ports.shr_in_tuser <= operation_reg.op_sra & register_c_reg(5 downto 0);
 	
 	-- when branch, cmp always use registers
 	alu_in_ports.cmp_in_tdata <= select_operand(register_b_value, immediate_b_reg, operation_reg.op_immediate_b and not operation_reg.op_branch) &
@@ -370,7 +370,7 @@ begin
 	alu_cmp_tuser.eq <= operation_reg.op_cmp_eq;
 	alu_cmp_tuser.ge <= operation_reg.op_cmp_ge;
 	alu_cmp_tuser.le <= operation_reg.op_cmp_le;
-	alu_cmp_tuser.rd <= register_c_reg;
+	alu_cmp_tuser.rd <= register_c_reg(5 downto 0);
 	alu_cmp_tuser.invert <= operation_reg.op_cmp_invert;
 	alu_cmp_tuser.unsigned <= operation_reg.op_unsigned;
 	alu_cmp_tuser.branch <= operation_reg.op_branch;
@@ -381,11 +381,11 @@ begin
 	
 	alu_in_ports.clo_in_tdata <= select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.clo_in_tvalid <= operation_reg.op_clo and out_valid_reg;
-	alu_in_ports.clo_in_tuser <= register_c_reg;
+	alu_in_ports.clo_in_tuser <= register_c_reg(5 downto 0);
 	
 	alu_in_ports.clz_in_tdata <= select_operand(register_a_value, immediate_a_reg, operation_reg.op_immediate_a);
 	alu_in_ports.clz_in_tvalid <= operation_reg.op_clz and out_valid_reg;
-	alu_in_ports.clz_in_tuser <= register_c_reg;
+	alu_in_ports.clz_in_tuser <= register_c_reg(5 downto 0);
 	
 	register_hilo_in.write_data <= register_a_value & register_a_value;
 	register_hilo_in.write_strobe <= operation_reg.op_hi & operation_reg.op_lo;
@@ -399,11 +399,13 @@ begin
 	register_port_in_d.write_strobe <= mov_strobe_reg;
 	register_port_in_d.write_enable <= (fast_cmp_result and operation_valid_reg and out_valid_reg) when operation_reg.op_link_branch = '1' else (not register_c_reg(5) and operation_reg.op_mov and not operation_reg.op_tohilo and operation_valid_reg and out_valid_reg);
 	
+	cop0_reg_port_in_a.sel <= register_a(8 downto 6);
 	cop0_reg_port_in_a.address <= register_a(4 downto 0);
 	cop0_reg_port_in_a.write_data <= (others => '0');
 	cop0_reg_port_in_a.write_enable <= '0';
 	cop0_reg_port_in_a.write_strobe <= (others => '0');
 	
+	cop0_reg_port_in_b.sel <= register_c_reg(8 downto 6);
 	cop0_reg_port_in_b.address <= register_c_reg(4 downto 0);
 	cop0_reg_port_in_b.write_data <= register_a_value;
 	cop0_reg_port_in_b.write_enable <= operation_reg.op_mov and register_c_reg(5) and operation_valid_reg;

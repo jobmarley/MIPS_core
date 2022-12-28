@@ -163,6 +163,7 @@ package mips_utils is
 	
 	
 	type cop0_register_port_in_t is record
+		sel : std_logic_vector(2 downto 0);
 		address : std_logic_vector(4 DOWNTO 0);
 		write_enable : std_logic;
 		write_data : std_logic_vector(31 downto 0);
