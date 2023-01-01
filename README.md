@@ -65,3 +65,7 @@ Just run the following commands from the MIPS_core/core/test/ directory
 python instruction_test_generate.py
 vivado -mode batch -source core_test.tcl
 ```
+## Performance
+| Test      | Version | Cycle count | Performance count | Instruction per second | Clock frequency |
+|--------------|:-----|:------------|:------------|:------------|:------------|
+| mips_project_test over 10s, no cache | [751259be...](https://github.com/jobmarley/MIPS_core/commit/751259be9c90a9bd18cb2f2d89b1a88257c52010) [64b995f9...](https://github.com/jobmarley/mips_project_test/commit/64b995f915fc816a2f5840006b71d912ebccc6f7) | 1 000 000 704 | 42 512 991 | 4 251 296 | 100Mhz |
