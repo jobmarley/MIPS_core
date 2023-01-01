@@ -46,6 +46,13 @@ architecture cop0_registers_behavioral of cop0_registers is
 		r20 : slv32_t;
 		r21 : slv32_t;
 		r22 : slv32_t;
+		r22s1 : slv32_t;
+		r22s2 : slv32_t;
+		r22s3 : slv32_t;
+		r22s4 : slv32_t;
+		r22s5 : slv32_t;
+		r22s6 : slv32_t;
+		r22s7 : slv32_t;
 		r23 : slv32_t;
 		r24 : slv32_t;
 		r25 : slv32_t;
@@ -92,6 +99,13 @@ begin
 	registers_next.r20 <= registers_connector_in(20)(0);
 	registers_next.r21 <= registers_connector_in(21)(0);
 	registers_next.r22 <= registers_connector_in(22)(0);
+	registers_next.r22s1 <= registers_connector_in(22)(1);
+	registers_next.r22s2 <= registers_connector_in(22)(2);
+	registers_next.r22s3 <= registers_connector_in(22)(3);
+	registers_next.r22s4 <= registers_connector_in(22)(4);
+	registers_next.r22s5 <= registers_connector_in(22)(5);
+	registers_next.r22s6 <= registers_connector_in(22)(6);
+	registers_next.r22s7 <= registers_connector_in(22)(7);
 	registers_next.r23 <= registers_connector_in(23)(0);
 	registers_next.r24 <= registers_connector_in(24)(0);
 	registers_next.r25 <= registers_connector_in(25)(0);
@@ -125,7 +139,7 @@ begin
 		19 => (0 => registers.r19, others => x"00000000"),
 		20 => (0 => registers.r20, others => x"00000000"),
 		21 => (0 => registers.r21, others => x"00000000"),
-		22 => (0 => registers.r22, others => x"00000000"),
+		22 => (0 => registers.r22, 1 => registers.r22s1, 2 => registers.r22s2, 3 => registers.r22s3, 4 => registers.r22s4, 5 => registers.r22s5, 6 => registers.r22s6, 7 => registers.r22s7, others => x"00000000"),
 		23 => (0 => registers.r23, others => x"00000000"),
 		24 => (0 => registers.r24, others => x"00000000"),
 		25 => (0 => registers.r25, others => x"00000000"),

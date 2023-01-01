@@ -98,8 +98,8 @@ architecture mips_debugger_behavioral of mips_debugger is
 	signal s_axi_rdata_reg : std_logic_vector(31 downto 0);
 	signal s_axi_rdata_reg_next : std_logic_vector(31 downto 0);
 	
-	signal address_reg : std_logic_vector(5 downto 0);
-	signal address_reg_next : std_logic_vector(5 downto 0);
+	signal address_reg : std_logic_vector(8 downto 0);
+	signal address_reg_next : std_logic_vector(8 downto 0);
 	signal write_data_reg : std_logic_vector(31 downto 0);
 	signal write_data_reg_next : std_logic_vector(31 downto 0);
 	signal write_strobe_reg : std_logic_vector(3 downto 0);
@@ -206,6 +206,7 @@ begin
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= x"F";
 		
+		cop0_reg_port_in_a.sel <= (others => '0');
 		cop0_reg_port_in_a.address <= (others => '0');
 		cop0_reg_port_in_a.write_data <= (others => '0');
 		cop0_reg_port_in_a.write_enable <= '0';
@@ -256,11 +257,11 @@ begin
 							s_axi_rdata_reg_next <= x"000000" & leds_reg;
 							s_axi_rresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_read_resp;
-						elsif s_axi_araddr(11 downto 7) = "00001" then -- REGISTERS
-							address_reg_next <= '0' & s_axi_araddr(6 downto 2);
+						elsif s_axi_araddr(8 downto 7) = "01" then -- REGISTERS
+							address_reg_next <= "0000" & s_axi_araddr(6 downto 2);
 							debugger_state_next <= debugger_state_read_reg;
-						elsif s_axi_araddr(11 downto 7) = "00010" then -- COP0
-							address_reg_next <= '1' & s_axi_araddr(6 downto 2);
+						elsif s_axi_araddr(8 downto 7) = "10" then -- COP0
+							address_reg_next <= s_axi_araddr(11 downto 9) & '1' & s_axi_araddr(6 downto 2);
 							debugger_state_next <= debugger_state_read_reg;
 						else
 							s_axi_rdata_reg_next <= (others => '0');
@@ -278,13 +279,13 @@ begin
 							leds_reg_next <= slv_select(leds_reg, s_axi_wdata, s_axi_wstrb(0 downto 0));
 							s_axi_bresp_reg_next <= AXI_RESP_OKAY;
 							debugger_state_next <= debugger_state_write_resp;
-						elsif s_axi_awaddr(11 downto 7) = "00001" then
-							address_reg_next <= '0' & s_axi_araddr(6 downto 2);	-- REGISTERS
+						elsif s_axi_awaddr(8 downto 7) = "01" then
+							address_reg_next <= "0000" & s_axi_awaddr(6 downto 2);	-- REGISTERS
 							write_data_reg_next <= s_axi_wdata;
 							write_strobe_reg_next <= s_axi_wstrb;
 							debugger_state_next <= debugger_state_write_reg;
-						elsif s_axi_awaddr(11 downto 7) = "00010" then
-							address_reg_next <= '1' & s_axi_araddr(6 downto 2); -- COP0
+						elsif s_axi_awaddr(8 downto 7) = "10" then
+							address_reg_next <= s_axi_awaddr(11 downto 9) & '1' & s_axi_awaddr(6 downto 2); -- COP0
 							write_data_reg_next <= s_axi_wdata;
 							write_strobe_reg_next <= s_axi_wstrb;
 							debugger_state_next <= debugger_state_write_reg;
@@ -297,11 +298,12 @@ begin
 					if address_reg(5) = '0' then
 						register_port_in_a.address <= address_reg(4 downto 0);
 					else
+						cop0_reg_port_in_a.sel <= address_reg(8 downto 6);
 						cop0_reg_port_in_a.address <= address_reg(4 downto 0);
 					end if;
 					debugger_state_next <= debugger_state_read_reg2;
 				when debugger_state_read_reg2 =>
-					if address_reg = "000000" then
+					if address_reg = "000000000" then
 						-- 0 is mapped to program counter
 						s_axi_rdata_reg_next <= fetch_instruction_address;
 					elsif address_reg(5) = '0' then
@@ -317,7 +319,7 @@ begin
 						debugger_state_next <= debugger_state_idle;
 					end if;
 				when debugger_state_write_reg =>
-					if address_reg = "000000" then
+					if address_reg = "000000000" then
 						fetch_wait_jump <= '1';
 						fetch_override_address <= write_data_reg;
 						fetch_override_address_valid <= '1';
@@ -327,6 +329,7 @@ begin
 						register_port_in_a.write_strobe <= write_strobe_reg;
 						register_port_in_a.write_enable <= '1';
 					else
+						cop0_reg_port_in_a.sel <= address_reg(8 downto 6);
 						cop0_reg_port_in_a.address <= address_reg(4 downto 0);
 						cop0_reg_port_in_a.write_data <= write_data_reg;
 						cop0_reg_port_in_a.write_strobe <= write_strobe_reg;
