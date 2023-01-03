@@ -172,7 +172,8 @@ architecture cache_memory_behavioral of cache_memory is
 	type state_t is (
 		state_idle,
 		state_update_read_address,
-		state_update_read_data
+		state_update_read_data,
+		state_update_send_data
 	);
 	
 	signal state : state_t;
@@ -427,23 +428,24 @@ begin
 						mem_dina <= M_AXI_rdata;
 						bram_address_next.offset <= std_logic_vector(UNSIGNED(bram_address.offset) + RAM_DATA_WIDTH_BYTE);
 						if M_AXI_rlast = '1' then
-							
-							hit_next <= '1';
-							
-							vhit_cache_address.set_index := bram_address.set_index;
-							vhit_cache_address.way_index := bram_address.way_index;
-							vhit_cache_address.offset := address(hit_cache_address.offset'LENGTH-1 downto 0);
-							hit_cache_address_next <= vhit_cache_address;	
-							
-							-- read data
-							mem_wea <= (others => '0');
-							mem_addra <= BRAM_address_to_slv(vhit_cache_address);
-							mem_dina <= (others => '0');
-							
-							state_next <= state_idle;
+							state_next <= state_update_send_data;
 						end if;
 					end if;
-				
+				when state_update_send_data =>
+					-- could remove that step by intercepting the correct offset in update
+					hit_next <= '1';
+							
+					vhit_cache_address.set_index := bram_address.set_index;
+					vhit_cache_address.way_index := bram_address.way_index;
+					vhit_cache_address.offset := address(hit_cache_address.offset'LENGTH-1 downto 0);
+					hit_cache_address_next <= vhit_cache_address;	
+							
+					-- read data
+					mem_wea <= (others => '0');
+					mem_addra <= BRAM_address_to_slv(vhit_cache_address);
+					mem_dina <= (others => '0');
+					
+					state_next <= state_idle;
 				when others =>
 			end case;
 		end if;
