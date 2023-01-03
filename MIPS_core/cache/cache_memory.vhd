@@ -15,6 +15,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 use work.axi_helper.all;
+use work.mips_utils.all;
+library xpm;
+use xpm.vcomponents.all;
 
 entity cache_memory is
 	--generic(
@@ -33,19 +36,8 @@ entity cache_memory is
 	porta_read_data_ready : in std_logic;
 	porta_read_data_valid : out std_logic;
 	
-	-- port B
-	portb_address : in std_logic_vector(31 downto 0);
-	portb_address_ready : out std_logic;
-	portb_address_valid : in std_logic;
-	portb_read_data : out std_logic_vector(31 downto 0);
-	portb_read_data_ready : in std_logic;
-	portb_read_data_valid : out std_logic;
-	portb_write_data : in std_logic_vector(31 downto 0);
-	portb_write_strobe : in std_logic_vector(3 downto 0);
-	portb_write : in std_logic;
 	
-	
-	-- AXI4 memory 
+	-- AXI4 RAM 
 	M_AXI_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
     M_AXI_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
     M_AXI_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -67,52 +59,64 @@ entity cache_memory is
     M_AXI_bready : out STD_LOGIC;
     M_AXI_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
     M_AXI_bvalid : in STD_LOGIC;
-    M_AXI_rdata : in STD_LOGIC_VECTOR ( 511 downto 0 );
+    M_AXI_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
     M_AXI_rlast : in STD_LOGIC;
     M_AXI_rready : out STD_LOGIC;
     M_AXI_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
     M_AXI_rvalid : in STD_LOGIC;
-    M_AXI_wdata : out STD_LOGIC_VECTOR ( 511 downto 0 );
+    M_AXI_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
     M_AXI_wlast : out STD_LOGIC;
     M_AXI_wready : in STD_LOGIC;
-    M_AXI_wstrb : out STD_LOGIC_VECTOR ( 63 downto 0 );
-    M_AXI_wvalid : out STD_LOGIC;
-	
-	-- memory interface a
-	mem_clka : OUT STD_LOGIC;
-	mem_ena : OUT STD_LOGIC;
-	mem_wea : OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
-	mem_addra : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
-	mem_dina : OUT STD_LOGIC_VECTOR(511 DOWNTO 0);
-	mem_douta : IN STD_LOGIC_VECTOR(511 DOWNTO 0);
-	mem_rsta : OUT std_logic;
-	
-	-- memory interface b
-	mem_clkb : OUT STD_LOGIC;
-	mem_enb : OUT STD_LOGIC;
-	mem_web : OUT STD_LOGIC_VECTOR(63 DOWNTO 0);
-	mem_addrb : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
-	mem_dinb : OUT STD_LOGIC_VECTOR(511 DOWNTO 0);
-	mem_doutb : IN STD_LOGIC_VECTOR(511 DOWNTO 0);
-	mem_rstb : OUT std_logic
-	
+    M_AXI_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
+    M_AXI_wvalid : out STD_LOGIC
 	);
 end cache_memory;
 
 architecture cache_memory_behavioral of cache_memory is
 		
-	ATTRIBUTE X_INTERFACE_PARAMETER : STRING;
-	ATTRIBUTE X_INTERFACE_INFO : STRING;
-	
-	attribute X_INTERFACE_PARAMETER of mem_clka : signal is "MODE Master";--, MASTER_TYPE BRAM_CTRL, MEM_SIZE 8192, MEM_WIDTH 32, MEM_ECC NONE, READ_WRITE_MODE READ_WRITE, READ_LATENCY 1";
-	ATTRIBUTE X_INTERFACE_INFO of mem_clka : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM CLK";
-	ATTRIBUTE X_INTERFACE_INFO of mem_addra : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM ADDR";
-	ATTRIBUTE X_INTERFACE_INFO of mem_dina : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM DIN";
-	ATTRIBUTE X_INTERFACE_INFO of mem_douta : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM DOUT";
-	ATTRIBUTE X_INTERFACE_INFO of mem_ena : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM EN";
-	ATTRIBUTE X_INTERFACE_INFO of mem_rsta : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM RST";
-	ATTRIBUTE X_INTERFACE_INFO of mem_wea : SIGNAL is "xilinx.com:interface:bram_rtl:1.0 BRAM WE";
-	
+	-- see https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/XPM_MEMORY_SPRAM
+	component xpm_memory_spram is
+	generic (
+	   ADDR_WIDTH_A : INTEGER;
+	   AUTO_SLEEP_TIME : INTEGER;
+	   BYTE_WRITE_WIDTH_A : INTEGER;
+	   CASCADE_HEIGHT : INTEGER;
+	   ECC_MODE : STRING;
+	   MEMORY_INIT_FILE : STRING;
+	   MEMORY_INIT_PARAM : STRING;
+	   MEMORY_OPTIMIZATION : STRING;
+	   MEMORY_PRIMITIVE : STRING;
+	   MEMORY_SIZE : INTEGER;
+	   MESSAGE_CONTROL : INTEGER;
+	   READ_DATA_WIDTH_A : INTEGER;
+	   READ_LATENCY_A : INTEGER;
+	   READ_RESET_VALUE_A : STRING;
+	   RST_MODE_A : STRING;
+	   SIM_ASSERT_CHK : INTEGER;
+	   USE_MEM_INIT : INTEGER;
+	   USE_MEM_INIT_MMI : INTEGER;
+	   WAKEUP_TIME : STRING;
+	   WRITE_DATA_WIDTH_A : INTEGER;
+	   WRITE_MODE_A : STRING;
+	   WRITE_PROTECT : INTEGER
+	);
+	port (
+	   dbiterra : out std_logic;
+	   douta : out std_logic_vector(READ_DATA_WIDTH_A-1 downto 0);
+	   sbiterra : out std_logic;
+	   addra : in std_logic_vector(ADDR_WIDTH_A-1 downto 0);
+	   clka : in std_logic;
+	   dina : in std_logic_vector(WRITE_DATA_WIDTH_A-1 downto 0);
+	   ena : in std_logic;
+	   injectdbiterra : in std_logic;
+	   injectsbiterra : in std_logic;
+	   regcea : in std_logic;
+	   rsta : in std_logic;
+	   sleep : in std_logic;
+	   wea : in std_logic_vector(WRITE_DATA_WIDTH_A/BYTE_WRITE_WIDTH_A-1 downto 0)
+
+	);
+	end component;
 	
 	function log2(v : NATURAL) return NATURAL is
 		variable tmp : NATURAL := 0;
@@ -126,794 +130,437 @@ architecture cache_memory_behavioral of cache_memory is
 		return result;
 	end function;
 	
-	constant MEMORY_DATA_WIDTH_BYTES : NATURAL := 64;												-- memory data width in bytes
-	constant LINE_LENGTH : NATURAL := 8;															-- in number of data width
-	constant LINE_LENGTH_BYTES : NATURAL := LINE_LENGTH * MEMORY_DATA_WIDTH_BYTES;
-	constant SET_SIZE : NATURAL := 16;																-- number of entries in a set
+	
+	constant DATA_WIDTH_BITS : NATURAL := 32;							-- size of data out
+	constant DATA_WIDTH_BYTE : NATURAL := DATA_WIDTH_BITS / 8;
+	constant RAM_DATA_WIDTH_BITS : NATURAL := 32;						-- size of ram/bram data
+	constant RAM_DATA_WIDTH_BYTE : NATURAL := RAM_DATA_WIDTH_BITS / 8;
+	
+	constant LINE_LENGTH : NATURAL := 8;
+	constant LINE_LENGTH_BITS : NATURAL := LINE_LENGTH * DATA_WIDTH_BITS;
+	constant LINE_LENGTH_BYTE : NATURAL := LINE_LENGTH_BITS / 8;
+	constant SET_COUNT : NATURAL := 16;																-- number of entries in a set
 	constant WAY_COUNT : NATURAL := 2;
-	constant CACHE_ADDRESS_WIDTH_BITS : NATURAL := log2(WAY_COUNT * SET_SIZE * LINE_LENGTH);		-- number of bits in the cache bram address
-	constant ADDRESS_LOW : NATURAL := log2(MEMORY_DATA_WIDTH_BYTES * LINE_LENGTH * SET_SIZE);
+	
+	constant BRAM_MEMORY_SIZE_BYTE : NATURAL := LINE_LENGTH_BYTE*SET_COUNT*WAY_COUNT;
+	constant BRAM_ADDRESS_WIDTH : NATURAL := log2(BRAM_MEMORY_SIZE_BYTE / RAM_DATA_WIDTH_BYTE);			-- addressable by blocks of RAM_DATA_WIDTH_BYTE
+	
+	constant TAG_WIDTH_BITS : NATURAL := 32 - log2(LINE_LENGTH_BYTE*SET_COUNT);
+	constant SET_INDEX_WIDTH_BITS : NATURAL := log2(SET_COUNT);
+	constant OFFSET_WIDTH_BITS : NATURAL := log2(LINE_LENGTH_BYTE);
+	
+	subtype cache_tag_t is std_logic_vector(TAG_WIDTH_BITS-1 downto 0);
+	subtype cache_set_index_t is UNSIGNED(log2(SET_COUNT)-1 downto 0);
+	subtype cache_way_index_t is UNSIGNED(log2(WAY_COUNT)-1 downto 0);
+	subtype cache_offset_t is std_logic_vector(log2(LINE_LENGTH_BYTE)-1 downto 0);
 	
 	type cache_line_info_t is record
-		address : std_logic_vector(31 downto ADDRESS_LOW);
-		dirty : std_logic;														-- '1' if that cache line has been written to
+		tag : cache_tag_t;
+		way_index : cache_way_index_t;							-- ways are reordered so we need that
+		dirty : std_logic;										-- '1' if that cache line has been written to
 		updating : std_logic;
+		valid : std_logic;										-- '0' if not initialized
 	end record;
 		
-	type cache_line_info_array_t is array (NATURAL range <>) of cache_line_info_t;
-	type cache_set_t is array (NATURAL range <>) of cache_line_info_t;
-	type cache_way_t is array (NATURAL range <>) of cache_set_t(SET_SIZE-1 downto 0);
-	subtype cache_set_index_t is UNSIGNED(log2(SET_SIZE)-1 downto 0);
-	subtype cache_way_index_t is UNSIGNED(log2(WAY_COUNT)-1 downto 0);
+	type cache_set_info_t is array (WAY_COUNT-1 downto 0) of cache_line_info_t;
+	type cache_set_info_array_t is array (SET_COUNT-1 downto 0) of cache_set_info_t;
 	
 	
-	-- for each element in a set, its a list of index of last used
-	-- (cache_set_used_t(5)(0) = way_index) is the way_index where the most recent element 5 was used
-	-- (cache_set_used_t(5)(1) = way_index) is the way_index where the second most recent element 5 was used
-	type cache_set_used_t is array (NATURAL range <>) of NATURAL;
-	type cache_way_used_t is array (NATURAL range <>) of cache_set_used_t(SET_SIZE-1 downto 0);
-	type natural_array_t is array (NATURAL range <>) of NATURAL;
-	
-	signal cache_ways : cache_way_t(WAY_COUNT-1 downto 0);
-	signal cache_ways_next : cache_way_t(WAY_COUNT-1 downto 0);
+	signal cache_infos : cache_set_info_array_t;
+	signal cache_infos_next : cache_set_info_array_t;
 			
-	signal cache_set_used_order : cache_way_used_t(WAY_COUNT-1 downto 0);
-	signal cache_set_used_order_next : cache_way_used_t(WAY_COUNT-1 downto 0);
+	type state_t is (
+		state_idle,
+		state_update_read_address,
+		state_update_read_data
+	);
 	
-	function get_cache_address(way_index : NATURAL; set_index : NATURAL; data_address : std_logic_vector) return std_logic_vector is
-	begin
-		return std_logic_vector(TO_UNSIGNED(way_index, log2(WAY_COUNT)) & TO_UNSIGNED(way_index, log2(SET_SIZE)) & UNSIGNED(data_address));
-	end function;
-	
-	function get_cache_address(way_index : NATURAL; address : std_logic_vector) return std_logic_vector is
-	begin
-		return std_logic_vector(TO_UNSIGNED(way_index, log2(WAY_COUNT))) & address(log2(LINE_LENGTH_BYTES*SET_SIZE)-1 downto log2(MEMORY_DATA_WIDTH_BYTES));
-	end function;
-	
-	function get_set_index(address : std_logic_vector) return NATURAL is
-	begin
-		return TO_INTEGER(unsigned(address(ADDRESS_LOW downto log2(MEMORY_DATA_WIDTH_BYTES * LINE_LENGTH))));
-	end function;
-	
-	procedure cache_test(address : std_logic_vector; cways : cache_way_t; variable hit : out std_logic; variable way_index : out NATURAL) is
-		constant set_index : NATURAL := get_set_index(address);
-	begin
-		for iway in cways'LOW to cways'HIGH loop
-			if address(31 downto ADDRESS_LOW) = cways(iway)(set_index).address(31 downto ADDRESS_LOW) then 
-				hit := '1';
-				way_index := iway;
-				return;
-			end if;
-		end loop;
+	signal state : state_t;
+	signal state_next : state_t;
 		
-		hit := '0';
-		way_index := 0;
+	type address_t is record
+		tag : cache_tag_t;
+		set_index : cache_set_index_t;
+	end record;
+	
+	type bram_address_t is record
+		set_index : cache_set_index_t;
+		way_index : cache_way_index_t;
+		offset : cache_offset_t;
+	end record;
+	
+	procedure indexes_from_address(addr : std_logic_vector; variable tag : out cache_tag_t; variable set_index : out cache_set_index_t) is
+		variable result : address_t;
+	begin
+		tag := addr(31 downto 32-TAG_WIDTH_BITS);
+		set_index := unsigned(addr(SET_INDEX_WIDTH_BITS+OFFSET_WIDTH_BITS-1 downto OFFSET_WIDTH_BITS));
 	end procedure;
+		
+	signal hit_cache_address : bram_address_t;
+	signal hit_cache_address_next : bram_address_t;
+	signal hit : std_logic;
+	signal hit_next : std_logic;
+	signal address : std_logic_vector(31 downto 0);
+	signal address_next : std_logic_vector(31 downto 0);
+	
+	signal bram_address : bram_address_t;
+	signal bram_address_next : bram_address_t;
+		
+	signal reorder_valid : std_logic;
+	signal reorder_valid_next : std_logic;
+	signal reorder_set_index : cache_set_index_t;
+	signal reorder_set_index_next : cache_set_index_t;
+	signal reorder_last_used_way_index : cache_way_index_t;
+	signal reorder_last_used_way_index_next : cache_way_index_t;
+	signal reorder_tag : cache_tag_t;
+	signal reorder_tag_next : cache_tag_t;
 	
 	
-	signal m_axi_mem_port_out : axi4_port_out_t;
-	signal m_axi_mem_port_in : axi4_port_in_t;
+	-- block ram
+	signal mem_clka : STD_LOGIC;
+	signal mem_ena : STD_LOGIC;
+	signal mem_wea : STD_LOGIC_VECTOR(RAM_DATA_WIDTH_BYTE-1 DOWNTO 0);
+	signal mem_addra : STD_LOGIC_VECTOR(BRAM_ADDRESS_WIDTH-1 downto 0);
+	signal mem_dina : STD_LOGIC_VECTOR(RAM_DATA_WIDTH_BITS-1 DOWNTO 0);
+	signal mem_douta : STD_LOGIC_VECTOR(RAM_DATA_WIDTH_BITS-1 DOWNTO 0);
 	
-	signal axi4_read_resp : std_logic_vector(1 downto 0);
-			
-	type port_process_state_t is (
-		port_process_state_idle,
-		port_process_state_request_update,
-		port_process_state_wait_update);
-	-- port a
-	signal porta_enable : std_logic;
-	signal porta_data_pending : std_logic;
-	signal porta_data_pending_next : std_logic;
-	signal porta_mem_data_index : NATURAL;
-	signal porta_mem_data_index_next : NATURAL;
-	signal porta_addr_ok : std_logic;
-	signal porta_data_ok : std_logic;
-	signal porta_update_request_address : std_logic_vector(31 downto 0);
-	signal porta_update_request : std_logic;
-	signal porta_update_request_granted : std_logic;
-	signal porta_address_reg : std_logic_vector(31 downto 0);
-	signal porta_address_reg_next : std_logic_vector(31 downto 0);
-	signal porta_cache_address_reg : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal porta_cache_address_reg_next : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal porta_state : port_process_state_t;
-	signal porta_state_next : port_process_state_t;
+	signal data_out_reg : slv32_t;
+	signal data_out_reg_next : slv32_t;
+		
+	-- return an slv address for the bram (increments of RAM_DATA_WIDTH_BYTE)
+	function BRAM_address_to_slv(address : bram_address_t) return std_logic_vector is
+		variable result : std_logic_vector(BRAM_ADDRESS_WIDTH-1 downto 0);
+	begin
+		result := std_logic_vector(address.set_index) & std_logic_vector(address.way_index) & address.offset(address.offset'HIGH downto log2(RAM_DATA_WIDTH_BYTE));
+		return result;
+	end function;
 	
-	signal porta_debug_hit : std_logic;
-	signal porta_debug_index : NATURAL;
-	
-	signal porta_set_index : NATURAL;
-	signal porta_way_index : NATURAL;
-	signal porta_hit : std_logic;
-	
-	-- port b
-	signal portb_enable : std_logic;
-	signal portb_data_pending : std_logic;
-	signal portb_data_pending_next : std_logic;
-	signal portb_mem_data_index : NATURAL;
-	signal portb_mem_data_index_next : NATURAL;
-	signal portb_addr_ok : std_logic;
-	signal portb_data_ok : std_logic;
-	signal portb_update_request_address : std_logic_vector(31 downto 0);
-	signal portb_update_request : std_logic;
-	signal portb_update_request_granted : std_logic;
-	signal portb_address_reg : std_logic_vector(31 downto 0);
-	signal portb_address_reg_next : std_logic_vector(31 downto 0);
-	signal portb_cache_address_reg : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal portb_cache_address_reg_next : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal portb_state : port_process_state_t;
-	signal portb_state_next : port_process_state_t;
-	signal portb_cache_line_dirty : std_logic;
-	signal portb_write_data_reg : std_logic_vector(31 downto 0);
-	signal portb_write_data_reg_next : std_logic_vector(31 downto 0);
-	signal portb_write_strobe_reg : std_logic_vector(3 downto 0);
-	signal portb_write_strobe_reg_next : std_logic_vector(3 downto 0);
-	signal portb_write_reg : std_logic;
-	signal portb_write_reg_next : std_logic;
-	
-	signal portb_debug_hit : std_logic;
-	signal portb_debug_index : NATURAL;
-	
-	signal portb_set_index : NATURAL;
-	signal portb_way_index : NATURAL;
-	signal portb_hit : std_logic;
-	
-	-- updater
-	signal updater_mem_en : STD_LOGIC;
-	signal updater_mem_we : STD_LOGIC_VECTOR(63 DOWNTO 0);
-	signal updater_mem_addr : STD_LOGIC_VECTOR(7 DOWNTO 0);
-	signal updater_mem_din : STD_LOGIC_VECTOR(511 DOWNTO 0);
-	signal updater_mem_dout : STD_LOGIC_VECTOR(511 DOWNTO 0);
-	signal updater_beat_counter : UNSIGNED(7 downto 0);
-	signal updater_beat_counter_next : UNSIGNED(7 downto 0);
-	type updater_state_t is (
-		updater_state_idle,
-		updater_state_update_line_write_addr,
-		updater_state_update_line_write_data,
-		updater_state_update_line_read_addr,
-		updater_state_update_line_read_data);
-	signal updater_state : updater_state_t;
-	signal updater_state_next : updater_state_t;
-	signal updater_address : std_logic_vector(31 downto 0);
-	signal updater_address_next : std_logic_vector(31 downto 0);
-	signal updater_cache_address : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal updater_cache_address_next : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal updater_cache_start_address : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal updater_cache_start_address_next : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-	signal updater_done : std_logic;
-	signal updater_cache_line_update : std_logic;
-	signal updater_way : NATURAL;
-	signal updater_set_index : NATURAL;
-	signal updater_line_info : cache_line_info_t;
-	signal updater_round_robin : std_logic;
-	signal updater_round_robin_next : std_logic;
-	
+	signal stall : std_logic;
+	signal stall_next : std_logic;
 begin
 	mem_ena <= '1';
 	mem_clka <= clock;
-	mem_rsta <= resetn;
-	
-	
-	M_AXI_araddr <= m_axi_mem_port_out.araddr;
-    M_AXI_arburst <= m_axi_mem_port_out.arburst;
-    M_AXI_arcache <= m_axi_mem_port_out.arcache;
-    M_AXI_arlen <= m_axi_mem_port_out.arlen;
-    M_AXI_arlock <= m_axi_mem_port_out.arlock;
-    M_AXI_arprot <= m_axi_mem_port_out.arprot;
-    M_AXI_arsize <= m_axi_mem_port_out.arsize;
-    M_AXI_arvalid <= m_axi_mem_port_out.arvalid;
-    M_AXI_awaddr <= m_axi_mem_port_out.awaddr;
-    M_AXI_awburst <= m_axi_mem_port_out.awburst;
-    M_AXI_awcache <= m_axi_mem_port_out.awcache;
-    M_AXI_awlen <= m_axi_mem_port_out.awlen;
-    M_AXI_awlock <= m_axi_mem_port_out.awlock;
-    M_AXI_awprot <= m_axi_mem_port_out.awprot;
-    M_AXI_awsize <= m_axi_mem_port_out.awsize;
-    M_AXI_awvalid <= m_axi_mem_port_out.awvalid;
-    M_AXI_bready <= m_axi_mem_port_out.bready;
-    M_AXI_rready <= m_axi_mem_port_out.rready;
-    M_AXI_wdata <= m_axi_mem_port_out.wdata;
-    M_AXI_wlast <= m_axi_mem_port_out.wlast;
-    M_AXI_wstrb <= m_axi_mem_port_out.wstrb;
-    M_AXI_wvalid <= m_axi_mem_port_out.wvalid;
-    m_axi_mem_port_in.arready <= M_AXI_arready;
-    m_axi_mem_port_in.awready <= M_AXI_awready;
-    m_axi_mem_port_in.bresp <= M_AXI_bresp;
-    m_axi_mem_port_in.bvalid <= M_AXI_bvalid;
-    m_axi_mem_port_in.rdata <= M_AXI_rdata;
-    m_axi_mem_port_in.rlast <= M_AXI_rlast;
-    m_axi_mem_port_in.rresp <= M_AXI_rresp;
-    m_axi_mem_port_in.rvalid <= M_AXI_rvalid;
-    m_axi_mem_port_in.wready <= M_AXI_wready;
-	
-	
+		
 	process (clock) is
 	begin
 		if rising_edge(clock) then
-			updater_state <= updater_state_next;
+			state <= state_next;
 			
-			cache_ways <= cache_ways_next;
-			cache_set_used_order <= cache_set_used_order_next;
+			hit <= hit_next;
+			hit_cache_address <= hit_cache_address_next;
+						
+			address <= address_next;
 			
-			-- port a
-			porta_data_pending <= porta_data_pending_next;
-			porta_mem_data_index <= porta_mem_data_index_next;
-			porta_address_reg <= porta_address_reg_next;
-			porta_cache_address_reg <= porta_cache_address_reg_next;
-			porta_state <= porta_state_next;
+			reorder_valid <= reorder_valid_next;
+			reorder_set_index <= reorder_set_index_next;
+			reorder_last_used_way_index <= reorder_last_used_way_index_next;
+			reorder_tag <= reorder_tag_next;
 			
-			-- port b
-			portb_data_pending <= portb_data_pending_next;
-			portb_mem_data_index <= portb_mem_data_index_next;
-			portb_address_reg <= portb_address_reg_next;
-			portb_cache_address_reg <= portb_cache_address_reg_next;
-			portb_state <= portb_state_next;
-			portb_write_data_reg <= portb_write_data_reg_next;
-			portb_write_strobe_reg <= portb_write_strobe_reg_next;
-			portb_write_reg <= portb_write_reg_next;
-	
-	
-			-- updater
-			updater_beat_counter <= updater_beat_counter_next;
-			updater_state <= updater_state_next;
-			updater_address <= updater_address_next;
-			updater_cache_address <= updater_cache_address_next;
-			updater_cache_start_address <= updater_cache_start_address_next;
-			updater_round_robin <= updater_round_robin_next;
+			bram_address <= bram_address_next;
+			
+			cache_infos <= cache_infos_next;
+			
+			data_out_reg <= data_out_reg_next;
+			
+			stall <= stall_next;
 		end if;
 	end process;
 
-	
-	porta_process : process (
+	process(
 		resetn,
-		porta_state,
+		state,
 		porta_address,
 		porta_address_valid,
 		porta_read_data_ready,
+		address,
+		cache_infos,
+		
+		M_AXI_arready,
+		M_AXI_awready,
+		M_AXI_bresp,
+		M_AXI_bvalid,
+		M_AXI_rdata,
+		M_AXI_rlast,
+		M_AXI_rresp,
+		M_AXI_rvalid,
+		M_AXI_wready,
+		
+		hit,
+		hit_cache_address,
+		
+		bram_address,
+		
+		reorder_set_index,
+		reorder_last_used_way_index,
+		reorder_tag,
+		
 		mem_douta,
-		porta_update_request_granted,
-		updater_done,
-		porta_enable,
-		porta_data_ok,
-		porta_addr_ok,
-		porta_data_pending,
-		porta_cache_address_reg,
-		porta_mem_data_index,
-		porta_address_reg,
-		cache_ways,
-		updater_mem_en,
-		updater_mem_we,
-		updater_mem_addr,
-		updater_mem_din
+		data_out_reg,
+		
+		stall
 		)
-		variable hit : std_logic;
-		variable way_index : NATURAL;
-		variable vcache_address : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
+		variable vtag : cache_tag_t;
+		variable vset_index : cache_set_index_t;
+		variable vcache_line : cache_line_info_t;
+		variable vhit : std_logic;
+		variable vhit_cache_address : bram_address_t;
 	begin
-		
-		mem_ena <= '1';
-		mem_wea <= (others => '0');
-		mem_addra <= porta_cache_address_reg;
-		mem_dina <= (others => '0');
-				
-		porta_data_pending_next <= porta_data_pending;
-		porta_mem_data_index_next <= porta_mem_data_index;
-		porta_address_reg_next <= porta_address_reg;
-		porta_cache_address_reg_next <= porta_cache_address_reg;
-		porta_state_next <= porta_state;
-		
-		porta_enable <= '0';
-		porta_addr_ok <= '0';
-		porta_data_ok <= '0';
-		porta_update_request_address <= (others => '0');
-		porta_update_request <= '0';
-		porta_hit <= '0';
-		porta_set_index <= 0;
-		porta_way_index <= 0;
-		
 		porta_address_ready <= '0';
+	
+		state_next <= state;
+		
+		hit_next <= hit;
+		hit_cache_address_next <= hit_cache_address;
+		
+		address_next <= address;
+		
+		M_AXI_araddr <= (others => '0');
+		M_AXI_arburst <= (others => '0');
+		M_AXI_arcache <= (others => '0');
+		M_AXI_arlen <= (others => '0');
+		M_AXI_arlock <= '0';
+		M_AXI_arprot <= (others => '0');
+		M_AXI_arsize <= (others => '0');
+		M_AXI_arvalid <= '0';
+		M_AXI_awaddr <= (others => '0');
+		M_AXI_awburst <= (others => '0');
+		M_AXI_awcache <= (others => '0');
+		M_AXI_awlen <= (others => '0');
+		M_AXI_awlock <= '0';
+		M_AXI_awprot <= (others => '0');
+		M_AXI_awsize <= (others => '0');
+		M_AXI_awvalid <= '0';
+		M_AXI_bready <= '0';
+		M_AXI_rready <= '0';
+		M_AXI_wdata <= (others => '0');
+		M_AXI_wlast <= '0';
+		M_AXI_wstrb <= (others => '0');
+		M_AXI_wvalid <= '0';
+		
+		mem_wea <= (others => '0');
+		mem_addra <= BRAM_address_to_slv(hit_cache_address);
+		mem_dina <= (others => '0');
+		
+		reorder_valid_next <= '0';
+		reorder_set_index_next <= reorder_set_index;
+		reorder_last_used_way_index_next <= reorder_last_used_way_index;
+		reorder_tag_next <= reorder_tag;
+		
+		bram_address_next <= bram_address;
+				
+		if resetn = '0' then
+			hit_cache_address_next <= (offset => (others => '0'), set_index => (others => '0'), way_index => (others => '0'));
+			bram_address_next <= (offset => (others => '0'), set_index => (others => '0'), way_index => (others => '0'));
+			address_next <= (others => '0');
+			reorder_set_index_next <= (others => '0');
+			reorder_tag_next <= (others => '0');
+			reorder_last_used_way_index_next <= (others => '0');
+			hit_next <= '0';
+			state_next <= state_idle;
+		else
+			case state is
+				when state_idle =>
+					if stall = '0' then
+						porta_address_ready <= '1';
+						address_next <= porta_address;
+					
+						indexes_from_address(porta_address, vtag, vset_index);
+				
+						vhit := '0';
+					
+						reorder_set_index_next <= vset_index;
+						reorder_tag_next <= vtag;
+					
+						hit_next <= '0';
+					
+						for i in WAY_COUNT-1 downto 0 loop
+							vcache_line := cache_infos(TO_INTEGER(vset_index))(i);
+							if vtag = vcache_line.tag and vcache_line.valid = '1' then
+								vhit_cache_address.set_index := vset_index;
+								vhit_cache_address.way_index := vcache_line.way_index;
+								vhit_cache_address.offset := porta_address(hit_cache_address.offset'LENGTH-1 downto 0);
+								hit_cache_address_next <= vhit_cache_address;	
+							
+								hit_next <= porta_address_valid;
+							
+								-- reorder
+								reorder_valid_next <= porta_address_valid;
+								reorder_last_used_way_index_next <= TO_UNSIGNED(i, reorder_last_used_way_index'LENGTH);
+												
+								-- read data
+								mem_wea <= (others => '0');
+								mem_addra <= BRAM_address_to_slv(vhit_cache_address);
+								mem_dina <= (others => '0');
+							
+								vhit := porta_address_valid;
+							end if;
+						end loop;
+					
+						if vhit = '0' and porta_address_valid = '1' then
+							state_next <= state_update_read_address;
+						end if;
+					end if;
+				
+				when state_update_read_address =>
+					vcache_line := cache_infos(TO_INTEGER(reorder_set_index))(WAY_COUNT-1);		
+					reorder_last_used_way_index_next <= TO_UNSIGNED(WAY_COUNT-1, reorder_last_used_way_index'LENGTH);
+					
+					bram_address_next.set_index <= reorder_set_index;
+					bram_address_next.way_index <= vcache_line.way_index;
+					bram_address_next.offset <= (others => '0');
+						
+					M_AXI_araddr <= (others => '0');
+					M_AXI_araddr(31 downto OFFSET_WIDTH_BITS) <= address(31 downto OFFSET_WIDTH_BITS);
+					M_AXI_arvalid <= '1';
+					M_AXI_arburst <= AXI4_BURST_INCR;
+					M_AXI_arlen <= std_logic_vector(TO_UNSIGNED(LINE_LENGTH_BYTE / RAM_DATA_WIDTH_BYTE - 1, 8));
+					M_AXI_arsize <= AXI4_BURST_SIZE_64;
+					if M_AXI_arready = '1' then
+						reorder_valid_next <= '1';
+						state_next <= state_update_read_data;
+					end if;
+				when state_update_read_data =>
+					M_AXI_rready <= '1';
+					if M_AXI_rvalid = '1' then
+						mem_wea <= (others => '1');
+						mem_addra <= BRAM_address_to_slv(bram_address);
+						mem_dina <= M_AXI_rdata;
+						bram_address_next.offset <= std_logic_vector(UNSIGNED(bram_address.offset) + RAM_DATA_WIDTH_BYTE);
+						if M_AXI_rlast = '1' then
+							
+							hit_next <= '1';
+							
+							vhit_cache_address.set_index := bram_address.set_index;
+							vhit_cache_address.way_index := bram_address.way_index;
+							vhit_cache_address.offset := address(hit_cache_address.offset'LENGTH-1 downto 0);
+							hit_cache_address_next <= vhit_cache_address;	
+							
+							-- read data
+							mem_wea <= (others => '0');
+							mem_addra <= BRAM_address_to_slv(vhit_cache_address);
+							mem_dina <= (others => '0');
+							
+							state_next <= state_idle;
+						end if;
+					end if;
+				
+				when others =>
+			end case;
+		end if;
+	end process;
+		
+	process(
+		resetn,
+		hit,
+		porta_read_data_ready,
+		data_out_reg,
+		mem_douta,
+		stall
+		)
+	begin
+		stall_next <= '0';
+		
+		data_out_reg_next <= data_out_reg;
+		
 		porta_read_data_valid <= '0';
 		porta_read_data <= (others => '0');
 		
-		porta_debug_hit <= '0';
-		porta_debug_index <= 0;
-		
 		if resetn = '0' then
-			porta_data_pending_next <= '0';
-			porta_mem_data_index_next <= 0;
-			porta_address_reg_next <= (others => '0');
-			porta_cache_address_reg_next <= (others => '0');
-			porta_state_next <= port_process_state_idle;
+			data_out_reg_next <= (others => '0');
 		else
-			case porta_state is
-				when port_process_state_idle =>
-					porta_enable <= not porta_data_pending or porta_data_ok;
-					porta_data_ok <= '0';
-					porta_addr_ok <= '0';
-					porta_data_pending_next <= porta_addr_ok or (porta_data_pending and not porta_data_ok);
-					porta_update_request <= '0';
-		
-					if porta_data_pending = '1' then
-						mem_addra <= porta_cache_address_reg;
-						porta_read_data <= mem_douta(porta_mem_data_index*32 + 31 downto porta_mem_data_index*32);
-						porta_read_data_valid <= '1';
-						if porta_read_data_ready = '1' then
-							porta_data_ok <= '1';
-						end if;
-					end if;
-		
-					if porta_enable = '1' then
-						porta_address_ready <= '1';
-						if porta_address_valid = '1' then
-							cache_test(porta_address, cache_ways, hit, way_index);
-							porta_debug_hit <= hit;
-							porta_debug_index <= way_index;
-							if hit = '1' and cache_ways(way_index)(get_set_index(porta_address)).updating = '0' then
-								-- cache hit
-								vcache_address := get_cache_address(way_index, porta_address);
-								porta_cache_address_reg_next <= vcache_address;
-								mem_addra <= vcache_address;
-								porta_mem_data_index_next <= TO_INTEGER(unsigned(porta_address(5 downto 2)));
-								porta_addr_ok <= '1';
-						
-								porta_set_index <= get_set_index(porta_address);
-								porta_way_index <= way_index;
-								porta_hit <= '1';
-							else
-								porta_address_reg_next <= porta_address;
-								porta_update_request <= '1';
-								porta_update_request_address <= porta_address_reg_next;
-								porta_mem_data_index_next <= TO_INTEGER(unsigned(porta_address(5 downto 2)));
-								if porta_update_request_granted = '1' then
-									porta_state_next <= port_process_state_wait_update;
-								else
-									porta_state_next <= port_process_state_request_update;
-								end if;
-							end if;
-						end if;
-					end if;
-				when port_process_state_request_update =>
-					porta_update_request <= '1';
-					porta_update_request_address <= porta_address_reg;
-					if porta_update_request_granted = '1' then
-						porta_state_next <= port_process_state_wait_update;
-					end if;
-		
-				when port_process_state_wait_update =>
-					mem_ena <= updater_mem_en;
-					mem_wea <= updater_mem_we;
-					mem_addra <= updater_mem_addr;
-					mem_dina <= updater_mem_din;
-					updater_mem_dout <= mem_douta;
-			
-					if updater_done = '1' then
-						-- no need to test cache hit since we just updated
-						cache_test(porta_address_reg, cache_ways, hit, way_index);
-						porta_cache_address_reg_next <= get_cache_address(way_index, porta_address_reg);
-						mem_ena <= '1';
-						mem_wea <= (others => '0');
-						mem_addra <= get_cache_address(way_index, porta_address_reg);
-						mem_dina <= (others => '0');
-						porta_data_pending_next <= '1';
-						porta_state_next <= port_process_state_idle;
-					end if;
-			end case;
+			-- handle output
+			if stall = '1' then
+				stall_next <= not porta_read_data_ready;
+				porta_read_data_valid <= '1';
+				porta_read_data <= data_out_reg;
+			elsif hit = '1' then
+				stall_next <= not porta_read_data_ready;
+				data_out_reg_next <= mem_douta;
+				porta_read_data_valid <= '1';
+				porta_read_data <= mem_douta;
+			end if;
 		end if;
 	end process;
 	
-	portb_process : process (
+	-- update the order of ways infos (0 is most recently used)
+	process(
 		resetn,
-		portb_state,
-		portb_address,
-		portb_address_valid,
-		portb_read_data_ready,
-		mem_douta,
-		portb_update_request_granted,
-		updater_done,
-		portb_enable,
-		portb_data_ok,
-		portb_addr_ok,
-		portb_data_pending,
-		portb_cache_address_reg,
-		portb_mem_data_index,
-		portb_write_reg,
-		portb_address_reg,
-		portb_write_strobe_reg,
-		portb_write_data_reg,
-		cache_ways,
-		updater_mem_en,
-		updater_mem_we,
-		updater_mem_addr,
-		updater_mem_din
+		reorder_valid,
+		reorder_set_index,
+		reorder_tag,
+		reorder_last_used_way_index,
+		cache_infos
 		)
-		variable hit : std_logic;
-		variable way_index : NATURAL;
-		variable int32Index : NATURAL;
+		variable iset : NATURAL;
+		variable ilast_used_way : NATURAL;
 	begin
-		
-		mem_enb <= '1';
-		mem_web <= (others => '0');
-		mem_addrb <= portb_cache_address_reg;
-		mem_dinb <= (others => '0');
-				
-		portb_data_pending_next <= portb_data_pending;
-		portb_mem_data_index_next <= portb_mem_data_index;
-		portb_address_reg_next <= portb_address_reg;
-		portb_cache_address_reg_next <= portb_cache_address_reg;
-		portb_state_next <= portb_state;
-		
-		portb_enable <= '0';
-		portb_addr_ok <= '0';
-		portb_data_ok <= '0';
-		portb_update_request_address <= (others => '0');
-		portb_update_request <= '0';
-		portb_cache_line_dirty <= '0';
-		porta_hit <= '0';
-		porta_set_index <= 0;
-		porta_way_index <= 0;
-		
-		portb_address_ready <= '0';
-		portb_read_data_valid <= '0';
-		portb_read_data <= (others => '0');
-		
-		portb_debug_hit <= '0';
-		portb_debug_index <= 0;
-		
-		portb_write_data_reg <= portb_write_data_reg_next;
-		portb_write_strobe_reg <= portb_write_strobe_reg_next;
-		portb_write_reg <= portb_write_reg_next;
+		iset := TO_INTEGER(reorder_set_index);
+		ilast_used_way := TO_INTEGER(reorder_last_used_way_index);
 		
 		if resetn = '0' then
-			portb_data_pending_next <= '0';
-			portb_mem_data_index_next <= 0;
-			portb_address_reg_next <= (others => '0');
-			portb_cache_address_reg_next <= (others => '0');
-			portb_write_data_reg_next <= (others => '0');
-			portb_write_strobe_reg <= (others => '0');
-			portb_write_reg <= '0';
-			portb_state_next <= port_process_state_idle;
-		else
-			case portb_state is
-				when port_process_state_idle =>
-					portb_enable <= not portb_data_pending or portb_data_ok;
-					portb_data_ok <= '0';
-					portb_addr_ok <= '0';
-					portb_data_pending_next <= (portb_addr_ok and not portb_write) or (portb_data_pending and not portb_data_ok);
-					portb_update_request <= '0';
-		
-					if portb_data_pending = '1' then
-						mem_addrb <= portb_cache_address_reg;
-						portb_read_data <= mem_douta(portb_mem_data_index*32 + 31 downto portb_mem_data_index*32);
-						portb_read_data_valid <= '1';
-						if portb_read_data_ready = '1' then
-							portb_data_ok <= '1';
-						end if;
-					end if;
-		
-					if portb_enable = '1' then
-						portb_address_ready <= '1';
-						if portb_address_valid = '1' then
-							cache_test(portb_address, cache_ways, hit, way_index);
-							portb_debug_hit <= hit;
-							portb_debug_index <= way_index;
-							if hit = '1' and cache_ways(way_index)(get_set_index(portb_address)).updating = '0' then
-								-- cache hit
-								portb_cache_address_reg_next <= get_cache_address(way_index, portb_address);
-								mem_addrb <= get_cache_address(way_index, portb_address);
-								int32Index := TO_INTEGER(unsigned(portb_address(5 downto 2)));
-								if portb_write = '1' then
-									mem_web(4 * int32Index + 3 downto 4 * int32Index) <= portb_write_strobe;
-									mem_dinb(32 * int32Index + 31 downto 32 * int32Index) <= portb_write_data;
-									portb_cache_line_dirty <= '1';
-								end if;
-								portb_mem_data_index_next <= int32Index;
-								portb_addr_ok <= '1';
-						
-								portb_set_index <= get_set_index(portb_address);
-								portb_way_index <= way_index;
-								portb_hit <= '1';
-							else
-								portb_address_reg_next <= portb_address;
-								portb_write_data_reg_next <= portb_write_data;
-								portb_write_strobe_reg_next <= portb_write_strobe;
-								portb_write_reg_next <= portb_write;
-								portb_update_request <= '1';
-								portb_update_request_address <= portb_address_reg_next;
-								portb_mem_data_index_next <= TO_INTEGER(unsigned(portb_address(5 downto 2)));
-								if portb_update_request_granted = '1' then
-									portb_state_next <= port_process_state_wait_update;
-								else
-									portb_state_next <= port_process_state_request_update;
-								end if;
-							end if;
-						end if;
-					end if;
-				when port_process_state_request_update =>
-					portb_update_request <= '1';
-					portb_update_request_address <= portb_address_reg;
-					if portb_update_request_granted = '1' then
-						portb_state_next <= port_process_state_wait_update;
-					end if;
-		
-				when port_process_state_wait_update =>
-					mem_enb <= updater_mem_en;
-					mem_web <= updater_mem_we;
-					mem_addrb <= updater_mem_addr;
-					mem_dinb <= updater_mem_din;
-					updater_mem_dout <= mem_doutb;
-			
-					if updater_done = '1' then
-						-- no need to test cache hit since we just updated
-						cache_test(portb_address_reg, cache_ways, hit, way_index);
-						portb_cache_address_reg_next <= get_cache_address(way_index, portb_address_reg);
-						mem_enb <= '1';
-						mem_web <= (others => '0');
-						mem_addrb <= get_cache_address(way_index, portb_address_reg);
-						mem_dinb <= (others => '0');
-						int32Index := TO_INTEGER(unsigned(portb_address(5 downto 2)));
-						if portb_write_reg = '1' then
-							mem_web(4 * int32Index + 3 downto 4 * int32Index) <= portb_write_strobe_reg;
-							mem_dinb(32 * int32Index + 31 downto 32 * int32Index) <= portb_write_data_reg;
-							portb_cache_line_dirty <= '1';
-							portb_write_reg_next <= '0';
-						else
-							portb_data_pending_next <= '1';
-						end if;
-						portb_state_next <= port_process_state_idle;
-					end if;
-			end case;
-		end if;
-	end process;
-	
-	updater_process : process(
-		resetn,
-		updater_state,
-		porta_update_request,
-		porta_update_request_address,
-		portb_update_request,
-		portb_update_request_address,
-		cache_ways,
-		updater_mem_dout,
-		m_axi_mem_port_in,
-		updater_beat_counter,
-		updater_cache_address,
-		updater_address,
-		updater_round_robin,
-		cache_set_used_order,
-		updater_cache_start_address
-	) is
-		variable axi4_handshake : BOOLEAN;
-		variable axi4_handshake2 : BOOLEAN;
-		variable vcache_address : std_logic_vector(CACHE_ADDRESS_WIDTH_BITS-1 downto 0);
-		variable vlast_used_way : NATURAL;
-		variable vset_index : NATURAL;
-	begin
-		updater_done <= '0';
-		updater_mem_en <= '1';
-		updater_mem_we <= (others => '0');
-		updater_mem_addr <= (others => '0');
-		updater_mem_din <= (others => '0');
-	
-		updater_cache_start_address_next <= updater_cache_start_address;
-		updater_cache_address_next <= updater_cache_address;
-		updater_state_next <= updater_state;
-		updater_beat_counter_next <= updater_beat_counter;
-		updater_cache_line_update <= '0';
-		updater_round_robin_next <= updater_round_robin;
-		
-		if resetn = '0' then
-			updater_line_info.address <= (others => '1');
-			updater_line_info.dirty <= '0';
-			updater_line_info.updating <= '0';
-			
-			updater_cache_address_next <= (others => '0');
-			updater_cache_start_address_next <= (others => '0');
-			updater_beat_counter_next <= x"00";
-			updater_mem_addr <= (others => '0');
-			updater_mem_din <= (others => '0');
-			updater_round_robin_next <= '0';
-			updater_state_next <= updater_state_idle;
-		else
-					
-			AXI4_idle(m_axi_mem_port_out);
-			
-			case updater_state is
-				when updater_state_idle =>
-					-- select a bram port to use
-					if porta_update_request = '1' and (updater_round_robin = '0' or portb_update_request = '0') then
-						-- validate the request, and save parameters
-						porta_update_request_granted <= '1';
-						updater_address_next <= porta_update_request_address(31 downto 9) & "000000000";
-						vset_index := get_set_index(porta_update_request_address);
-						vlast_used_way := cache_set_used_order(WAY_COUNT-1)(vset_index);
-						vcache_address := get_cache_address(vlast_used_way, porta_update_request_address);
-						updater_cache_start_address_next <= vcache_address;
-						updater_cache_address_next <= vcache_address;
-						-- update cache line info
-						updater_line_info.address <= porta_update_request_address(31 downto ADDRESS_LOW);
-						updater_line_info.updating <= '1';
-						updater_line_info.dirty <= '0';
-				
-						updater_cache_line_update <= '1';
-				
-						updater_round_robin_next <= '1';
-				
-						if cache_ways(vlast_used_way)(vset_index).dirty = '1' then
-							updater_state_next <= updater_state_update_line_write_addr;
-						else
-							updater_state_next <= updater_state_update_line_read_addr;
-						end if;
-					elsif portb_update_request = '1' and (updater_round_robin = '1' or porta_update_request = '0') then
-						-- validate the request, and save parameters
-						portb_update_request_granted <= '1';
-						updater_address_next <= portb_update_request_address(31 downto 9) & "000000000";
-						vset_index := get_set_index(portb_update_request_address);
-						vlast_used_way := cache_set_used_order(WAY_COUNT-1)(vset_index);
-						vcache_address := get_cache_address(vlast_used_way, portb_update_request_address);
-						updater_cache_start_address_next <= vcache_address;
-						updater_cache_address_next <= vcache_address;
-						-- update cache line info
-						updater_line_info.address <= portb_update_request_address(31 downto ADDRESS_LOW);
-						updater_line_info.updating <= '1';
-						updater_line_info.dirty <= '0';
-				
-						updater_cache_line_update <= '1';
-				
-						updater_round_robin_next <= '0';
-				
-						if cache_ways(vlast_used_way)(vset_index).dirty = '1' then
-							updater_state_next <= updater_state_update_line_write_addr;
-						else
-							updater_state_next <= updater_state_update_line_read_addr;
-						end if;
-					end if;
-				when updater_state_update_line_write_addr =>
-					updater_mem_addr <= updater_cache_address;
-					AXI4_write_addr(m_axi_mem_port_out, m_axi_mem_port_in, updater_address, AXI4_BURST_INCR, AXI4_BURST_SIZE_64, 8, axi4_handshake);
-					AXI4_write_data(m_axi_mem_port_out, m_axi_mem_port_in, updater_mem_dout, x"FFFFFFFFFFFFFFFF", '0', axi4_handshake2);
-					if axi4_handshake = TRUE and axi4_handshake2 = TRUE then
-						updater_cache_address_next <= std_logic_vector(unsigned(updater_cache_address) + 1);
-						updater_mem_addr <= updater_cache_address_next;
-						updater_beat_counter_next <= TO_UNSIGNED(7, 8);
-						updater_state_next <= updater_state_update_line_write_data;
-					elsif axi4_handshake = TRUE then
-						updater_beat_counter_next <= TO_UNSIGNED(8, 8);
-						updater_state_next <= updater_state_update_line_write_data;
-					end if;
-				when updater_state_update_line_write_data =>
-					updater_mem_addr <= updater_cache_address;
-					AXI4_write_data(m_axi_mem_port_out, m_axi_mem_port_in, updater_mem_dout, x"FFFFFFFFFFFFFFFF", '0', axi4_handshake);
-					if axi4_handshake = TRUE then
-						updater_cache_address_next <= std_logic_vector(unsigned(updater_cache_address) + 1);
-						updater_mem_addr <= updater_cache_address_next;
-						updater_beat_counter_next <= updater_beat_counter - 1;
-						if updater_beat_counter = TO_UNSIGNED(0, 8) then
-							updater_cache_address_next <= updater_cache_start_address_next;
-							updater_state_next <= updater_state_update_line_read_addr;
-						end if;
-					end if;
-			
-				when updater_state_update_line_read_addr =>
-					AXI4_read_addr(m_axi_mem_port_out, m_axi_mem_port_in, updater_address(31 downto 9) & "000000000", AXI4_BURST_INCR, AXI4_BURST_SIZE_64, 8, axi4_handshake);
-					AXI4_read_data(m_axi_mem_port_out, m_axi_mem_port_in, updater_mem_din, axi4_read_resp, axi4_handshake2);
-					if axi4_handshake = TRUE and axi4_handshake2 = TRUE then
-						updater_cache_address_next <= std_logic_vector(unsigned(updater_cache_address) + 1);
-						updater_mem_addr <= updater_cache_address;
-						updater_mem_we <= x"FFFFFFFFFFFFFFFF";
-						updater_beat_counter_next <= TO_UNSIGNED(7, 8);
-						updater_state_next <= updater_state_update_line_read_data;
-					elsif axi4_handshake = TRUE then
-						updater_beat_counter_next <= TO_UNSIGNED(8, 8);
-						updater_state_next <= updater_state_update_line_read_data;
-					end if;
-				when updater_state_update_line_read_data =>
-					AXI4_read_data(m_axi_mem_port_out, m_axi_mem_port_in, updater_mem_din, axi4_read_resp, axi4_handshake);
-					if axi4_handshake = TRUE then
-						updater_cache_address_next <= std_logic_vector(unsigned(updater_cache_address) + 1);
-						updater_mem_addr <= updater_cache_address;
-						updater_mem_we <= x"FFFFFFFFFFFFFFFF";
-						updater_beat_counter_next <= updater_beat_counter - 1;
-						if updater_beat_counter = TO_UNSIGNED(1, 8) then
-							-- update cache line info again to clear updating flag
-							updater_done <= '1';
-							updater_state_next <= updater_state_idle;
-						end if;
-					end if;
-			
-				when others =>
-					updater_state_next <= updater_state_idle;
-			end case;
-		end if;
-	end process;
-	
-	
-	-- synchronize and update cache lines order based on most recently used
-	-- last one is discarded when we hit a cache miss
-	cache_line_infos_updater_process : process (
-		resetn,
-		cache_ways,
-		cache_ways_next,
-		updater_cache_line_update,
-		updater_set_index,
-		updater_way,
-		updater_line_info,
-		porta_way_index,
-		porta_set_index,
-		portb_way_index,
-		portb_set_index,
-		cache_set_used_order,
-		porta_hit,
-		portb_hit,
-		updater_done
-		)
-		variable vtmp : NATURAL;
-	begin
-		
-		cache_ways_next <= cache_ways;
-		cache_set_used_order_next <= cache_set_used_order;
-		
-		if resetn = '0' then
-			for iway in 0 to WAY_COUNT-1 loop
-				for set_index in 0 to SET_SIZE-1 loop
-					cache_ways_next(iway)(set_index).address <= x"FFFFFFFF";
-					--cache_ways_next(iway)(set_index).cache_address <= std_logic_vector(TO_UNSIGNED(iway*SET_SIZE*LINE_LENGTH + set_index*LINE_LENGTH, CACHE_ADDRESS_WIDTH_BITS));
-					cache_ways_next(iway)(set_index).dirty <= '0';
-					cache_ways_next(iway)(set_index).updating <= '0';
+			for iset in SET_COUNT-1 downto 0 loop
+				for iway in WAY_COUNT-1 downto 0 loop
+					cache_infos_next(iset)(iway).tag <= (others => '0');
+					cache_infos_next(iset)(iway).way_index <= TO_UNSIGNED(iway, cache_way_index_t'LENGTH);
+					cache_infos_next(iset)(iway).dirty <= '0';
+					cache_infos_next(iset)(iway).updating <= '0';
+					cache_infos_next(iset)(iway).valid <= '0';
 				end loop;
 			end loop;
 		else
-			-- clear updating flag
-			if updater_done = '1' then
-				for i in 0 to WAY_COUNT-1 loop
-					for j in 0 to SET_SIZE-1 loop
-						cache_ways_next(i)(j).updating <= '0';
-					end loop;
+			if reorder_valid = '1' then
+				for i in ilast_used_way downto 1 loop
+					cache_infos_next(iset)(i) <= cache_infos(iset)(i - 1);
 				end loop;
+				cache_infos_next(iset)(0) <= cache_infos(iset)(ilast_used_way);
+				cache_infos_next(iset)(0).tag <= reorder_tag;
+				cache_infos_next(iset)(0).valid <= '1';
 			end if;
-			
-			if updater_cache_line_update = '1' then
-				-- update the last used element for that set index
-				vtmp := cache_set_used_order(WAY_COUNT-1)(updater_set_index);
-				cache_ways_next(vtmp)(updater_set_index) <= updater_line_info;
-				
-				for i in 1 to WAY_COUNT-1 loop
-					cache_set_used_order_next(i)(updater_set_index) <= cache_set_used_order(i - 1)(updater_set_index);
-				end loop;
-				cache_set_used_order_next(0)(updater_set_index) <= vtmp;
-			else
-				-- we do not update at the same time as the updater for simplicity
-				if porta_hit = '1' and portb_hit = '1' and porta_set_index = portb_set_index then
-					-- collision, we refresh the oldest one
-					if porta_way_index > portb_way_index then
-						vtmp := porta_way_index;
-					else
-						vtmp := portb_way_index;
-					end if;
-					
-					for i in 1 to vtmp loop
-						cache_set_used_order_next(i)(porta_set_index) <= cache_set_used_order(i - 1)(porta_set_index);
-					end loop;
-					cache_set_used_order_next(0)(porta_set_index) <= cache_set_used_order(vtmp)(porta_set_index);
-				else
-					-- port a
-					if porta_hit = '1' then
-						for i in 1 to porta_way_index loop
-							cache_set_used_order_next(i)(porta_set_index) <= cache_set_used_order(i - 1)(porta_set_index);
-						end loop;
-						cache_set_used_order_next(0)(porta_set_index) <= cache_set_used_order(porta_way_index)(porta_set_index);
-					end if;
-			
-					-- port b
-					if portb_hit = '1' then
-						for i in 1 to portb_way_index loop
-							cache_set_used_order_next(i)(portb_set_index) <= cache_set_used_order(i - 1)(portb_set_index);
-						end loop;
-						cache_set_used_order_next(0)(portb_set_index) <= cache_set_used_order(portb_way_index)(portb_set_index);
-					end if;
-				end if;
-				
-			end if;
-			
 		end if;
 	end process;
 	
+	
+	-- instantiate a block ram
+	-- this should be changed if used with a non xilinx device
+	
+	xpm_memory_spram_inst : xpm_memory_spram
+	generic map (
+	   ADDR_WIDTH_A => BRAM_ADDRESS_WIDTH,
+	   AUTO_SLEEP_TIME => 0,
+	   BYTE_WRITE_WIDTH_A => 8,
+	   CASCADE_HEIGHT => 0,
+	   ECC_MODE => "no_ecc",
+	   MEMORY_INIT_FILE => "none",
+	   MEMORY_INIT_PARAM => "0",
+	   MEMORY_OPTIMIZATION => "true",
+	   MEMORY_PRIMITIVE => "auto",
+	   MEMORY_SIZE => BRAM_MEMORY_SIZE_BYTE*8,
+	   MESSAGE_CONTROL => 0,
+	   READ_DATA_WIDTH_A => 32,
+	   READ_LATENCY_A => 1,
+	   READ_RESET_VALUE_A => "0",
+	   RST_MODE_A => "SYNC",
+	   SIM_ASSERT_CHK => 0,
+	   USE_MEM_INIT => 0,
+	   USE_MEM_INIT_MMI => 0,
+	   WAKEUP_TIME => "disable_sleep",
+	   WRITE_DATA_WIDTH_A => 32,
+	   WRITE_MODE_A => "write_first",
+	   WRITE_PROTECT => 1
+	)
+	port map (
+		douta => mem_douta,
+		addra => mem_addra,
+		clka => clock,
+		dina => mem_dina,
+		ena => mem_ena,
+		rsta => '0',
+		wea => mem_wea,
+		injectdbiterra => '0',
+		injectsbiterra => '0',
+		regcea => '1',
+		sleep => '0'
+
+	);
+
 end cache_memory_behavioral;

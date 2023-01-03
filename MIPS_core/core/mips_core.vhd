@@ -117,7 +117,60 @@ entity mips_core is
 	);
 end mips_core;
 
-architecture mips_core_behavioral of mips_core is	
+architecture mips_core_behavioral of mips_core is
+	component cache_memory is
+		--generic(
+		--	BRAM_data_width : POSITIVE := 512;
+		--	BRAM_address_width : POSITIVE := 8
+		--);
+		port (
+		resetn : in std_logic;
+		clock : in std_logic;
+	
+		-- port A
+		porta_address : in std_logic_vector(31 downto 0);
+		porta_address_ready : out std_logic;
+		porta_address_valid : in std_logic;
+		porta_read_data : out std_logic_vector(31 downto 0);
+		porta_read_data_ready : in std_logic;
+		porta_read_data_valid : out std_logic;
+	
+	
+		-- AXI4 RAM 
+		M_AXI_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+		M_AXI_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+		M_AXI_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+		M_AXI_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+		M_AXI_arlock : out STD_LOGIC;
+		M_AXI_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		M_AXI_arready : in STD_LOGIC;
+		M_AXI_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		M_AXI_arvalid : out STD_LOGIC;
+		M_AXI_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
+		M_AXI_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
+		M_AXI_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
+		M_AXI_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
+		M_AXI_awlock : out STD_LOGIC;
+		M_AXI_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		M_AXI_awready : in STD_LOGIC;
+		M_AXI_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
+		M_AXI_awvalid : out STD_LOGIC;
+		M_AXI_bready : out STD_LOGIC;
+		M_AXI_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+		M_AXI_bvalid : in STD_LOGIC;
+		M_AXI_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
+		M_AXI_rlast : in STD_LOGIC;
+		M_AXI_rready : out STD_LOGIC;
+		M_AXI_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
+		M_AXI_rvalid : in STD_LOGIC;
+		M_AXI_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
+		M_AXI_wlast : out STD_LOGIC;
+		M_AXI_wready : in STD_LOGIC;
+		M_AXI_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
+		M_AXI_wvalid : out STD_LOGIC
+		);
+	end component;
+
 	component mips_debugger is
 		port (
 			resetn : in std_logic;
@@ -176,38 +229,15 @@ architecture mips_core_behavioral of mips_core is
 			resetn : in std_logic;
 			clock : in std_logic;
 	
-			m_axi_mem_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-			m_axi_mem_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
-			m_axi_mem_arcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
-			m_axi_mem_arlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
-			m_axi_mem_arlock : out STD_LOGIC;
-			m_axi_mem_arprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-			m_axi_mem_arready : in STD_LOGIC;
-			m_axi_mem_arsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
-			m_axi_mem_arvalid : out STD_LOGIC;
-			m_axi_mem_awaddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
-			m_axi_mem_awburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
-			m_axi_mem_awcache : out STD_LOGIC_VECTOR ( 3 downto 0 );
-			m_axi_mem_awlen : out STD_LOGIC_VECTOR ( 7 downto 0 );
-			m_axi_mem_awlock : out STD_LOGIC;
-			m_axi_mem_awprot : out STD_LOGIC_VECTOR ( 2 downto 0 );
-			m_axi_mem_awready : in STD_LOGIC;
-			m_axi_mem_awsize : out STD_LOGIC_VECTOR ( 2 downto 0 );
-			m_axi_mem_awvalid : out STD_LOGIC;
-			m_axi_mem_bready : out STD_LOGIC;
-			m_axi_mem_bresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-			m_axi_mem_bvalid : in STD_LOGIC;
-			m_axi_mem_rdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
-			m_axi_mem_rlast : in STD_LOGIC;
-			m_axi_mem_rready : out STD_LOGIC;
-			m_axi_mem_rresp : in STD_LOGIC_VECTOR ( 1 downto 0 );
-			m_axi_mem_rvalid : in STD_LOGIC;
-			m_axi_mem_wdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
-			m_axi_mem_wlast : out STD_LOGIC;
-			m_axi_mem_wready : in STD_LOGIC;
-			m_axi_mem_wstrb : out STD_LOGIC_VECTOR ( 3 downto 0 );
-			m_axi_mem_wvalid : out STD_LOGIC;
-	
+			-- cache
+			porta_address : out std_logic_vector(31 downto 0);
+			porta_address_ready : in std_logic;
+			porta_address_valid : out std_logic;
+			porta_read_data : in std_logic_vector(31 downto 0);
+			porta_read_data_ready : out std_logic;
+			porta_read_data_valid : in std_logic;
+		
+			-- decode
 			instruction_address_plus_8 : out std_logic_vector(31 downto 0);
 			instruction_address_plus_4 : out std_logic_vector(31 downto 0);
 			instruction_address : out std_logic_vector(31 downto 0);
@@ -340,7 +370,79 @@ architecture mips_core_behavioral of mips_core is
 	signal fetch_wait_jump : std_logic;
 				
 	signal fetch_error : std_logic;
+	
+	-- cache
+	signal cache_porta_address : std_logic_vector(31 downto 0);
+	signal cache_porta_address_ready : std_logic;
+	signal cache_porta_address_valid : std_logic;
+	signal cache_porta_read_data : std_logic_vector(31 downto 0);
+	signal cache_porta_read_data_ready : std_logic;
+	signal cache_porta_read_data_valid : std_logic;
+	
+	signal cache_m_axi_araddr : STD_LOGIC_VECTOR ( 31 downto 0 );
+	signal cache_m_axi_arburst : STD_LOGIC_VECTOR ( 1 downto 0 );
+	signal cache_m_axi_arcache : STD_LOGIC_VECTOR ( 3 downto 0 );
+	signal cache_m_axi_arlen : STD_LOGIC_VECTOR ( 7 downto 0 );
+	signal cache_m_axi_arlock : STD_LOGIC;
+	signal cache_m_axi_arprot : STD_LOGIC_VECTOR ( 2 downto 0 );
+	signal cache_m_axi_arready : STD_LOGIC;
+	signal cache_m_axi_arsize : STD_LOGIC_VECTOR ( 2 downto 0 );
+	signal cache_m_axi_arvalid : STD_LOGIC;
+	signal cache_m_axi_awaddr : STD_LOGIC_VECTOR ( 31 downto 0 );
+	signal cache_m_axi_awburst : STD_LOGIC_VECTOR ( 1 downto 0 );
+	signal cache_m_axi_awcache : STD_LOGIC_VECTOR ( 3 downto 0 );
+	signal cache_m_axi_awlen : STD_LOGIC_VECTOR ( 7 downto 0 );
+	signal cache_m_axi_awlock : STD_LOGIC;
+	signal cache_m_axi_awprot : STD_LOGIC_VECTOR ( 2 downto 0 );
+	signal cache_m_axi_awready : STD_LOGIC;
+	signal cache_m_axi_awsize : STD_LOGIC_VECTOR ( 2 downto 0 );
+	signal cache_m_axi_awvalid : STD_LOGIC;
+	signal cache_m_axi_bready : STD_LOGIC;
+	signal cache_m_axi_bresp : STD_LOGIC_VECTOR ( 1 downto 0 );
+	signal cache_m_axi_bvalid : STD_LOGIC;
+	signal cache_m_axi_rdata : STD_LOGIC_VECTOR ( 31 downto 0 );
+	signal cache_m_axi_rlast : STD_LOGIC;
+	signal cache_m_axi_rready : STD_LOGIC;
+	signal cache_m_axi_rresp : STD_LOGIC_VECTOR ( 1 downto 0 );
+	signal cache_m_axi_rvalid : STD_LOGIC;
+	signal cache_m_axi_wdata : STD_LOGIC_VECTOR ( 31 downto 0 );
+	signal cache_m_axi_wlast : STD_LOGIC;
+	signal cache_m_axi_wready : STD_LOGIC;
+	signal cache_m_axi_wstrb : STD_LOGIC_VECTOR ( 3 downto 0 );
+	signal cache_m_axi_wvalid : STD_LOGIC;
 begin
+	m_axi_mema_araddr <= cache_m_axi_araddr;
+	m_axi_mema_arburst <= cache_m_axi_arburst;
+	m_axi_mema_arcache <= cache_m_axi_arcache;
+	m_axi_mema_arlen <= cache_m_axi_arlen;
+	m_axi_mema_arlock <= cache_m_axi_arlock;
+	m_axi_mema_arprot <= cache_m_axi_arprot;
+	cache_m_axi_arready <= m_axi_mema_arready;
+	m_axi_mema_arsize <= cache_m_axi_arsize;
+	m_axi_mema_arvalid <= cache_m_axi_arvalid;
+	m_axi_mema_awaddr <= cache_m_axi_awaddr;
+	m_axi_mema_awburst <= cache_m_axi_awburst;
+	m_axi_mema_awcache <= cache_m_axi_awcache;
+	m_axi_mema_awlen <= cache_m_axi_awlen;
+	m_axi_mema_awlock <= cache_m_axi_awlock;
+	m_axi_mema_awprot <= cache_m_axi_awprot;
+	cache_m_axi_awready <= m_axi_mema_awready;
+	m_axi_mema_awsize <= cache_m_axi_awsize;
+	m_axi_mema_awvalid <= cache_m_axi_awvalid;
+	m_axi_mema_bready <= cache_m_axi_bready;
+	cache_m_axi_bresp <= m_axi_mema_bresp;
+	cache_m_axi_bvalid <= m_axi_mema_bvalid;
+	cache_m_axi_rdata <= m_axi_mema_rdata;
+	cache_m_axi_rlast <= m_axi_mema_rlast;
+	m_axi_mema_rready <= cache_m_axi_rready;
+	cache_m_axi_rresp <= m_axi_mema_rresp;
+	cache_m_axi_rvalid <= m_axi_mema_rvalid;
+	m_axi_mema_wdata <= cache_m_axi_wdata;
+	m_axi_mema_wlast <= cache_m_axi_wlast;
+	cache_m_axi_wready <= m_axi_mema_wready;
+	m_axi_mema_wstrb <= cache_m_axi_wstrb;
+	m_axi_mema_wvalid <= cache_m_axi_wvalid;
+	
 	fetch_instruction_data_ready <= internal_instruction_data_ready;
 		
 	fetch_override_address <= debugger_override_address when debugger_override_address_valid = '1' else internal_override_address;
@@ -465,42 +567,19 @@ begin
 		stall => stall
 	);
 	mips_fetch_i0 : mips_fetch port map(
-		enable => processor_enable and not stall,
+		enable => processor_enable,
 		resetn => resetn,
 		clock => clock,
+		
+		-- cache
+		porta_address => cache_porta_address,
+		porta_address_ready => cache_porta_address_ready,
+		porta_address_valid => cache_porta_address_valid,
+		porta_read_data => cache_porta_read_data,
+		porta_read_data_ready => cache_porta_read_data_ready,
+		porta_read_data_valid => cache_porta_read_data_valid,
 	
-		m_axi_mem_araddr => m_axi_mema_araddr,
-		m_axi_mem_arburst => m_axi_mema_arburst,
-		m_axi_mem_arcache => m_axi_mema_arcache,
-		m_axi_mem_arlen => m_axi_mema_arlen,
-		m_axi_mem_arlock => m_axi_mema_arlock,
-		m_axi_mem_arprot => m_axi_mema_arprot,
-		m_axi_mem_arready => m_axi_mema_arready,
-		m_axi_mem_arsize => m_axi_mema_arsize,
-		m_axi_mem_arvalid => m_axi_mema_arvalid,
-		m_axi_mem_awaddr => m_axi_mema_awaddr,
-		m_axi_mem_awburst => m_axi_mema_awburst,
-		m_axi_mem_awcache => m_axi_mema_awcache,
-		m_axi_mem_awlen => m_axi_mema_awlen,
-		m_axi_mem_awlock => m_axi_mema_awlock,
-		m_axi_mem_awprot => m_axi_mema_awprot,
-		m_axi_mem_awready => m_axi_mema_awready,
-		m_axi_mem_awsize => m_axi_mema_awsize,
-		m_axi_mem_awvalid => m_axi_mema_awvalid,
-		m_axi_mem_bready => m_axi_mema_bready,
-		m_axi_mem_bresp => m_axi_mema_bresp,
-		m_axi_mem_bvalid => m_axi_mema_bvalid,
-		m_axi_mem_rdata => m_axi_mema_rdata,
-		m_axi_mem_rlast => m_axi_mema_rlast,
-		m_axi_mem_rready => m_axi_mema_rready,
-		m_axi_mem_rresp => m_axi_mema_rresp,
-		m_axi_mem_rvalid => m_axi_mema_rvalid,
-		m_axi_mem_wdata => m_axi_mema_wdata,
-		m_axi_mem_wlast => m_axi_mema_wlast,
-		m_axi_mem_wready => m_axi_mema_wready,
-		m_axi_mem_wstrb => m_axi_mema_wstrb,
-		m_axi_mem_wvalid => m_axi_mema_wvalid,
-	
+		-- decode
 		instruction_address_plus_8 => fetch_instruction_address_plus_8,
 		instruction_address_plus_4 => fetch_instruction_address_plus_4,
 		instruction_address => fetch_instruction_address,
@@ -516,5 +595,50 @@ begin
 		execute_delay_slot => fetch_execute_delay_slot,
 		
 		error => fetch_error
+	);
+	cache_memory_i0 : cache_memory port map(
+		resetn => resetn,
+		clock => clock,
+	
+		-- port A
+		porta_address => cache_porta_address,
+		porta_address_ready => cache_porta_address_ready,
+		porta_address_valid => cache_porta_address_valid,
+		porta_read_data => cache_porta_read_data,
+		porta_read_data_ready => cache_porta_read_data_ready,
+		porta_read_data_valid => cache_porta_read_data_valid,
+	
+		-- AXI4 RAM 
+		M_AXI_araddr => cache_m_axi_araddr,
+		M_AXI_arburst => cache_m_axi_arburst,
+		M_AXI_arcache => cache_m_axi_arcache,
+		M_AXI_arlen => cache_m_axi_arlen,
+		M_AXI_arlock => cache_m_axi_arlock,
+		M_AXI_arprot => cache_m_axi_arprot,
+		M_AXI_arready => cache_m_axi_arready,
+		M_AXI_arsize => cache_m_axi_arsize,
+		M_AXI_arvalid => cache_m_axi_arvalid,
+		M_AXI_awaddr => cache_m_axi_awaddr,
+		M_AXI_awburst => cache_m_axi_awburst,
+		M_AXI_awcache => cache_m_axi_awcache,
+		M_AXI_awlen => cache_m_axi_awlen,
+		M_AXI_awlock => cache_m_axi_awlock,
+		M_AXI_awprot => cache_m_axi_awprot,
+		M_AXI_awready => cache_m_axi_awready,
+		M_AXI_awsize => cache_m_axi_awsize,
+		M_AXI_awvalid => cache_m_axi_awvalid,
+		M_AXI_bready => cache_m_axi_bready,
+		M_AXI_bresp => cache_m_axi_bresp,
+		M_AXI_bvalid => cache_m_axi_bvalid,
+		M_AXI_rdata => cache_m_axi_rdata,
+		M_AXI_rlast => cache_m_axi_rlast,
+		M_AXI_rready => cache_m_axi_rready,
+		M_AXI_rresp => cache_m_axi_rresp,
+		M_AXI_rvalid => cache_m_axi_rvalid,
+		M_AXI_wdata => cache_m_axi_wdata,
+		M_AXI_wlast => cache_m_axi_wlast,
+		M_AXI_wready => cache_m_axi_wready,
+		M_AXI_wstrb => cache_m_axi_wstrb,
+		M_AXI_wvalid => cache_m_axi_wvalid
 	);
 end mips_core_behavioral;

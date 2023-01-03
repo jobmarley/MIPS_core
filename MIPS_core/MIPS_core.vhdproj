@@ -7,10 +7,10 @@
   </PropertyGroup>
   <Import Project="$(CustomProjectExtensionsPath)vhdl4vsProjectType.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;$(LibraryPaths)</LibraryPaths>
+    <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;UNIMACRO=$(XilinxLibraryPath)\unimacro;$(LibraryPaths)</LibraryPaths>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;$(LibraryPaths)</LibraryPaths>
+    <LibraryPaths>IEEE=$(XilinxLibraryPath)\ieee;STD=$(XilinxLibraryPath)\std;UNISIM=$(XilinxLibraryPath)\unisims;UNIMACRO=$(XilinxLibraryPath)\unimacro;$(LibraryPaths)</LibraryPaths>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\vivado\constraints\example_top.xdc">
