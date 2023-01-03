@@ -68,9 +68,11 @@ architecture mips_fetch_behavioral of mips_fetch is
 	
 	signal sporta_address_valid : std_logic;
 	signal sporta_read_data_ready : std_logic;
+	signal sporta_address : slv32_t;
 begin
 	porta_address_valid <= sporta_address_valid;
 	porta_read_data_ready <= sporta_read_data_ready;
+	porta_address <= sporta_address;
 	
 	send_address <= sporta_address_valid and porta_address_ready;
 	receive_data <= sporta_read_data_ready and porta_read_data_valid;
@@ -109,29 +111,26 @@ begin
 		receive_data,
 		fifo_used,
 		instruction_address_fifo,
-		current_address,
-		instruction_address_plus_8_reg,
-		instruction_address_plus_4_reg
+		sporta_address
 		)
 	begin
 		fifo_used_next <= fifo_used;
 		instruction_address_fifo_next <= instruction_address_fifo;
-		
 		
 		if resetn = '0' then
 			instruction_address_fifo_next <= (others => (others => '0'));
 			fifo_used_next <= TO_UNSIGNED(0, fifo_used'LENGTH);
 		else
 			if send_address = '1' and receive_data = '1' then
-				for i in 0 downto FIFO_SIZE-2 loop
+				for i in 0 to FIFO_SIZE-2 loop
 					instruction_address_fifo_next(i) <= instruction_address_fifo(i+1);
 				end loop;
-				instruction_address_fifo_next(TO_INTEGER(fifo_used-1)) <= current_address;
+				instruction_address_fifo_next(TO_INTEGER(fifo_used-1)) <= sporta_address;
 			elsif send_address = '1' then
-				instruction_address_fifo_next(TO_INTEGER(fifo_used)) <= current_address;
+				instruction_address_fifo_next(TO_INTEGER(fifo_used)) <= sporta_address;
 				fifo_used_next <= fifo_used + 1;
 			elsif receive_data = '1' then
-				for i in 0 downto FIFO_SIZE-2 loop
+				for i in 0 to FIFO_SIZE-2 loop
 					instruction_address_fifo_next(i) <= instruction_address_fifo(i+1);
 				end loop;
 				fifo_used_next <= fifo_used - 1;
@@ -166,7 +165,7 @@ begin
 		discard_counter
 		)
 	begin
-		porta_address <= current_address;
+		sporta_address <= current_address;
 		sporta_address_valid <= '0';
 		sporta_read_data_ready <= '0';
 		
@@ -204,7 +203,7 @@ begin
 			discard_counter_next <= (others => '0');
 		else
 			
-			porta_address <= current_address;
+			sporta_address <= current_address;
 					
 			-- send address and increment
 			if fifo_used < 3 then
@@ -251,7 +250,7 @@ begin
 							skip_jump_reg_next <= '0';
 							wait_jump_reg_next <= '0';
 						elsif override_address_valid_reg = '1' then
-							porta_address <= override_address_reg;
+							sporta_address <= override_address_reg;
 							if porta_address_ready = '1' and fifo_used < 3 then
 								current_address_next <= std_logic_vector(unsigned(override_address_reg) + 4);
 							else
