@@ -157,6 +157,7 @@ begin
 	-- readreg stage is in two cycles : 1) we check if we must stall, 2) we send the data to the alu, or write to register
 	-- which means, when we get the next instruction, the data is BEING written to register. Since we might need it in the next cycle we use bypass
 	process(
+		resetn,
 		out_valid_reg,
 		register_c_bypass_value,
 		register_hi_bypass_value,
@@ -170,7 +171,11 @@ begin
 		register_hi_bypass_value_next <= register_hi_bypass_value;
 		register_lo_bypass_value_next <= register_lo_bypass_value;
 		
-		if out_valid_reg = '1' then
+		if resetn = '0' then
+			register_c_bypass_value_next <= (others => '0');
+			register_hi_bypass_value_next <= (others => '0');
+			register_lo_bypass_value_next <= (others => '0');
+		elsif out_valid_reg = '1' then
 			register_c_bypass_value_next <= register_c_value;
 			register_hi_bypass_value_next <= register_hi_value;
 			register_lo_bypass_value_next <= register_lo_value;
@@ -490,7 +495,8 @@ begin
 		registers_pending_reset_in_b,
 		registers_pending_set,
 		
-		state
+		state,
+		out_valid_reg
 	)
         variable instruction_data_r : instruction_r_t;
         variable instruction_data_i : instruction_i_t;
@@ -530,7 +536,7 @@ begin
 		registers_pending_reg_next.hi <= (registers_pending_reg.hi and not (registers_pending_reset_in_a.hi or registers_pending_reset_in_b.hi)) or registers_pending_set.hi;
 		registers_pending_reg_next.lo <= (registers_pending_reg.lo and not (registers_pending_reset_in_a.lo or registers_pending_reset_in_b.lo)) or registers_pending_set.lo;
 						
-		out_valid_reg_next <= '0';
+		out_valid_reg_next <= out_valid_reg;
 		
 		register_a_use_bypass_next <= '0';
 		register_b_use_bypass_next <= '0';
@@ -556,6 +562,8 @@ begin
 			registers_pending_reg_next.hi <= '0';
 			registers_pending_reg_next.lo <= '0';
 			
+			out_valid_reg_next <= '0';
+			
 			state_next <= state_idle;
 		elsif enable = '1' then
 			
@@ -576,6 +584,8 @@ begin
 					immediate_b_reg_next <= immediate_b;
 					link_address_reg_next <= link_address;
 					mov_strobe_reg_next <= mov_strobe;
+					
+					out_valid_reg_next <= '0';
 					
 					register_port_in_a.address <= register_a(4 downto 0);
 					register_port_in_b.address <= register_b(4 downto 0);

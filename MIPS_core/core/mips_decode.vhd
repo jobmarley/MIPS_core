@@ -199,6 +199,9 @@ begin
 			immediate_b_reg_next <= (others => '0');
 			link_address_reg_next <= (others => '0');
 			mov_strobe_reg_next <= (others => '0');
+			
+			override_address_reg_next <= (others => '0');
+			override_address_valid_reg_next <= '0';
 		elsif enable = '1' then
 			-- default values
 			register_a_reg_next <= (others => '0');
