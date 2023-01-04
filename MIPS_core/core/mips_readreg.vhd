@@ -185,6 +185,8 @@ begin
 	-- the is the set pending. We set register pending if the op_reg_c_set_pending flag is set
 	-- but not if the operation is mov (which means move to another register), because in that case we use bypass to avoid stall
 	process(
+		resetn,
+		enable,
 		register_c_reg,
 		operation_reg,
 		operation,
@@ -194,8 +196,7 @@ begin
 	begin
 		registers_pending_set <= (gp_registers => (others => '0'), others => '0');
 		
-		-- we use out_valid_reg_next so we dont have to wait 1 more cycle
-		if out_valid_reg_next = '1' then
+		if enable = '1' and out_valid_reg_next = '1' then -- we use out_valid_reg_next so we dont have to wait 1 more cycle
 			case state is
 				when state_idle =>
 					-- pending must not be set when we stall. Otherwise we might deadlock
@@ -502,15 +503,15 @@ begin
         variable instruction_data_i : instruction_i_t;
         variable instruction_data_j : instruction_j_t;
 	begin
-		register_port_in_a.address <= register_a(4 downto 0);
+		register_port_in_a.address <= register_a_reg(4 downto 0);
 		register_port_in_a.write_enable <= '0';
 		register_port_in_a.write_data <= (others => '0');
 		register_port_in_a.write_strobe <= (others => '0');
-		register_port_in_b.address <= register_b(4 downto 0);
+		register_port_in_b.address <= register_b_reg(4 downto 0);
 		register_port_in_b.write_enable <= '0';
 		register_port_in_b.write_data <= (others => '0');
 		register_port_in_b.write_strobe <= (others => '0');
-		register_port_in_c.address <= register_c(4 downto 0);
+		register_port_in_c.address <= register_c_reg(4 downto 0);
 		register_port_in_c.write_enable <= '0';
 		register_port_in_c.write_data <= (others => '0');
 		register_port_in_c.write_strobe <= (others => '0');
@@ -531,6 +532,7 @@ begin
 				
 		state_next <= state;
 		
+		-- pending should not be dependent on enable, since other stages could stall and reset
 		registers_pending_reg_next.gp_registers <= (registers_pending_reg.gp_registers and not (registers_pending_reset_in_a.gp_registers or registers_pending_reset_in_b.gp_registers)) or registers_pending_set.gp_registers;
 		registers_pending_reg_next.gp_registers(0) <= '0';
 		registers_pending_reg_next.hi <= (registers_pending_reg.hi and not (registers_pending_reset_in_a.hi or registers_pending_reset_in_b.hi)) or registers_pending_set.hi;
