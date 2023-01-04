@@ -144,24 +144,40 @@ begin
 		instruction_data_r,
 		instruction_data_i,
 		instruction_data_j,
-		instruction_data_cop0
+		instruction_data_cop0,
+		
+		register_a_reg,
+		register_b_reg,
+		register_c_reg,
+		operation_reg,
+		operation_valid_reg,
+		load_reg,
+		store_reg,
+		memop_type_reg,
+		override_address_reg,
+		override_address_valid_reg,
+		immediate_a_reg,
+		immediate_b_reg,
+		link_address_reg,
+		mov_strobe_reg
 	)
 	begin
-		register_a_reg_next <= (others => '0');
-		register_b_reg_next <= (others => '0');
-		register_c_reg_next <= (others => '0');
-		operation_reg_next <= (others => '0');
-		operation_valid_reg_next <= '0';
-		load_reg_next <= '0';
-		store_reg_next <= '0';
-		memop_type_reg_next <= (others => '0');
-		override_address_reg_next <= (others => '0');
-		override_address_valid_reg_next <= '0';
+		-- keep the same values (stall)
+		register_a_reg_next <= register_a_reg;
+		register_b_reg_next <= register_b_reg;
+		register_c_reg_next <= register_c_reg;
+		operation_reg_next <= operation_reg;
+		operation_valid_reg_next <= operation_valid_reg;
+		load_reg_next <= load_reg;
+		store_reg_next <= store_reg;
+		memop_type_reg_next <= memop_type_reg;
+		override_address_reg_next <= override_address_reg;
+		override_address_valid_reg_next <= override_address_valid_reg;
 		
-		immediate_a_reg_next <= (others => '0');
-		immediate_b_reg_next <= (others => '0');
-		link_address_reg_next <= (others => '0');
-		mov_strobe_reg_next <= x"0";
+		immediate_a_reg_next <= immediate_a_reg;
+		immediate_b_reg_next <= immediate_b_reg;
+		link_address_reg_next <= link_address_reg;
+		mov_strobe_reg_next <= mov_strobe_reg;
 		
 		instr_data_ready <= '0';
 		panic <= '0';
@@ -184,6 +200,23 @@ begin
 			link_address_reg_next <= (others => '0');
 			mov_strobe_reg_next <= (others => '0');
 		elsif enable = '1' then
+			-- default values
+			register_a_reg_next <= (others => '0');
+			register_b_reg_next <= (others => '0');
+			register_c_reg_next <= (others => '0');
+			operation_reg_next <= (others => '0');
+			operation_valid_reg_next <= '0';
+			load_reg_next <= '0';
+			store_reg_next <= '0';
+			memop_type_reg_next <= (others => '0');
+			override_address_reg_next <= (others => '0');
+			override_address_valid_reg_next <= '0';
+		
+			immediate_a_reg_next <= (others => '0');
+			immediate_b_reg_next <= (others => '0');
+			link_address_reg_next <= (others => '0');
+			mov_strobe_reg_next <= x"0";
+			
 			instr_data_ready <= '1';
 			if instr_data_valid = '1' then
 								
