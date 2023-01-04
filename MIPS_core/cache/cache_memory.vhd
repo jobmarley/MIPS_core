@@ -499,6 +499,8 @@ begin
 		iset := TO_INTEGER(reorder_set_index);
 		ilast_used_way := TO_INTEGER(reorder_last_used_way_index);
 		
+		cache_infos_next <= cache_infos;
+		
 		if resetn = '0' then
 			for iset in SET_COUNT-1 downto 0 loop
 				for iway in WAY_COUNT-1 downto 0 loop
@@ -511,8 +513,10 @@ begin
 			end loop;
 		else
 			if reorder_valid = '1' then
-				for i in ilast_used_way downto 1 loop
-					cache_infos_next(iset)(i) <= cache_infos(iset)(i - 1);
+				for i in WAY_COUNT-1 downto 1 loop
+					if i <= ilast_used_way then
+						cache_infos_next(iset)(i) <= cache_infos(iset)(i - 1);
+					end if;
 				end loop;
 				cache_infos_next(iset)(0) <= cache_infos(iset)(ilast_used_way);
 				cache_infos_next(iset)(0).tag <= reorder_tag;
