@@ -76,6 +76,8 @@ begin
 	cache_m_axis_data_tready <= sporta_read_data_ready;
 	cache_s_axis_address_tdata <= current_address;
 	
+	instruction_data <= cache_m_axis_data_tdata;
+	
 	send_address <= sporta_address_valid and cache_s_axis_address_tready;
 	receive_data <= sporta_read_data_ready and cache_m_axis_data_tvalid;
 	
@@ -190,7 +192,6 @@ begin
 		execute_delay_slot_reg_next <= execute_delay_slot_reg or execute_delay_slot;
 						
 		instruction_data_valid <= '0';
-		instruction_data <= (others => '0');
 		discard_counter_next <= discard_counter;
 		
 		if resetn = '0' then
@@ -223,7 +224,6 @@ begin
 					-- forward data only if we dont discard (after a jump)		
 					sporta_read_data_ready <= instruction_data_ready;
 					instruction_data_valid <= cache_m_axis_data_tvalid;
-					instruction_data <= cache_m_axis_data_tdata;
 					
 					-- if we jump, we wait to have a data pending (the delay slot), but we dont send the data
 					if wait_jump_reg = '1' then
@@ -235,7 +235,6 @@ begin
 							-- forward data
 							sporta_read_data_ready <= instruction_data_ready;
 							instruction_data_valid <= cache_m_axis_data_tvalid;
-							instruction_data <= cache_m_axis_data_tdata;
 						
 							-- send 1 instruction
 							if instruction_data_ready = '1' and cache_m_axis_data_tvalid = '1' then
