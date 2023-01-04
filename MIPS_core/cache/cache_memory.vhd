@@ -24,19 +24,23 @@ entity cache_memory is
 	--	BRAM_data_width : POSITIVE := 512;
 	--	BRAM_address_width : POSITIVE := 8
 	--);
+	--generic(
+	--	TUSER_width : NATURAL := 0
+	--);
 	port (
 	resetn : in std_logic;
 	clock : in std_logic;
 	
-	-- port A
-	porta_address : in std_logic_vector(31 downto 0);
-	porta_address_ready : out std_logic;
-	porta_address_valid : in std_logic;
-	porta_read_data : out std_logic_vector(31 downto 0);
-	porta_read_data_ready : in std_logic;
-	porta_read_data_valid : out std_logic;
+	s_axis_address_tdata : in std_logic_vector(31 downto 0);
+	--s_axis_address_tuser : in std_logic_vector(TUSER_width-1 downto 0);
+	s_axis_address_tvalid : in std_logic;
+	s_axis_address_tready : out std_logic;
 	
-	
+	m_axis_data_tdata : out std_logic_vector(31 downto 0);
+	--m_axis_data_tuser : out std_logic_vector(TUSER_width-1 downto 0);
+	m_axis_data_tvalid : out std_logic;
+	m_axis_data_tready : in std_logic;
+		
 	-- AXI4 RAM 
 	M_AXI_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
     M_AXI_arburst : out STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -270,9 +274,9 @@ begin
 	process(
 		resetn,
 		state,
-		porta_address,
-		porta_address_valid,
-		porta_read_data_ready,
+		s_axis_address_tdata,
+		s_axis_address_tvalid,
+		m_axis_data_tready,
 		address,
 		cache_infos,
 		
@@ -306,7 +310,7 @@ begin
 		variable vhit : std_logic;
 		variable vhit_cache_address : bram_address_t;
 	begin
-		porta_address_ready <= '0';
+		s_axis_address_tready <= '0';
 	
 		state_next <= state;
 		
@@ -362,10 +366,10 @@ begin
 			case state is
 				when state_idle =>
 					if stall = '0' then
-						porta_address_ready <= '1';
-						address_next <= porta_address;
+						s_axis_address_tready <= '1';
+						address_next <= s_axis_address_tdata;
 					
-						indexes_from_address(porta_address, vtag, vset_index);
+						indexes_from_address(s_axis_address_tdata, vtag, vset_index);
 				
 						vhit := '0';
 					
@@ -379,13 +383,13 @@ begin
 							if vtag = vcache_line.tag and vcache_line.valid = '1' then
 								vhit_cache_address.set_index := vset_index;
 								vhit_cache_address.way_index := vcache_line.way_index;
-								vhit_cache_address.offset := porta_address(hit_cache_address.offset'LENGTH-1 downto 0);
+								vhit_cache_address.offset := s_axis_address_tdata(hit_cache_address.offset'LENGTH-1 downto 0);
 								hit_cache_address_next <= vhit_cache_address;	
 							
-								hit_next <= porta_address_valid;
+								hit_next <= s_axis_address_tvalid;
 							
 								-- reorder
-								reorder_valid_next <= porta_address_valid;
+								reorder_valid_next <= s_axis_address_tvalid;
 								reorder_last_used_way_index_next <= TO_UNSIGNED(i, reorder_last_used_way_index'LENGTH);
 												
 								-- read data
@@ -393,11 +397,11 @@ begin
 								mem_addra <= BRAM_address_to_slv(vhit_cache_address);
 								mem_dina <= (others => '0');
 							
-								vhit := porta_address_valid;
+								vhit := s_axis_address_tvalid;
 							end if;
 						end loop;
 					
-						if vhit = '0' and porta_address_valid = '1' then
+						if vhit = '0' and s_axis_address_tvalid = '1' then
 							state_next <= state_update_read_address;
 						end if;
 					end if;
@@ -454,7 +458,7 @@ begin
 	process(
 		resetn,
 		hit,
-		porta_read_data_ready,
+		m_axis_data_tready,
 		data_out_reg,
 		mem_douta,
 		stall
@@ -464,22 +468,22 @@ begin
 		
 		data_out_reg_next <= data_out_reg;
 		
-		porta_read_data_valid <= '0';
-		porta_read_data <= (others => '0');
+		m_axis_data_tvalid <= '0';
+		m_axis_data_tdata <= (others => '0');
 		
 		if resetn = '0' then
 			data_out_reg_next <= (others => '0');
 		else
 			-- handle output
 			if stall = '1' then
-				stall_next <= not porta_read_data_ready;
-				porta_read_data_valid <= '1';
-				porta_read_data <= data_out_reg;
+				stall_next <= not m_axis_data_tready;
+				m_axis_data_tvalid <= '1';
+				m_axis_data_tdata <= data_out_reg;
 			elsif hit = '1' then
-				stall_next <= not porta_read_data_ready;
+				stall_next <= not m_axis_data_tready;
 				data_out_reg_next <= mem_douta;
-				porta_read_data_valid <= '1';
-				porta_read_data <= mem_douta;
+				m_axis_data_tvalid <= '1';
+				m_axis_data_tdata <= mem_douta;
 			end if;
 		end if;
 	end process;

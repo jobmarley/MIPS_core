@@ -10,13 +10,16 @@ entity mips_fetch is
 		clock : in std_logic;
 	
 		-- cache
-		porta_address : out std_logic_vector(31 downto 0);
-		porta_address_ready : in std_logic;
-		porta_address_valid : out std_logic;
-		porta_read_data : in std_logic_vector(31 downto 0);
-		porta_read_data_ready : out std_logic;
-		porta_read_data_valid : in std_logic;
-		
+		cache_s_axis_address_tdata : out std_logic_vector(31 downto 0);
+		--cache_s_axis_address_tuser : out std_logic_vector(TUSER_width-1 downto 0);
+		cache_s_axis_address_tvalid : out std_logic;
+		cache_s_axis_address_tready : in std_logic;
+	
+		cache_m_axis_data_tdata : in std_logic_vector(31 downto 0);
+		--cache_m_axis_data_tuser : in std_logic_vector(TUSER_width-1 downto 0);
+		cache_m_axis_data_tvalid : in std_logic;
+		cache_m_axis_data_tready : out std_logic;
+	
 		-- decode
 		instruction_address_plus_8 : out std_logic_vector(31 downto 0);
 		instruction_address_plus_4 : out std_logic_vector(31 downto 0);
@@ -69,12 +72,12 @@ architecture mips_fetch_behavioral of mips_fetch is
 	signal sporta_address_valid : std_logic;
 	signal sporta_read_data_ready : std_logic;
 begin
-	porta_address_valid <= sporta_address_valid;
-	porta_read_data_ready <= sporta_read_data_ready;
-	porta_address <= current_address;
+	cache_s_axis_address_tvalid <= sporta_address_valid;
+	cache_m_axis_data_tready <= sporta_read_data_ready;
+	cache_s_axis_address_tdata <= current_address;
 	
-	send_address <= sporta_address_valid and porta_address_ready;
-	receive_data <= sporta_read_data_ready and porta_read_data_valid;
+	send_address <= sporta_address_valid and cache_s_axis_address_tready;
+	receive_data <= sporta_read_data_ready and cache_m_axis_data_tvalid;
 	
 	instruction_address_plus_8 <= instruction_address_plus_8_reg;
 	instruction_address_plus_4 <= instruction_address_plus_4_reg;
@@ -143,9 +146,9 @@ begin
 		
 		current_address,
 		
-		porta_address_ready,
-		porta_read_data,
-		porta_read_data_valid,
+		cache_s_axis_address_tready,
+		cache_m_axis_data_tdata,
+		cache_m_axis_data_tvalid,
 		
 		instruction_data_ready,
 			
@@ -203,13 +206,13 @@ begin
 			-- send address and increment
 			if fifo_used < 3 then
 				sporta_address_valid <= '1';
-				if porta_address_ready = '1' then
+				if cache_s_axis_address_tready = '1' then
 					current_address_next <= std_logic_vector(UNSIGNED(current_address) + 4);
 				end if;
 			end if;
 					
 			if discard_counter > 0 then
-				if porta_read_data_valid = '1' then
+				if cache_m_axis_data_tvalid = '1' then
 					-- just discard data and decrement counter
 					sporta_read_data_ready <= '1';
 					discard_counter_next <= discard_counter - 1;
@@ -219,8 +222,8 @@ begin
 				if enable = '1' then
 					-- forward data only if we dont discard (after a jump)		
 					sporta_read_data_ready <= instruction_data_ready;
-					instruction_data_valid <= porta_read_data_valid;
-					instruction_data <= porta_read_data;
+					instruction_data_valid <= cache_m_axis_data_tvalid;
+					instruction_data <= cache_m_axis_data_tdata;
 					
 					-- if we jump, we wait to have a data pending (the delay slot), but we dont send the data
 					if wait_jump_reg = '1' then
@@ -231,11 +234,11 @@ begin
 						if execute_delay_slot_reg = '1' then
 							-- forward data
 							sporta_read_data_ready <= instruction_data_ready;
-							instruction_data_valid <= porta_read_data_valid;
-							instruction_data <= porta_read_data;
+							instruction_data_valid <= cache_m_axis_data_tvalid;
+							instruction_data <= cache_m_axis_data_tdata;
 						
 							-- send 1 instruction
-							if instruction_data_ready = '1' and porta_read_data_valid = '1' then
+							if instruction_data_ready = '1' and cache_m_axis_data_tvalid = '1' then
 								execute_delay_slot_reg_next <= '0';
 							end if;
 						elsif skip_jump_reg = '1' then

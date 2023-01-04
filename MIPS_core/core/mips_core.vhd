@@ -120,21 +120,21 @@ end mips_core;
 architecture mips_core_behavioral of mips_core is
 	component cache_memory is
 		--generic(
-		--	BRAM_data_width : POSITIVE := 512;
-		--	BRAM_address_width : POSITIVE := 8
+		--	TUSER_width : POSITIVE := 0
 		--);
 		port (
 		resetn : in std_logic;
 		clock : in std_logic;
 	
-		-- port A
-		porta_address : in std_logic_vector(31 downto 0);
-		porta_address_ready : out std_logic;
-		porta_address_valid : in std_logic;
-		porta_read_data : out std_logic_vector(31 downto 0);
-		porta_read_data_ready : in std_logic;
-		porta_read_data_valid : out std_logic;
+		s_axis_address_tdata : in std_logic_vector(31 downto 0);
+		--s_axis_address_tuser : in std_logic_vector(TUSER_width-1 downto 0);
+		s_axis_address_tvalid : in std_logic;
+		s_axis_address_tready : out std_logic;
 	
+		m_axis_data_tdata : out std_logic_vector(31 downto 0);
+		--m_axis_data_tuser : out std_logic_vector(TUSER_width-1 downto 0);
+		m_axis_data_tvalid : out std_logic;
+		m_axis_data_tready : in std_logic;
 	
 		-- AXI4 RAM 
 		M_AXI_araddr : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -230,12 +230,15 @@ architecture mips_core_behavioral of mips_core is
 			clock : in std_logic;
 	
 			-- cache
-			porta_address : out std_logic_vector(31 downto 0);
-			porta_address_ready : in std_logic;
-			porta_address_valid : out std_logic;
-			porta_read_data : in std_logic_vector(31 downto 0);
-			porta_read_data_ready : out std_logic;
-			porta_read_data_valid : in std_logic;
+			cache_s_axis_address_tdata : out std_logic_vector(31 downto 0);
+			--cache_s_axis_address_tuser : out std_logic_vector(TUSER_width-1 downto 0);
+			cache_s_axis_address_tvalid : out std_logic;
+			cache_s_axis_address_tready : in std_logic;
+	
+			cache_m_axis_data_tdata : in std_logic_vector(31 downto 0);
+			--cache_m_axis_data_tuser : in std_logic_vector(TUSER_width-1 downto 0);
+			cache_m_axis_data_tvalid : in std_logic;
+			cache_m_axis_data_tready : out std_logic;
 		
 			-- decode
 			instruction_address_plus_8 : out std_logic_vector(31 downto 0);
@@ -372,12 +375,16 @@ architecture mips_core_behavioral of mips_core is
 	signal fetch_error : std_logic;
 	
 	-- cache
-	signal cache_porta_address : std_logic_vector(31 downto 0);
-	signal cache_porta_address_ready : std_logic;
-	signal cache_porta_address_valid : std_logic;
-	signal cache_porta_read_data : std_logic_vector(31 downto 0);
-	signal cache_porta_read_data_ready : std_logic;
-	signal cache_porta_read_data_valid : std_logic;
+	constant CACHE_TUSER_width : NATURAL := 0;
+	signal cache_s_axis_address_tdata : std_logic_vector(31 downto 0);
+	signal cache_s_axis_address_tuser : std_logic_vector(CACHE_TUSER_width-1 downto 0);
+	signal cache_s_axis_address_tvalid : std_logic;
+	signal cache_s_axis_address_tready : std_logic;
+	
+	signal cache_m_axis_data_tdata : std_logic_vector(31 downto 0);
+	signal cache_m_axis_data_tuser : std_logic_vector(CACHE_TUSER_width-1 downto 0);
+	signal cache_m_axis_data_tvalid : std_logic;
+	signal cache_m_axis_data_tready : std_logic;
 	
 	signal cache_m_axi_araddr : STD_LOGIC_VECTOR ( 31 downto 0 );
 	signal cache_m_axi_arburst : STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -572,12 +579,15 @@ begin
 		clock => clock,
 		
 		-- cache
-		porta_address => cache_porta_address,
-		porta_address_ready => cache_porta_address_ready,
-		porta_address_valid => cache_porta_address_valid,
-		porta_read_data => cache_porta_read_data,
-		porta_read_data_ready => cache_porta_read_data_ready,
-		porta_read_data_valid => cache_porta_read_data_valid,
+		cache_s_axis_address_tdata => cache_s_axis_address_tdata,
+		--cache_s_axis_address_tuser => cache_s_axis_address_tuser,
+		cache_s_axis_address_tvalid => cache_s_axis_address_tvalid,
+		cache_s_axis_address_tready => cache_s_axis_address_tready,
+	
+		cache_m_axis_data_tdata => cache_m_axis_data_tdata,
+		--cache_m_axis_data_tuser => cache_m_axis_data_tuser,
+		cache_m_axis_data_tvalid => cache_m_axis_data_tvalid,
+		cache_m_axis_data_tready => cache_m_axis_data_tready,
 	
 		-- decode
 		instruction_address_plus_8 => fetch_instruction_address_plus_8,
@@ -596,17 +606,23 @@ begin
 		
 		error => fetch_error
 	);
-	cache_memory_i0 : cache_memory port map(
+	cache_memory_i0 : cache_memory 
+	--generic map(
+	--	TUSER_width => CACHE_TUSER_width
+	--)
+	port map(
 		resetn => resetn,
 		clock => clock,
 	
-		-- port A
-		porta_address => cache_porta_address,
-		porta_address_ready => cache_porta_address_ready,
-		porta_address_valid => cache_porta_address_valid,
-		porta_read_data => cache_porta_read_data,
-		porta_read_data_ready => cache_porta_read_data_ready,
-		porta_read_data_valid => cache_porta_read_data_valid,
+		s_axis_address_tdata => cache_s_axis_address_tdata,
+		--s_axis_address_tuser => cache_s_axis_address_tuser,
+		s_axis_address_tvalid => cache_s_axis_address_tvalid,
+		s_axis_address_tready => cache_s_axis_address_tready,
+	
+		m_axis_data_tdata => cache_m_axis_data_tdata,
+		--m_axis_data_tuser => cache_m_axis_data_tuser,
+		m_axis_data_tvalid => cache_m_axis_data_tvalid,
+		m_axis_data_tready => cache_m_axis_data_tready,
 	
 		-- AXI4 RAM 
 		M_AXI_araddr => cache_m_axi_araddr,
