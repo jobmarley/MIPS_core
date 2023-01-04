@@ -68,11 +68,10 @@ architecture mips_fetch_behavioral of mips_fetch is
 	
 	signal sporta_address_valid : std_logic;
 	signal sporta_read_data_ready : std_logic;
-	signal sporta_address : slv32_t;
 begin
 	porta_address_valid <= sporta_address_valid;
 	porta_read_data_ready <= sporta_read_data_ready;
-	porta_address <= sporta_address;
+	porta_address <= current_address;
 	
 	send_address <= sporta_address_valid and porta_address_ready;
 	receive_data <= sporta_read_data_ready and porta_read_data_valid;
@@ -111,7 +110,7 @@ begin
 		receive_data,
 		fifo_used,
 		instruction_address_fifo,
-		sporta_address
+		current_address
 		)
 	begin
 		fifo_used_next <= fifo_used;
@@ -125,9 +124,9 @@ begin
 				for i in 0 to FIFO_SIZE-2 loop
 					instruction_address_fifo_next(i) <= instruction_address_fifo(i+1);
 				end loop;
-				instruction_address_fifo_next(TO_INTEGER(fifo_used-1)) <= sporta_address;
+				instruction_address_fifo_next(TO_INTEGER(fifo_used-1)) <= current_address;
 			elsif send_address = '1' then
-				instruction_address_fifo_next(TO_INTEGER(fifo_used)) <= sporta_address;
+				instruction_address_fifo_next(TO_INTEGER(fifo_used)) <= current_address;
 				fifo_used_next <= fifo_used + 1;
 			elsif receive_data = '1' then
 				for i in 0 to FIFO_SIZE-2 loop
@@ -165,7 +164,6 @@ begin
 		discard_counter
 		)
 	begin
-		sporta_address <= current_address;
 		sporta_address_valid <= '0';
 		sporta_read_data_ready <= '0';
 		
@@ -201,10 +199,7 @@ begin
 			execute_delay_slot_reg_next <= '0';
 			
 			discard_counter_next <= (others => '0');
-		else
-			
-			sporta_address <= current_address;
-					
+		else					
 			-- send address and increment
 			if fifo_used < 3 then
 				sporta_address_valid <= '1';
@@ -250,12 +245,8 @@ begin
 							skip_jump_reg_next <= '0';
 							wait_jump_reg_next <= '0';
 						elsif override_address_valid_reg = '1' then
-							sporta_address <= override_address_reg;
-							if porta_address_ready = '1' and fifo_used < 3 then
-								current_address_next <= std_logic_vector(unsigned(override_address_reg) + 4);
-							else
-								current_address_next <= override_address_reg;
-							end if;
+							current_address_next <= override_address_reg;
+							sporta_address_valid <= '0';
 							override_address_valid_reg_next <= '0';
 							skip_jump_reg_next <= '0';
 							wait_jump_reg_next <= '0';
