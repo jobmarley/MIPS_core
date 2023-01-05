@@ -52,6 +52,7 @@
     <VHDLSource Include="core\axi_lite_adapter\axi_lite_adapter_test_design.vhd" />
     <VHDLSource Include="core\axi_lite_adapter\axi_lite_adapter.vhd" />
     <VHDLSource Include="core\cop0_registers.vhd" />
+    <VHDLSource Include="core\mips_core_config.vhd" />
     <VHDLSource Include="core\mips_core_internal.vhd" />
     <VHDLSource Include="core\mips_core.vhd" />
     <VHDLSource Include="core\mips_core_impl_simple.vhd" />

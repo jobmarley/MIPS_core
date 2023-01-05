@@ -24,9 +24,13 @@ entity cache_memory is
 	--	BRAM_data_width : POSITIVE := 512;
 	--	BRAM_address_width : POSITIVE := 8
 	--);
-	--generic(
-	--	TUSER_width : NATURAL := 0
-	--);
+	generic(
+		--TUSER_width : NATURAL := 0;
+		SET_COUNT : NATURAL;
+		WAY_COUNT : NATURAL;
+		LINE_LENGTH : NATURAL;
+		RAM_DATA_WIDTH_BITS : NATURAL
+	);
 	port (
 	resetn : in std_logic;
 	clock : in std_logic;
@@ -137,14 +141,14 @@ architecture cache_memory_behavioral of cache_memory is
 	
 	constant DATA_WIDTH_BITS : NATURAL := 32;							-- size of data out
 	constant DATA_WIDTH_BYTE : NATURAL := DATA_WIDTH_BITS / 8;
-	constant RAM_DATA_WIDTH_BITS : NATURAL := 32;						-- size of ram/bram data
+	--constant RAM_DATA_WIDTH_BITS : NATURAL := ram_data_width;			-- size of ram/bram data
 	constant RAM_DATA_WIDTH_BYTE : NATURAL := RAM_DATA_WIDTH_BITS / 8;
 	
-	constant LINE_LENGTH : NATURAL := 8;
+	--constant LINE_LENGTH : NATURAL := 8;
 	constant LINE_LENGTH_BITS : NATURAL := LINE_LENGTH * DATA_WIDTH_BITS;
 	constant LINE_LENGTH_BYTE : NATURAL := LINE_LENGTH_BITS / 8;
-	constant SET_COUNT : NATURAL := 16;																-- number of entries in a set
-	constant WAY_COUNT : NATURAL := 2;
+	--constant SET_COUNT : NATURAL := 16;																-- number of entries in a set
+	--constant WAY_COUNT : NATURAL := 2;
 	
 	constant BRAM_MEMORY_SIZE_BYTE : NATURAL := LINE_LENGTH_BYTE*SET_COUNT*WAY_COUNT;
 	constant BRAM_ADDRESS_WIDTH : NATURAL := log2(BRAM_MEMORY_SIZE_BYTE / RAM_DATA_WIDTH_BYTE);			-- addressable by blocks of RAM_DATA_WIDTH_BYTE

@@ -13,8 +13,9 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 use work.mips_utils.all;
-
+use work.mips_core_config.all;
 
 entity mips_core is
   Port ( 
@@ -119,9 +120,13 @@ end mips_core;
 
 architecture mips_core_behavioral of mips_core is
 	component cache_memory is
-		--generic(
-		--	TUSER_width : POSITIVE := 0
-		--);
+		generic(
+			--TUSER_width : NATURAL := 0;
+			SET_COUNT : NATURAL;
+			WAY_COUNT : NATURAL;
+			LINE_LENGTH : NATURAL;
+			RAM_DATA_WIDTH_BITS : NATURAL
+		);
 		port (
 		resetn : in std_logic;
 		clock : in std_logic;
@@ -607,9 +612,13 @@ begin
 		error => fetch_error
 	);
 	cache_memory_i0 : cache_memory 
-	--generic map(
-	--	TUSER_width => CACHE_TUSER_width
-	--)
+	generic map(
+		--TUSER_width : NATURAL := 0;
+		SET_COUNT => 64 * (2 ** TO_INTEGER(unsigned(CONFIG1_INSTR_CACHE_SETS))),
+		WAY_COUNT => 2 ** TO_INTEGER(unsigned(CONFIG1_INSTR_CACHE_ASSOCIATIVITY)),
+		LINE_LENGTH => 2 * (2 ** TO_INTEGER(unsigned(CONFIG1_INSTR_CACHE_LINE_SIZE))) * 8 / 32,
+		RAM_DATA_WIDTH_BITS => 32
+		)
 	port map(
 		resetn => resetn,
 		clock => clock,

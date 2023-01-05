@@ -2,6 +2,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.numeric_std.all;
 use work.mips_utils.all;
+use work.mips_core_config.all;
 
 entity cop0_registers is
 	generic(
@@ -40,6 +41,7 @@ architecture cop0_registers_behavioral of cop0_registers is
 		r14 : slv32_t;
 		r15 : slv32_t;
 		r16 : slv32_t;
+		r16s1 : slv32_t;
 		r17 : slv32_t;
 		r18 : slv32_t;
 		r19 : slv32_t;
@@ -92,7 +94,33 @@ begin
 	registers_next.r13 <= registers_connector_in(13)(0);
 	registers_next.r14 <= registers_connector_in(14)(0);
 	registers_next.r15 <= registers_connector_in(15)(0);
-	registers_next.r16 <= registers_connector_in(16)(0);
+	registers_next.r16 <= (
+		31 => CONFIG0_CONFIG1_IMPLEMENTED,
+		30 downto 16 => CONFIG0_IMPL,
+		15 => CONFIG0_ENDIANNESS,
+		14 downto 13 => CONFIG0_ARCHITECTURE_TYPE,
+		12 downto 10 => CONFIG0_ARCHITECTURE_REVISION,
+		9 downto 7 => CONFIG0_MMU_TYPE,
+		2 downto 0 => CONFIG0_KSEG0,
+		others => '0'
+	);
+	registers_next.r16s1 <= (
+		31 => CONFIG1_CONFIG2_IMPLEMENTED,
+		30 downto 25 => CONFIG1_MMU_SIZE,
+		24 downto 22 => CONFIG1_INSTR_CACHE_SETS,
+		21 downto 19 => CONFIG1_INSTR_CACHE_LINE_SIZE,
+		18 downto 16 => CONFIG1_INSTR_CACHE_ASSOCIATIVITY,
+		15 downto 13 => CONFIG1_DATA_CACHE_SETS,
+		12 downto 10 => CONFIG1_DATA_CACHE_LINE_SIZE,
+		9 downto 7 => CONFIG1_DATA_CACHE_ASSOCIATIVITY,
+		6 => CONFIG1_COP2_PRESENT,
+		5 => CONFIG1_MDMX_ASE,
+		4 => CONFIG1_PERFORMANCE_COUNTER_IMPLEMENTED,
+		3 => CONFIG1_WATCH_REGISTER_IMPLEMENTED,
+		2 => CONFIG1_MIPS16_IMPLEMENTED,
+		1 => CONFIG1_EJTAG_IMPLEMENTED,
+		0 => CONFIG1_FPU_IMPLEMENTED
+	);
 	registers_next.r17 <= registers_connector_in(17)(0);
 	registers_next.r18 <= registers_connector_in(18)(0);
 	registers_next.r19 <= registers_connector_in(19)(0);
