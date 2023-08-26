@@ -60,6 +60,9 @@ Those registers are accessible through the AXI lite interface on the processor
 | 00000100 - 0000017C |  COP0 registers  |
 
 ## Tests
+instruction_test_generate.py generates an asm file containing instructions with randomized operands. This is then compiled with clang and used to create a test data file.  
+core_test.tcl runs in simulation to read that data file and send the instructions to the processor core, then compares the result with the expected values.  
+
 Just run the following commands from the MIPS_core/core/test/ directory
 ```
 python instruction_test_generate.py
